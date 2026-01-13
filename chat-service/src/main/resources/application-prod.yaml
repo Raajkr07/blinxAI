@@ -1,0 +1,79 @@
+# =========================
+# Blink Chat Service - Production Configuration
+# =========================
+
+spring:
+  application:
+    name: chat-service
+
+  # -------------------------
+  # MongoDB (production)
+  # -------------------------
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://prod-db-host:27017/blink_chat} # Use env variable for credentials
+
+    # -------------------------
+    # Redis (production)
+    # -------------------------
+    redis:
+      host: ${REDIS_HOST:redis-prod-host}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:} # secure from env variable
+
+  # -------------------------
+  # Mail (SMTP) configuration
+  # -------------------------
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:} # set via environment variable
+    password: ${MAIL_PASSWORD:} # set via environment variable
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# -------------------------
+# Swagger / OpenAPI
+# -------------------------
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# -------------------------
+# Server
+# -------------------------
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+# -------------------------
+# JWT configuration
+# -------------------------
+jwt:
+  secret: ${JWT_SECRET:replace-this-with-secure-secret}
+  expiration: 86400000        # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# -------------------------
+# App-specific configuration
+# -------------------------
+app:
+  otp:
+    length: 6
+    expiration: 300000
+  phone-prefix: "+91"
+
+# -------------------------
+# API Server URL for OpenAPI docs
+# -------------------------
+api:
+  server:
+    url: https://api.blink.com

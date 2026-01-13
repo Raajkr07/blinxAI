@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Information from {{appName}}</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1f2937;
+">
+
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+        <td align="center" style="padding: 40px 16px;">
+
+            <!-- Card -->
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+                   style="max-width: 520px; background: #ffffff; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.08);">
+
+                <!-- Body -->
+                <tr>
+                    <td style="padding: 32px;">
+
+                        <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">
+                            Dear {{userName}},
+                        </p>
+
+                        <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6;">
+                            Please find the following information regarding your {{appName}} account:
+                        </p>
+
+                        <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">
+                            {{messageContent}}
+                        </p>
+
+                        <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                            Should you require any further clarification, please do not hesitate to contact us.
+                            Thank you for your continued trust in {{appName}}.
+                        </p>
+
+                        <p style="margin: 24px 0 0 0; font-size: 14px;">
+                            Sincerely,<br/>
+                            <strong>{{appName}} Team</strong>
+                        </p>
+
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
