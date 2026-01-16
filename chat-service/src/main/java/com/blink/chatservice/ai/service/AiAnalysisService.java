@@ -1,8 +1,7 @@
-package com.blink.chatservice.ai;
+package com.blink.chatservice.ai.service;
 
 import com.blink.chatservice.ai.model.AiAnalysisModels.*;
 import com.blink.chatservice.chat.entity.Message;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

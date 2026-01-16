@@ -1,10 +1,10 @@
-package com.blink.chatservice.ai;
+package com.blink.chatservice.ai.service;
 
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.repository.MessageRepository;
 import com.blink.chatservice.chat.service.ChatService;
-import com.blink.chatservice.mcp.McpToolRegistry;
+import com.blink.chatservice.mcp.registry.McpToolRegistry;
 import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

@@ -1,6 +1,6 @@
 package com.blink.chatservice.ai.controller;
 
-import com.blink.chatservice.ai.AiService;
+import com.blink.chatservice.ai.service.AiService;
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,7 +45,8 @@ public class AiChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (IllegalStateException e) {
-            return ResponseEntity.status(503).build(); // Service unavailable (e.g., API key not configured)
+            // Service unavailable (e.g., API key not configured)
+            return ResponseEntity.status(503).build();
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();
