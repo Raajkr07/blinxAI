@@ -1,79 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify Your Blink Account</title>
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title th:text="'Verify your ' + ${appName} + ' account'">Verify your account</title>
+
     <style>
-        /* Reset and Base Styles */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        /* Client resets */
+        html, body { margin:0 !important; padding:0 !important; height:100% !important; width:100% !important; }
+        * { -ms-text-size-adjust:100%; -webkit-text-size-adjust:100%; }
+        table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; border-collapse:collapse !important; }
+        img { -ms-interpolation-mode:bicubic; border:0; outline:none; text-decoration:none; display:block; }
+        a { text-decoration:none; }
 
-        /* Container */
-        .email-container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; animation: slideIn 0.8s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        /* Mobile */
+        @media screen and (max-width: 600px) {
+          .container { width:100% !important; }
+          .px { padding-left:18px !important; padding-right:18px !important; }
+          .otp { letter-spacing:6px !important; font-size:34px !important; }
+          .btn { width:100% !important; }
+        }
 
-        /* Header */
-        .header { background: linear-gradient(135deg, #007bff, #0056b3); color: white; text-align: center; padding: 40px 20px; position: relative; overflow: hidden; }
-        .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: shimmer 3s infinite; }
-        @keyframes shimmer { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .logo { font-size: 28px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .header h1 { font-size: 24px; margin: 0; opacity: 0; animation: fadeInUp 1s 0.3s forwards; }
-        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        /* Animations (supported in some clients only; safe fallback is static) [web:17] */
+        @keyframes floaty { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }
+        @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.03)} 100%{transform:scale(1)} }
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
 
-        /* OTP Section */
-        .otp-section { padding: 50px 40px; text-align: center; }
-        .otp-highlight { background: linear-gradient(135deg, #ff6b6b, #feca57); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 48px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 8px; margin: 20px 0; animation: pulse 2s infinite; text-shadow: none; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .otp-label { color: #666; font-size: 18px; margin-bottom: 20px; }
+        .floaty { animation: floaty 3s ease-in-out infinite; }
+        .pulse { animation: pulse 1.6s ease-in-out infinite; }
 
-        /* Action Button */
-        .action-button { display: inline-block; background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 18px 50px; font-size: 18px; font-weight: 600; text-decoration: none; border-radius: 50px; box-shadow: 0 10px 25px rgba(40,167,69,0.3); transition: all 0.3s ease; animation: bounceIn 1s 0.6s forwards; opacity: 0; transform: scale(0.8); }
-        .action-button:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(40,167,69,0.4); }
-        @keyframes bounceIn { to { opacity: 1; transform: scale(1); } }
-
-        /* Instructions */
-        .instructions { margin: 40px 0; padding: 25px; background: #f8f9fa; border-radius: 15px; border-left: 5px solid #007bff; }
-        .instructions h2 { color: #007bff; font-size: 20px; margin-bottom: 15px; }
-        .instructions ul { text-align: left; color: #555; }
-        .instructions li { margin: 10px 0; position: relative; padding-left: 25px; }
-        .instructions li::before { content: '✓'; position: absolute; left: 0; color: #28a745; font-weight: bold; }
-
-        /* Footer */
-        .footer { background: #f8f9fa; padding: 30px; text-align: center; color: #6c757d; font-size: 14px; }
-        .footer p { margin: 5px 0; }
-        .highlight { color: #007bff; font-weight: 600; }
-
-        /* Responsive */
-        @media (max-width: 600px) { .email-container { margin: 10px; border-radius: 15px; } .otp-section { padding: 30px 20px; } .otp-highlight { font-size: 36px; letter-spacing: 4px; } }
+        /* Shimmer only for supporting clients; ignored elsewhere */
+        .shimmerText {
+          background: linear-gradient(90deg, #ff6b6b 0%, #feca57 50%, #ff6b6b 100%);
+          background-size: 200% 100%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 2.2s linear infinite;
+        }
     </style>
 </head>
-<body>
-<div class="email-container">
-    <div class="header">
-        <div class="logo" th:text="${appName}">Blink</div>
-        <h1>Verify Your Account</h1>
-    </div>
 
-    <div class="otp-section">
-        <div class="otp-label">Your One-Time Password (OTP) is:</div>
-        <div class="otp-highlight" th:text="${otp}">123456</div>
-        <div class="instructions">
-            <h2>How to use your OTP</h2>
-            <ul>
-                <li>Enter this 6-digit code on the verification page</li>
-                <li>This OTP is valid for <span class="highlight">10 minutes</span></li>
-                <li>Do not share it with anyone</li>
-                <li>Did not request? Ignore this email</li>
-            </ul>
-        </div>
-        <a th:href="${verifyUrl}" class="action-button" th:text="'Verify Now'">Verify Now</a>
-    </div>
-
-    <div class="footer">
-        <p>This is an automated message from <span th:text="${appName}">Blink</span>. Please do not reply.</p>
-        <p>&copy; 2026 <span th:text="${appName}">Blink</span>. All rights reserved. | <a href="#" style="color: #007bff;">Unsubscribe</a></p>
-    </div>
+<body style="margin:0; padding:0; background-color:#f3f5f9;">
+<div style="display:none; font-size:1px; line-height:1px; max-height:0px; max-width:0px; opacity:0; overflow:hidden;">
+    Use the OTP to verify your account. This code expires in 5 minutes.
 </div>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f3f5f9;">
+    <tr>
+        <td align="center" style="padding:24px 12px;">
+
+            <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+                   class="container"
+                   style="width:600px; max-width:600px; background-color:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 12px 28px rgba(16,24,40,0.12);">
+                <!-- Header -->
+                <tr>
+                    <td align="center"
+                        style="padding:34px 24px; background-color:#0b5ed7;">
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:26px; line-height:32px; font-weight:700; color:#ffffff;"
+                             th:text="${appName}">Blink</div>
+
+                        <div style="height:10px; line-height:10px; font-size:10px;">&nbsp;</div>
+
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:18px; line-height:26px; color:#eaf2ff;">
+                            Verify your account
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                    <td class="px" style="padding:34px 40px 12px 40px;">
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#1f2937;">
+                            Enter the following one-time password (OTP) to complete verification:
+                        </div>
+
+                        <div style="height:18px; line-height:18px; font-size:18px;">&nbsp;</div>
+
+                        <!-- OTP box -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                               style="background-color:#f8fafc; border:1px solid #e5e7eb; border-radius:14px;">
+                            <tr>
+                                <td align="center" style="padding:22px 14px;">
+                                    <div class="pulse"
+                                         style="font-family:'Courier New', Courier, monospace; font-size:44px; line-height:48px; font-weight:800; letter-spacing:8px; color:#111827;"
+                                         th:text="${otp}">123456</div>
+
+                                    <div class="shimmerText"
+                                         style="font-family:'Courier New', Courier, monospace; font-size:0; line-height:0; height:0; overflow:hidden;">
+                                    </div>
+
+                                    <div style="height:10px; line-height:10px; font-size:10px;">&nbsp;</div>
+
+                                    <div style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#6b7280;">
+                                        This OTP is valid for <strong style="color:#0b5ed7;">5 minutes</strong>.
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div style="height:22px; line-height:22px; font-size:22px;">&nbsp;</div>
+
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td align="center">
+                                    <a class="btn floaty"
+                                       th:href="${verifyUrl}"
+                                       style="display:inline-block; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:20px; font-weight:700;
+                              background-color:#16a34a; color:#ffffff; padding:14px 24px; border-radius:999px;">
+                                        Verify now
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div style="height:26px; line-height:26px; font-size:26px;">&nbsp;</div>
+
+                        <!-- Instructions -->
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                               style="background-color:#f8fafc; border-radius:14px; border-left:5px solid #0b5ed7;">
+                            <tr>
+                                <td style="padding:18px 18px;">
+                                    <div style="font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:22px; font-weight:700; color:#0b5ed7;">
+                                        How to use your OTP
+                                    </div>
+                                    <div style="height:10px; line-height:10px; font-size:10px;">&nbsp;</div>
+
+                                    <div style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:22px; color:#374151;">
+                                        • Enter this 6-digit code on the verification page<br>
+                                        • Don’t share it with anyone<br>
+                                        • If you didn’t request this, ignore this email
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <div style="height:18px; line-height:18px; font-size:18px;">&nbsp;</div>
+
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
+                            If the button doesn’t work, copy and paste this link into your browser:
+                            <br>
+                            <span style="word-break:break-all;" th:text="${verifyUrl}">https://blink.com/verify</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td align="center" style="padding:22px 24px; background-color:#f8fafc;">
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#6b7280;">
+                            This is an automated message from <span th:text="${appName}" style="color:#0b5ed7; font-weight:700;">Blink</span>. Please do not reply.
+                        </div>
+                        <div style="height:8px; line-height:8px; font-size:8px;">&nbsp;</div>
+                        <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#9ca3af;">
+                            © 2026 <span th:text="${appName}">Blink</span>. All rights reserved.
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div style="height:18px; line-height:18px; font-size:18px;">&nbsp;</div>
+        </td>
+    </tr>
+</table>
 </body>
 </html>
