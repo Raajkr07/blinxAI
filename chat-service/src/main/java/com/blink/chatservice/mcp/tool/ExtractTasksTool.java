@@ -1,4 +1,4 @@
-package com.blink.chatservice.mcp;
+package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.ai.AiAnalysisService;
 import lombok.RequiredArgsConstructor;
