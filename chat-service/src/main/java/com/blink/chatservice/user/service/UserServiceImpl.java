@@ -10,6 +10,8 @@ import com.blink.chatservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,16 +69,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String completeSignup(String identifier, String username, String avatarUrl, String bio, String email, String phone) {
+    @Transactional
+    public Map<String, String> signup(String identifier, String username, String avatarUrl, String bio, String email, String phone) {
         validateSignupDetails(identifier, email, phone);
+
         User user = getUserByIdentifier(identifier);
         updateUserFields(user, username, avatarUrl, bio, email, phone);
-        
+
         user.setCreatedAt(LocalDateTime.now());
-        user = userRepository.save(user); // Ensure we get the saved instance
+        user = userRepository.save(user);
+
         otpService.deleteOtp(identifier);
-        
-        // Evict cache to ensure fresh profile is loaded next time
+
         if (cacheManager != null) {
             var cache = cacheManager.getCache("users_v2");
             if (cache != null) {
@@ -85,16 +89,20 @@ public class UserServiceImpl implements UserService {
         }
 
         log.info("User signup completed for: {}", user.getId());
-        return jwtUtil.generateToken(user);
+        String accessToken = jwtUtil.generateToken(user);
+        String refreshToken = createRefreshToken(user.getId());
+        return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
     }
 
     @Override
-    public String completeLogin(AuthDto.LoginRequest loginRequest) {
+    @Transactional
+    public Map<String, String> login(AuthDto.LoginRequest loginRequest) {
         if (loginRequest == null || loginRequest.identifier() == null || loginRequest.identifier().trim().isEmpty()) {
             throw new IllegalArgumentException("Identifier is required");
         }
 
         User user = getUserByIdentifier(loginRequest.identifier());
+
         if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
             throw new IllegalStateException("Profile incomplete. Please complete signup first.");
         }
@@ -104,28 +112,15 @@ public class UserServiceImpl implements UserService {
             if (!valid) {
                 throw new IllegalStateException("Invalid or expired OTP");
             }
+            // Optional: if OTP is single-use, delete after successful validation.
+            otpService.deleteOtp(loginRequest.identifier());
         } else {
             otpService.deleteOtp(loginRequest.identifier());
         }
 
         log.info("User login completed for: {}", user.getId());
-        return jwtUtil.generateToken(user);
-    }
 
-    @Override
-    @Transactional
-    public Map<String, String> completeSignupWithRefreshToken(String identifier, String username, String avatarUrl, String bio, String email, String phone) {
-        String accessToken = completeSignup(identifier, username, avatarUrl, bio, email, phone);
-        User user = getUserByIdentifier(identifier);
-        String refreshToken = createRefreshToken(user.getId());
-        return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
-    }
-
-    @Override
-    @Transactional
-    public Map<String, String> completeLoginWithRefreshToken(AuthDto.LoginRequest loginRequest) {
-        String accessToken = completeLogin(loginRequest);
-        User user = getUserByIdentifier(loginRequest.identifier());
+        String accessToken = jwtUtil.generateToken(user);
         String refreshToken = createRefreshToken(user.getId());
         return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
     }
@@ -172,14 +167,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean userExists(String phone, String email) {
-        boolean phoneExists = phone != null && userRepository.existsByPhone(phone);
-        boolean emailExists = email != null && !email.trim().isEmpty() &&
-                userRepository.existsByEmail(email.trim().toLowerCase(Locale.ROOT));
-        return phoneExists || emailExists;
-    }
-
-    @Override
     public boolean userExists(String identifier) {
         if (identifier == null) return false;
         if (isValidPhone(identifier)) return userRepository.existsByPhone(identifier);
@@ -187,7 +174,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "users_v2", key = "#userId")
+    @Cacheable(value = "users_v2", key = "#userId")
     public User getProfile(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -201,7 +188,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @org.springframework.cache.annotation.CachePut(value = "users_v2", key = "#userId")
+    @CachePut(value = "users_v2", key = "#userId")
     public User updateProfile(String userId, String username, String avatarUrl, String bio, String email, String phone) {
         User user = getProfile(userId);
         
