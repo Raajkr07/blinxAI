@@ -109,10 +109,8 @@ public class UserServiceImpl implements UserService {
 
         if (loginRequest.otp() != null && !loginRequest.otp().trim().isEmpty()) {
             boolean valid = otpService.validateOtp(loginRequest.identifier(), loginRequest.otp());
-            if (!valid) {
-                throw new IllegalStateException("Invalid or expired OTP");
-            }
-            // Optional: if OTP is single-use, delete after successful validation.
+            if (!valid) throw new IllegalStateException("Invalid or expired OTP");
+
             otpService.deleteOtp(loginRequest.identifier());
         } else {
             otpService.deleteOtp(loginRequest.identifier());
@@ -128,32 +126,24 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Map<String, String> refreshAccessToken(String refreshTokenValue) {
-        if (!jwtUtil.validateToken(refreshTokenValue) || !jwtUtil.isRefreshToken(refreshTokenValue)) {
+        if (!jwtUtil.validateToken(refreshTokenValue) || !jwtUtil.isRefreshToken(refreshTokenValue))
             throw new IllegalStateException("Invalid refresh token");
-        }
 
-        if (jwtUtil.isTokenExpired(refreshTokenValue)) {
-            throw new IllegalStateException("Refresh token expired");
-        }
+        if (jwtUtil.isTokenExpired(refreshTokenValue)) throw new IllegalStateException("Refresh token expired");
 
         RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new IllegalStateException("Refresh token not found"));
 
-        if (!refreshToken.isValid()) {
-            throw new IllegalStateException("Refresh token is revoked or expired");
-        }
+        if (!refreshToken.isValid()) throw new IllegalStateException("Refresh token is revoked or expired");
 
         String userId = jwtUtil.extractUserId(refreshTokenValue);
         User user = getProfile(userId);
         String newAccessToken = jwtUtil.generateToken(user);
-        
-        // Rotate refresh token
+
         String newRefreshTokenValue = createRefreshToken(userId);
-        
-        // Revoke old
+
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
-
         return Map.of("accessToken", newAccessToken, "refreshToken", newRefreshTokenValue);
     }
 
@@ -178,12 +168,9 @@ public class UserServiceImpl implements UserService {
     public User getProfile(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        // CORRUPTION FIX: Detect and sanitize bad data on read
-        if (user.getUsername() != null && user.getUsername().contains("java.util.")) {
+
+        if (user.getUsername() != null && user.getUsername().contains("java.util."))
             user.setUsername("User");
-            // Optionally save the fix asynchronously or just return clean data
-        }
         return user;
     }
 
@@ -193,9 +180,7 @@ public class UserServiceImpl implements UserService {
         User user = getProfile(userId);
         
         if (username != null && !username.trim().isEmpty()) {
-            // Prevent corruption
             if (username.contains("java.util.") || username.contains("@") && !username.contains(".")) {
-                 // heuristic: if it looks like a class name or object ref
                  log.warn("Attempt to set invalid username: {}", username);
                  throw new IllegalArgumentException("Invalid username format");
             }
