@@ -1,5 +1,6 @@
 package com.blink.chatservice.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -18,10 +19,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -42,7 +44,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
     }
 
-    @Override
+    @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
             HttpHeaders headers,
@@ -70,22 +72,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    @Override
-    protected ResponseEntity<Object> handleBindException(
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBindException(
             BindException ex,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request
+            HttpServletRequest request
     ) {
-        Map<String, Object> details = new HashMap<>();
-        Map<String, String> fieldErrors = new HashMap<>();
+        Map<String, Object> details = new LinkedHashMap<>();
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
+        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
+            fieldErrors.put(fe.getField(), fe.getDefaultMessage());
         }
         details.put("fields", fieldErrors);
 
-        String path = request.getDescription(false).replace("uri=", "");
+        String path = request.getRequestURI();
+
         ErrorResponse body = ErrorResponse.of(
                 "VALIDATION_ERROR",
                 "Request binding failed",
@@ -94,8 +95,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 details
         );
 
-        log.warn("Bind validation failed for request: {} - errors: {}", path, fieldErrors);
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        log.debug("Bind validation failed for request: {} - errors: {}", path, fieldErrors);
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
