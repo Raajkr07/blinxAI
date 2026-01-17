@@ -50,6 +50,14 @@ Here's what the app looks like in action:
 ## 🏗️ Architecture
 
 I built this as a **monolithic application** rather than breaking it into microservices. For this use case, the monolithic approach actually makes a lot of sense - the chat functionality is tightly coupled, and I didn't want the complexity of managing distributed transactions across services.
+
+
+> **Note:** If the chart fails to load:
+> - Copy the code
+> - Open the link  
+>   👉 https://mermaid.live/edit
+> - Paste it into the editor
+
 ```
 This AWS(EKS) architecture is pretty straightforward but robust:
 ```
