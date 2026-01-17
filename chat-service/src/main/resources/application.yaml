@@ -1,5 +1,13 @@
 spring:
+  application:
+    name: chat-service
   profiles:
     active: dev
 #    active: docker
 #    active: prod
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: true
