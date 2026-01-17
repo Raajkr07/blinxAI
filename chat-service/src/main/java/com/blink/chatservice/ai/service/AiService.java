@@ -290,7 +290,15 @@ public class AiService {
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        String jsonBody;
+        try {
+            jsonBody = objectMapper.writeValueAsString(requestBody);
+            log.debug("Sending AI Request: {}", jsonBody);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize request body", e);
+        }
+
+        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
         try {
             return restTemplate.postForObject(url, entity, OpenAiResponse.class);
@@ -351,7 +359,7 @@ public class AiService {
                     log.warn("User {} tried to use unauthorized tool: {}", userId, call.function().name());
                     resultJson = safeJson(Map.of("error", "Unauthorized to use tool: " + call.function().name()));
                 } else {
-                    Map<String, Object> args = new HashMap<>();
+                    Map<Object, Object> args = new HashMap<>();
                     if (call.function().arguments() != null && !call.function().arguments().isBlank()) {
                         try {
                             args = objectMapper.readValue(call.function().arguments(), Map.class);
@@ -372,6 +380,7 @@ public class AiService {
             conversation.add(Map.of(
                     "role", "tool",
                     "tool_call_id", call.id(),
+                    "name", call.function().name(),
                     "content", resultJson
             ));
         }
@@ -381,7 +390,6 @@ public class AiService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException e) {
-            // Fallback for things that can't be serialized, though standard types should always work
             return "{\"error\":\"Result could not be serialized\"}";
         }
     }
