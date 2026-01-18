@@ -10,8 +10,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class RateLimiterService {
 
+    // In-memory rate limiting. 
+    // WARNING: This is local to the instance. For distributed rate limiting, use Redis.
+    // Also, this map grows indefinitely. Needs a cleanup job or Guava cache with expiry.
     private final Map<String, UserWindow> windows = new ConcurrentHashMap<>();
-    private final int maxRequests = 50;
+    private final int maxRequests = 50; 
     private final long windowMs = 10_000;
 
     public boolean tryConsume(String userId) {
