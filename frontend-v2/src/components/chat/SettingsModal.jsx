@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { userApi } from '../../api';
 import { useAuthStore } from '../../stores';
@@ -7,34 +7,13 @@ import toast from 'react-hot-toast';
 
 export function SettingsModal({ open, onOpenChange }) {
     const { user, setUser } = useAuthStore();
-    const [formData, setFormData] = useState({
-        username: '',
-        bio: '',
-        avatarUrl: '',
-        email: '',
-        phone: '',
-    });
-
-    useEffect(() => {
-        if (user && open) {
-            setFormData(prev => {
-                if (prev.username === (user.username || '') &&
-                    prev.bio === (user.bio || '') &&
-                    prev.avatarUrl === (user.avatarUrl || '') &&
-                    prev.email === (user.email || '') &&
-                    prev.phone === (user.phone || '')) {
-                    return prev;
-                }
-                return {
-                    username: user.username || '',
-                    bio: user.bio || '',
-                    avatarUrl: user.avatarUrl || '',
-                    email: user.email || '',
-                    phone: user.phone || '',
-                };
-            });
-        }
-    }, [user, open]);
+    const [formData, setFormData] = useState(() => ({
+        username: user?.username || '',
+        bio: user?.bio || '',
+        avatarUrl: user?.avatarUrl || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+    }));
 
     const updateProfileMutation = useMutation({
         mutationFn: (data) => userApi.updateProfile(data),

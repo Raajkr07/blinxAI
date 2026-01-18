@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { aiApi } from '../../api';
 import { Modal, ModalFooter, Button } from '../ui';
 import { cn } from '../../lib/utils';
-import { motion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 
 export function ConversationAnalysisModal({ open, onOpenChange, conversationId }) {
@@ -12,7 +12,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
     const { data: analysis, isLoading, refetch } = useQuery({
         queryKey: ['conversationAnalysis', conversationId],
         queryFn: () => aiApi.summarizeConversation(conversationId),
-        enabled: false, // Manual trigger
+        enabled: false,
     });
 
     const handleAnalyze = async () => {
@@ -72,7 +72,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                 )}
 
                 {analysis && (
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-6"
@@ -93,7 +93,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                 </h3>
                                 <ul className="space-y-2">
                                     {analysis.key_points.map((point, index) => (
-                                        <motion.li
+                                        <Motion.li
                                             key={index}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
@@ -102,7 +102,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                         >
                                             <span className="text-white mt-0.5">•</span>
                                             <span>{point}</span>
-                                        </motion.li>
+                                        </Motion.li>
                                     ))}
                                 </ul>
                             </div>
@@ -189,7 +189,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                 </div>
                             </div>
                         )}
-                    </motion.div>
+                    </Motion.div>
                 )}
             </div>
 

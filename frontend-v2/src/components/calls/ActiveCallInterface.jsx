@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { callsApi } from '../../api';
 import { useCallStore } from '../../stores';
 import { Button, Avatar } from '../ui';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
@@ -42,8 +42,6 @@ export function ActiveCallInterface() {
             }, 1000);
 
             return () => clearInterval(interval);
-        } else {
-            setCallDuration(0);
         }
     }, [callStatus, activeCall]);
 
@@ -67,7 +65,7 @@ export function ActiveCallInterface() {
     const isCalling = callStatus === 'calling';
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -113,7 +111,7 @@ export function ActiveCallInterface() {
 
 
                 {isVideo && isVideoEnabled && !isCalling && (
-                    <motion.div
+                    <Motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         className="absolute top-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-700"
@@ -121,7 +119,7 @@ export function ActiveCallInterface() {
                         <div className="w-full h-full flex items-center justify-center">
                             <p className="text-xs text-gray-400">Your video</p>
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 )}
 
 
@@ -270,6 +268,6 @@ export function ActiveCallInterface() {
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </Motion.div>
     );
 }

@@ -1,13 +1,11 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { chatApi, userApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores';
-import { Modal, Avatar, Button, Input } from '../ui';
+import { Modal, Avatar, Button } from '../ui';
 
 export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' }) {
     const { user: currentUser } = useAuthStore();
-
 
     const { data: conversation, isLoading: isLoadingConv } = useQuery({
         queryKey: queryKeys.conversation(conversationId),
@@ -17,8 +15,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
 
     const isGroup = type === 'group' || conversation?.type === 'GROUP' || conversation?.type === 'COMMUNITY';
     const isAI = type === 'ai' || conversation?.type === 'AI_ASSISTANT';
-
-
 
     const otherUserId = !isGroup && !isAI && conversation?.participants
         ? conversation.participants.find(id => id !== currentUser?.id)
@@ -31,7 +27,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
     });
 
     const isLoading = isLoadingConv || (!!otherUserId && isLoadingUser);
-
 
     const displayData = isGroup || isAI ? conversation : (userProfile || conversation);
 
@@ -50,7 +45,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                 </div>
             ) : (
                 <div className="space-y-6">
-
                     <div className="flex-col items-center gap-4 flex">
                         <Avatar
                             src={displayData?.avatarUrl}
@@ -65,8 +59,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                         </div>
                     </div>
 
-
-
                     {displayData?.bio && (
                         <div className="space-y-2">
                             <h3 className="text-sm font-medium text-[var(--color-gray-500)]">
@@ -77,8 +69,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                             </p>
                         </div>
                     )}
-
-
 
                     {!isGroup && !isAI && (
                         <div className="space-y-3">
@@ -96,8 +86,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                             )}
                         </div>
                     )}
-
-
 
                     {isGroup && conversation?.participants && (
                         <div className="space-y-3">
@@ -138,8 +126,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                         </div>
                     )}
 
-
-
                     {isAI && (
                         <div className="space-y-3 p-4 rounded-lg bg-[var(--color-border)]">
                             <div className="flex items-center gap-2">
@@ -166,8 +152,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                             </p>
                         </div>
                     )}
-
-
 
                     <div className="flex gap-3 pt-4 border-t border-[var(--color-border)]">
                         <Button

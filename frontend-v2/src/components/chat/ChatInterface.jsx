@@ -146,8 +146,8 @@ export function ChatInterface() {
                             <Button
                                 variant="ghost"
                                 size={isSidebarCollapsed ? "icon" : "sm"}
-                                onClick={logout}
                                 className={cn("justify-start", isSidebarCollapsed && "w-10 h-10")}
+                                onClick={logout}
                                 title="Logout"
                             >
                                 <svg
@@ -182,7 +182,7 @@ export function ChatInterface() {
                                 </ChatWindowHeader>
 
                                 <ChatWindowContent>
-                                    <MessageList conversationId={displayConversationId} />
+                                    <MessageList key={displayConversationId} conversationId={displayConversationId} />
                                 </ChatWindowContent>
 
                                 <ChatWindowFooter>
@@ -204,6 +204,7 @@ export function ChatInterface() {
                     onOpenChange={setShowNewGroupModal}
                 />
                 <SettingsModal
+                    key={showSettingsModal}
                     open={showSettingsModal}
                     onOpenChange={setShowSettingsModal}
                 />

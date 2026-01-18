@@ -15,7 +15,6 @@ export function MessageList({ conversationId }) {
     const topSentinelRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const prevScrollHeightRef = useRef(0);
-    // const queryClient = useQueryClient(); // removed unused
 
     const {
         data,
@@ -36,11 +35,6 @@ export function MessageList({ conversationId }) {
         enabled: !!conversationId,
         refetchOnWindowFocus: false,
     });
-
-    // Use a unique key on the component or a local ref to reset live messages when conversationId changes
-    useEffect(() => {
-        setLiveMessages(prev => prev.length === 0 ? prev : []);
-    }, [conversationId]);
 
     const optimisticMessagesRef = useRef(optimisticMessages);
     useEffect(() => {
@@ -158,7 +152,7 @@ export function MessageList({ conversationId }) {
         if (!isFetchingNextPage && sortedMessages.length > 0 && !prevScrollHeightRef.current) {
             messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
         }
-    }, [conversationId, isLoading]);
+    }, [conversationId, isLoading, isFetchingNextPage, sortedMessages.length]);
 
     useEffect(() => {
         if (liveMessages.length > 0 || optimisticArray.length > 0) {

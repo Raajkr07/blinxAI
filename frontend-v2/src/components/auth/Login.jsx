@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import { authApi } from '../../api';
 import { useAuthStore } from '../../stores';
 import { Button, Input } from '../ui';
@@ -79,7 +79,7 @@ export function Login({ onSwitchToSignup }) {
     };
 
     return (
-        <motion.div
+        <Motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass-strong rounded-2xl p-8 space-y-6"
@@ -116,7 +116,7 @@ export function Login({ onSwitchToSignup }) {
             )}
 
             {step === 'otp' && (
-                <motion.form
+                <Motion.form
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     onSubmit={handleVerifyOtp}
@@ -166,7 +166,7 @@ export function Login({ onSwitchToSignup }) {
                     >
                         Resend OTP
                     </button>
-                </motion.form>
+                </Motion.form>
             )}
 
             <div className="text-center pt-4 border-t border-gray-800">
@@ -180,6 +180,6 @@ export function Login({ onSwitchToSignup }) {
                     </button>
                 </p>
             </div>
-        </motion.div>
+        </Motion.div>
     );
 }

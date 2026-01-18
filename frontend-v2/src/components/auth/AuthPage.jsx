@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Login } from './Login';
 import { Signup } from './Signup';
 
@@ -14,7 +14,7 @@ export function AuthPage() {
             </div>
 
             <div className="w-full max-w-[448px] mx-auto">
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-8"
@@ -23,27 +23,27 @@ export function AuthPage() {
                         Blink
                     </h1>
                     <p className="text-base text-gray-400">Futuristic Chat Experience</p>
-                </motion.div>
+                </Motion.div>
 
                 <AnimatePresence mode="wait">
                     {mode === 'login' ? (
-                        <motion.div
+                        <Motion.div
                             key="login"
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                         >
                             <Login onSwitchToSignup={() => setMode('signup')} />
-                        </motion.div>
+                        </Motion.div>
                     ) : (
-                        <motion.div
+                        <Motion.div
                             key="signup"
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                         >
                             <Signup onSwitchToLogin={() => setMode('login')} />
-                        </motion.div>
+                        </Motion.div>
                     )}
                 </AnimatePresence>
             </div>

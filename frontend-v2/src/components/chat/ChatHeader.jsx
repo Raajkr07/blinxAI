@@ -81,8 +81,9 @@ export function ChatHeader() {
             clearActiveConversation();
             toast.success('Left group');
         },
-        onError: () => {
-            toast.error('Failed to leave group');
+        onError: (error) => {
+            const message = error.response?.data?.message || 'Failed to leave group. Note: Last member cannot leave, try deleting the chat instead.';
+            toast.error(message, { duration: 5000 });
         },
     });
 
@@ -246,12 +247,12 @@ export function ChatHeader() {
                             </SimpleDropdownItem>
                         )}
 
-                        {!isGroup && !isAI && (
+                        {!isAI && (
                             <SimpleDropdownItem
                                 onClick={() => setShowDeleteConfirm(true)}
                                 destructive
                             >
-                                Delete Chat
+                                {isGroup ? 'Delete Group' : 'Delete Chat'}
                             </SimpleDropdownItem>
                         )}
                     </SimpleDropdown>
@@ -289,11 +290,19 @@ export function ChatHeader() {
                 open={showLeaveConfirm}
                 onOpenChange={setShowLeaveConfirm}
                 title="Leave Group"
-                description="Are you sure you want to leave this group? You'll need to be re-added to join again."
-                confirmText="Leave"
+                description={
+                    conversation.participants?.length <= 1
+                        ? "You are the last member of this group. You cannot leave the group empty. Please delete the chat instead."
+                        : "Are you sure you want to leave this group? You'll need to be re-added to join again."
+                }
+                confirmText={conversation.participants?.length <= 1 ? "Got it" : "Leave Group"}
                 cancelText="Cancel"
-                variant="danger"
+                variant={conversation.participants?.length <= 1 ? "default" : "danger"}
                 onConfirm={() => {
+                    if (conversation.participants?.length <= 1) {
+                        setShowLeaveConfirm(false);
+                        return;
+                    }
                     leaveGroupMutation.mutate();
                     setShowLeaveConfirm(false);
                 }}

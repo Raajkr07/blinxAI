@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 export function Modal({
@@ -23,88 +23,90 @@ export function Modal({
 
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
-            <AnimatePresence>
-                {open && (
-                    <Dialog.Portal forceMount>
-                        <Dialog.Overlay asChild>
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[var(--z-modal-backdrop)]"
-                            />
-                        </Dialog.Overlay>
+            <Dialog.Portal forceMount>
+                <AnimatePresence>
+                    {open && (
+                        <>
+                            <Dialog.Overlay asChild>
+                                <Motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[var(--z-modal-backdrop)]"
+                                />
+                            </Dialog.Overlay>
 
-                        <Dialog.Content asChild>
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                transition={{ duration: 0.2 }}
-                                className={cn(
-                                    'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-                                    'w-full',
-                                    sizeClasses[size],
-                                    'glass-strong rounded-xl p-6',
-                                    'z-[var(--z-modal)]',
-                                    'focus:outline-none',
-                                    'text-[var(--color-foreground)]',
-                                    className
-                                )}
-                            >
-                                {(title || description) && (
-                                    <div className="mb-4">
-                                        {title && (
-                                            <Dialog.Title className="text-xl font-semibold text-[var(--color-foreground)] mb-2">
-                                                {title}
-                                            </Dialog.Title>
-                                        )}
-                                        {description && (
-                                            <Dialog.Description className="text-sm text-[var(--color-gray-400)]">
-                                                {description}
-                                            </Dialog.Description>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div>{children}</div>
-
-                                {showClose && (
-                                    <Dialog.Close asChild>
-                                        <button
-                                            className={cn(
-                                                'absolute top-4 right-4',
-                                                'h-8 w-8 rounded-lg',
-                                                'flex items-center justify-center',
-                                                'text-[var(--color-gray-400)] hover:text-[var(--color-foreground)]',
-                                                'hover:bg-[var(--color-border)]',
-                                                'transition-colors duration-200',
-                                                'focus-ring'
+                            <Dialog.Content asChild>
+                                <Motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    transition={{ duration: 0.2 }}
+                                    className={cn(
+                                        'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+                                        'w-full',
+                                        sizeClasses[size],
+                                        'glass-strong rounded-xl p-6',
+                                        'z-[var(--z-modal)]',
+                                        'focus:outline-none',
+                                        'text-[var(--color-foreground)]',
+                                        className
+                                    )}
+                                >
+                                    {(title || description) && (
+                                        <div className="mb-4">
+                                            {title && (
+                                                <Dialog.Title className="text-xl font-semibold text-[var(--color-foreground)] mb-2">
+                                                    {title}
+                                                </Dialog.Title>
                                             )}
-                                            aria-label="Close"
-                                        >
-                                            <svg
-                                                width="15"
-                                                height="15"
-                                                viewBox="0 0 15 15"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
+                                            {description && (
+                                                <Dialog.Description className="text-sm text-[var(--color-gray-400)]">
+                                                    {description}
+                                                </Dialog.Description>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div>{children}</div>
+
+                                    {showClose && (
+                                        <Dialog.Close asChild>
+                                            <button
+                                                className={cn(
+                                                    'absolute top-4 right-4',
+                                                    'h-8 w-8 rounded-lg',
+                                                    'flex items-center justify-center',
+                                                    'text-[var(--color-gray-400)] hover:text-[var(--color-foreground)]',
+                                                    'hover:bg-[var(--color-border)]',
+                                                    'transition-colors duration-200',
+                                                    'focus-ring'
+                                                )}
+                                                aria-label="Close"
                                             >
-                                                <path
-                                                    d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z"
-                                                    fill="currentColor"
-                                                    fillRule="evenodd"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </button>
-                                    </Dialog.Close>
-                                )}
-                            </motion.div>
-                        </Dialog.Content>
-                    </Dialog.Portal>
-                )}
-            </AnimatePresence>
+                                                <svg
+                                                    width="15"
+                                                    height="15"
+                                                    viewBox="0 0 15 15"
+                                                    fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                >
+                                                    <path
+                                                        d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z"
+                                                        fill="currentColor"
+                                                        fillRule="evenodd"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        </Dialog.Close>
+                                    )}
+                                </Motion.div>
+                            </Dialog.Content>
+                        </>
+                    )}
+                </AnimatePresence>
+            </Dialog.Portal>
         </Dialog.Root>
     );
 }

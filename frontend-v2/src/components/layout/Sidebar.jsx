@@ -12,10 +12,7 @@ export function Sidebar({ children }) {
     useEffect(() => {
         if (isMobile) {
             setSidebarWidth(window.innerWidth);
-        } else if (isSidebarCollapsed) {
-
-        } else {
-
+        } else if (!isSidebarCollapsed) {
             if (sidebarWidth < 240 || sidebarWidth > 600) {
                 setSidebarWidth(300);
             }

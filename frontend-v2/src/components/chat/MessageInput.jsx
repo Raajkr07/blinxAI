@@ -1,19 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi, socketService, aiApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
-import { useChatStore, useAuthStore } from '../../stores';
+import { useAuthStore, useChatStore } from '../../stores';
 import { Button, Input } from '../ui';
 import { AutoReplySuggestions } from './AutoReplySuggestions';
 import { generateId } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
-
-
 export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
+    const user = useAuthStore((state) => state.user);
     const { addOptimisticMessage, removeOptimisticMessage } = useChatStore();
-    const { user } = useAuthStore();
     const queryClient = useQueryClient();
 
     const { data: messagesPage } = useQuery({
@@ -30,16 +28,16 @@ export function MessageInput({ conversationId }) {
     });
 
     const lastReceivedMessage = useMemo(() => {
-        if (!messagesPage) return null;
+        if (!messagesPage || !user) return null;
 
         const messages = Array.isArray(messagesPage)
             ? messagesPage
             : messagesPage.content || [];
 
         return messages
-            .filter(msg => msg.senderId !== user?.id && msg.senderId !== 'me')
+            .filter(msg => msg.senderId !== user.id && msg.senderId !== 'me')
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-    }, [messagesPage, user?.id]);
+    }, [messagesPage, user]);
 
     const sendMessageMutation = useMutation({
         mutationFn: async (body) => {
@@ -71,6 +69,7 @@ export function MessageInput({ conversationId }) {
             return { tempId };
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
         },
         onError: (error, variables, context) => {
             console.error('Send message failed:', error);

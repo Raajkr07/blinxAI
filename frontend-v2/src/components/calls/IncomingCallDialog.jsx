@@ -1,11 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { callsApi } from '../../api';
 import { useCallStore } from '../../stores';
 import { Button, Avatar } from '../ui';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-
 
 export function IncomingCallDialog() {
     const { incomingCall, acceptCall, rejectCall } = useCallStore();
@@ -32,20 +31,19 @@ export function IncomingCallDialog() {
         },
     });
 
-    const handleAccept = () => {
-        if (incomingCall?.id) {
-            acceptMutation.mutate(incomingCall.id);
-        }
-    };
+    const incomingCallId = incomingCall?.id;
 
-    const handleReject = () => {
-        if (incomingCall?.id) {
-            rejectMutation.mutate(incomingCall.id);
-        } else {
-            rejectCall();
-        }
-    };
+    const handleReject = useCallback(() => {
+        if (!incomingCallId) return;
+        rejectMutation.mutate(incomingCallId);
+    }, [incomingCallId, rejectMutation]);
 
+    const handleAccept = useCallback(() => {
+        if (!incomingCallId) return;
+        acceptMutation.mutate(incomingCallId);
+    }, [incomingCallId, acceptMutation]);
+
+    const isVideo = useMemo(() => incomingCall?.callType === 'video', [incomingCall?.callType]);
 
     useEffect(() => {
         if (incomingCall) {
@@ -55,21 +53,19 @@ export function IncomingCallDialog() {
 
             return () => clearTimeout(timeout);
         }
-    }, [incomingCall]);
+    }, [incomingCall, handleReject]);
 
     if (!incomingCall) return null;
 
-    const isVideo = incomingCall.callType === 'video';
-
     return (
         <AnimatePresence>
-            <motion.div
+            <Motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/80 backdrop-blur-sm"
             >
-                <motion.div
+                <Motion.div
                     initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.9, y: 20 }}
@@ -95,7 +91,7 @@ export function IncomingCallDialog() {
 
 
                     <div className="flex justify-center mb-8">
-                        <motion.div
+                        <Motion.div
                             animate={{
                                 scale: [1, 1.2, 1],
                                 opacity: [0.5, 1, 0.5],
@@ -120,7 +116,7 @@ export function IncomingCallDialog() {
                                     fill="currentColor"
                                 />
                             </svg>
-                        </motion.div>
+                        </Motion.div>
                     </div>
 
 
@@ -175,8 +171,8 @@ export function IncomingCallDialog() {
                             Accept
                         </Button>
                     </div>
-                </motion.div>
-            </motion.div>
+                </Motion.div>
+            </Motion.div>
         </AnimatePresence>
     );
 }
