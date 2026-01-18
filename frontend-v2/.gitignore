@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 
-# Dependencies
 node_modules/
 
 # Production build
