@@ -58,6 +58,8 @@ public class EmailServiceImpl {
             try {
                 htmlContent = templateEngine.process("otp-mail", context);
             } catch (Exception e) {
+                // If template engine fails for some reason, we send a basic HTML fallback. 
+                // Better than failing the whole user flow.
                 log.error("Failed to process email template 'otp-mail'. Using fallback text. Error: {}", e.getMessage());
                 htmlContent = "<html><body><h2>Your OTP Code</h2><p>Your OTP code is: <strong>" + otp + "</strong></p><p>This code will expire in 10 minutes.</p></body></html>";
             }
