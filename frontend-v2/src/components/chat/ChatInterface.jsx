@@ -20,6 +20,7 @@ import {
     ChatHeader,
     ChatTabs,
 } from '../chat';
+import { CallLogs } from '../calls';
 import { AIAssistantButton } from './AIAssistantButton';
 
 const NewChatModal = lazy(() => import('./NewChatModal').then(m => ({ default: m.NewChatModal })));
@@ -30,7 +31,7 @@ export function ChatInterface() {
     const { user, logout } = useAuthStore();
     const { activeConversationId } = useChatStore();
     const { tabs, getActiveTab } = useTabsStore();
-    const { isSidebarCollapsed } = useUIStore();
+    const { isSidebarCollapsed, activeView } = useUIStore();
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [showNewGroupModal, setShowNewGroupModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -67,6 +68,53 @@ export function ChatInterface() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Call Logs Button */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                    const { setActiveView } = useUIStore.getState();
+                                    setActiveView(activeView === 'calls' ? 'chat' : 'calls');
+                                }}
+                                title={activeView === 'calls' ? 'Back to Chat' : 'Call Logs'}
+                                className={cn(
+                                    "transition-colors",
+                                    activeView === 'calls' && "bg-blue-500/10 text-blue-500"
+                                )}
+                            >
+                                {activeView === 'calls' ? (
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 15 15"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M6.85355 3.14645C7.04882 3.34171 7.04882 3.65829 6.85355 3.85355L3.70711 7H12.5C12.7761 7 13 7.22386 13 7.5C13 7.77614 12.7761 8 12.5 8H3.70711L6.85355 11.1464C7.04882 11.3417 7.04882 11.6583 6.85355 11.8536C6.65829 12.0488 6.34171 12.0488 6.14645 11.8536L2.14645 7.85355C1.95118 7.65829 1.95118 7.34171 2.14645 7.14645L6.14645 3.14645C6.34171 2.95118 6.65829 2.95118 6.85355 3.14645Z"
+                                            fill="currentColor"
+                                            fillRule="evenodd"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                ) : (
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 15 15"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M4.76447 2.98499C4.88558 2.73024 5.14395 2.56836 5.42857 2.56836H9.57143C9.85605 2.56836 10.1144 2.73024 10.2355 2.98499L11.0355 4.58499C11.1566 4.83974 11.1566 5.13862 11.0355 5.39337L10.5 6.46479V11.4286C10.5 11.7428 10.2428 12 9.92857 12H5.07143C4.75721 12 4.5 11.7428 4.5 11.4286V6.46479L3.96447 5.39337C3.84337 5.13862 3.84337 4.83974 3.96447 4.58499L4.76447 2.98499ZM5.85714 3.56836L5.28571 4.71122L5.82143 5.78264C5.94253 6.03739 5.94253 6.33627 5.82143 6.59102L5.5 7.23479V11H9.5V7.23479L9.17857 6.59102C9.05747 6.33627 9.05747 6.03739 9.17857 5.78264L9.71429 4.71122L9.14286 3.56836H5.85714Z"
+                                            fill="currentColor"
+                                            fillRule="evenodd"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                )}
+                            </Button>
                         </SidebarHeader>
 
                         <div className={cn("p-4 border-b border-[var(--color-border)] space-y-3", isSidebarCollapsed && "px-2")}>
@@ -172,25 +220,40 @@ export function ChatInterface() {
                 }
             >
                 < ChatWindow >
-                    {tabs.length > 0 && <ChatTabs />}
+                    {activeView === 'calls' ? (
+                        <>
+                            <ChatWindowHeader>
+                                <div className="flex items-center gap-3 px-4">
+                                    <h1 className="text-lg font-semibold text-[var(--color-foreground)]">
+                                        Call Logs
+                                    </h1>
+                                </div>
+                            </ChatWindowHeader>
+                            <CallLogs />
+                        </>
+                    ) : (
+                        <>
+                            {tabs.length > 0 && <ChatTabs />}
 
-                    {
-                        displayConversationId ? (
-                            <>
-                                <ChatWindowHeader>
-                                    <ChatHeader />
-                                </ChatWindowHeader>
+                            {
+                                displayConversationId ? (
+                                    <>
+                                        <ChatWindowHeader>
+                                            <ChatHeader />
+                                        </ChatWindowHeader>
 
-                                <ChatWindowContent>
-                                    <MessageList key={displayConversationId} conversationId={displayConversationId} />
-                                </ChatWindowContent>
+                                        <ChatWindowContent>
+                                            <MessageList key={displayConversationId} conversationId={displayConversationId} />
+                                        </ChatWindowContent>
 
-                                <ChatWindowFooter>
-                                    <MessageInput conversationId={displayConversationId} />
-                                </ChatWindowFooter>
-                            </>
-                        ) : null
-                    }
+                                        <ChatWindowFooter>
+                                            <MessageInput conversationId={displayConversationId} />
+                                        </ChatWindowFooter>
+                                    </>
+                                ) : null
+                            }
+                        </>
+                    )}
                 </ChatWindow >
             </AppShell >
 
