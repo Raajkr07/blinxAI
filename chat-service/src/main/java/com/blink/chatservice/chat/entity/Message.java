@@ -14,6 +14,7 @@ public class Message {
     @Id
     private String id;
     @Indexed
+    // Indexing conversationId for fast chat history loading.
     private String conversationId;
     private String senderId;
     private String recipientId;

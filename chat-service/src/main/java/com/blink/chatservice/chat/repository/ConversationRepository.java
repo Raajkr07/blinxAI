@@ -13,6 +13,7 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     List<Conversation> findByParticipantsContaining(String userId);
     List<Conversation> findByParticipantsContainingAndType(String userId, ConversationType type);
 
+    // Custom query to find exact match for 2-person DM. Ensuring $size: 2 to avoid matching group chats with same members.
     @Query("{ 'type': ?0, 'participants': { $all: ?1, $size: 2 } }")
     Optional<Conversation> findDirectByParticipants(ConversationType type, List<String> users);
 }

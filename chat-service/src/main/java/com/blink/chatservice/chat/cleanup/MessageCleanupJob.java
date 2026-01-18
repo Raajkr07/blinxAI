@@ -13,7 +13,8 @@ public class MessageCleanupJob {
 
     private final MessageRepository messageRepository;
 
-    // every night at 2 am it will work
+    // Running soft-delete at 2 AM to avoid peak hours.
+    // WARNING: current implementation loads all messages. Needs refactoring to bulk update for production scale.
     @Scheduled(cron = "0 0 2 * * *")
     public void softDeleteOldMessages() {
         LocalDateTime threshold = LocalDateTime.now().minusDays(7);

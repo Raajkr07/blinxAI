@@ -20,6 +20,7 @@ public class Conversation {
     private ConversationType type;
     private Set<String> participants = new HashSet<>();
     private Set<String> admins = new HashSet<>();
+    // Caching snippet of last message to avoid fetching message collection for list view.
     private String lastMessagePreview;
     private LocalDateTime lastMessageAt;
     private LocalDateTime createdAt = LocalDateTime.now();
