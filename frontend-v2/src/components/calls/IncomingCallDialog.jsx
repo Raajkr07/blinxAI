@@ -9,6 +9,13 @@ import toast from 'react-hot-toast';
 export function IncomingCallDialog() {
     const { incomingCall, acceptCall, rejectCall } = useCallStore();
 
+    // Debug logging
+    useEffect(() => {
+        if (incomingCall) {
+            console.log('IncomingCallDialog - Incoming call data:', incomingCall);
+        }
+    }, [incomingCall]);
+
     const acceptMutation = useMutation({
         mutationFn: (callId) => callsApi.acceptCall(callId),
         onSuccess: () => {
@@ -43,7 +50,11 @@ export function IncomingCallDialog() {
         acceptMutation.mutate(incomingCallId);
     }, [incomingCallId, acceptMutation]);
 
-    const isVideo = useMemo(() => incomingCall?.callType === 'video', [incomingCall?.callType]);
+    // Handle both uppercase and lowercase call types
+    const isVideo = useMemo(() => {
+        const type = incomingCall?.type || incomingCall?.callType;
+        return type === 'VIDEO' || type === 'video';
+    }, [incomingCall?.type, incomingCall?.callType]);
 
     useEffect(() => {
         if (incomingCall) {
@@ -55,7 +66,12 @@ export function IncomingCallDialog() {
         }
     }, [incomingCall, handleReject]);
 
-    if (!incomingCall) return null;
+    if (!incomingCall) {
+        console.log('IncomingCallDialog - No incoming call, returning null');
+        return null;
+    }
+
+    console.log('IncomingCallDialog - Rendering dialog for call:', incomingCallId);
 
     return (
         <AnimatePresence>
@@ -73,18 +89,18 @@ export function IncomingCallDialog() {
                 >
 
                     <div className="text-center mb-8">
-                        <div className="mb-4">
+                        <div className="mb-6">
                             <Avatar
                                 src={incomingCall.callerAvatar}
                                 name={incomingCall.callerName}
                                 size="xl"
-                                className="mx-auto"
+                                className="mx-auto ring-4 ring-white/10"
                             />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">
+                        <h2 className="text-3xl font-bold text-white mb-3">
                             {incomingCall.callerName}
                         </h2>
-                        <p className="text-gray-400">
+                        <p className="text-lg text-gray-300 font-medium">
                             Incoming {isVideo ? 'video' : 'audio'} call...
                         </p>
                     </div>
@@ -101,18 +117,22 @@ export function IncomingCallDialog() {
                                 repeat: Infinity,
                                 ease: 'easeInOut',
                             }}
-                            className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center"
+                            className="h-20 w-20 rounded-full bg-white/10 flex items-center justify-center"
                         >
                             <svg
-                                width="32"
-                                height="32"
-                                viewBox="0 0 15 15"
+                                width="40"
+                                height="40"
+                                viewBox="0 0 24 24"
                                 fill="none"
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="text-white"
                             >
                                 <path
-                                    d="M7.5 1C6.67157 1 6 1.67157 6 2.5V7.5C6 8.32843 6.67157 9 7.5 9C8.32843 9 9 8.32843 9 7.5V2.5C9 1.67157 8.32843 1 7.5 1Z"
+                                    d="M12 2C10.3431 2 9 3.34315 9 5V12C9 13.6569 10.3431 15 12 15C13.6569 15 15 13.6569 15 12V5C15 3.34315 13.6569 2 12 2Z"
+                                    fill="currentColor"
+                                />
+                                <path
+                                    d="M6 10C6.55228 10 7 10.4477 7 11V12C7 14.7614 9.23858 17 12 17C14.7614 17 17 14.7614 17 12V11C17 10.4477 17.4477 10 18 10C18.5523 10 19 10.4477 19 11V12C19 15.5265 16.3923 18.4439 13 18.9291V21H15C15.5523 21 16 21.4477 16 22C16 22.5523 15.5523 23 15 23H9C8.44772 23 8 22.5523 8 22C8 21.4477 8.44772 21 9 21H11V18.9291C7.60771 18.4439 5 15.5265 5 12V11C5 10.4477 5.44772 10 6 10Z"
                                     fill="currentColor"
                                 />
                             </svg>
@@ -121,55 +141,56 @@ export function IncomingCallDialog() {
 
 
                     <div className="flex gap-4">
-                        <Button
-                            variant="danger"
-                            size="lg"
-                            onClick={handleReject}
-                            disabled={rejectMutation.isPending}
-                            className="flex-1"
-                        >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 15 15"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-2"
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                            <Button
+                                variant="danger"
+                                size="lg"
+                                onClick={handleReject}
+                                disabled={rejectMutation.isPending}
+                                className="w-full h-14 rounded-full bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30"
                             >
-                                <path
-                                    d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z"
-                                    fill="currentColor"
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
-                            Decline
-                        </Button>
-                        <Button
-                            variant="default"
-                            size="lg"
-                            onClick={handleAccept}
-                            disabled={acceptMutation.isPending}
-                            loading={acceptMutation.isPending}
-                            className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 15 15"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-2"
+                                <svg
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-2"
+                                >
+                                    <path
+                                        d="M15.5 1.5C15.5 0.947715 15.0523 0.5 14.5 0.5C13.9477 0.5 13.5 0.947715 13.5 1.5V3.5C13.5 4.05228 13.9477 4.5 14.5 4.5C15.0523 4.5 15.5 4.05228 15.5 3.5V1.5ZM9.5 1.5C9.5 0.947715 9.05228 0.5 8.5 0.5C7.94772 0.5 7.5 0.947715 7.5 1.5V3.5C7.5 4.05228 7.94772 4.5 8.5 4.5C9.05228 4.5 9.5 4.05228 9.5 3.5V1.5ZM3.5 8C3.5 6.067 5.067 4.5 7 4.5H16C17.933 4.5 19.5 6.067 19.5 8V11.5C19.5 13.433 17.933 15 16 15H14.5V17H16C16.5523 17 17 17.4477 17 18C17 18.5523 16.5523 19 16 19H7C6.44772 19 6 18.5523 6 18C6 17.4477 6.44772 17 7 17H8.5V15H7C5.067 15 3.5 13.433 3.5 11.5V8ZM10.5 15H12.5V17H10.5V15Z"
+                                        fill="currentColor"
+                                        transform="rotate(135 12 12)"
+                                    />
+                                </svg>
+                                <span className="font-semibold">Decline</span>
+                            </Button>
+                        </div>
+                        <div className="flex-1 flex flex-col items-center gap-2">
+                            <Button
+                                variant="default"
+                                size="lg"
+                                onClick={handleAccept}
+                                disabled={acceptMutation.isPending}
+                                loading={acceptMutation.isPending}
+                                className="w-full h-14 rounded-full bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/30"
                             >
-                                <path
-                                    d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z"
-                                    fill="currentColor"
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
-                            Accept
-                        </Button>
+                                <svg
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-2"
+                                >
+                                    <path
+                                        d="M15.5 1.5C15.5 0.947715 15.0523 0.5 14.5 0.5C13.9477 0.5 13.5 0.947715 13.5 1.5V3.5C13.5 4.05228 13.9477 4.5 14.5 4.5C15.0523 4.5 15.5 4.05228 15.5 3.5V1.5ZM9.5 1.5C9.5 0.947715 9.05228 0.5 8.5 0.5C7.94772 0.5 7.5 0.947715 7.5 1.5V3.5C7.5 4.05228 7.94772 4.5 8.5 4.5C9.05228 4.5 9.5 4.05228 9.5 3.5V1.5ZM3.5 8C3.5 6.067 5.067 4.5 7 4.5H16C17.933 4.5 19.5 6.067 19.5 8V11.5C19.5 13.433 17.933 15 16 15H14.5V17H16C16.5523 17 17 17.4477 17 18C17 18.5523 16.5523 19 16 19H7C6.44772 19 6 18.5523 6 18C6 17.4477 6.44772 17 7 17H8.5V15H7C5.067 15 3.5 13.433 3.5 11.5V8ZM10.5 15H12.5V17H10.5V15Z"
+                                        fill="currentColor"
+                                    />
+                                </svg>
+                                <span className="font-semibold">Accept</span>
+                            </Button>
+                        </div>
                     </div>
                 </Motion.div>
             </Motion.div>
