@@ -24,26 +24,36 @@ public class OpenApiConfig {
     public OpenAPI blinkOpenAPI() {
         return new OpenAPI()
                 .info(new io.swagger.v3.oas.models.info.Info()
-                        .title("Blink Chat Service API")
-                        .version("v1")
-                        .description("API documentation for Blink-chat service backend. Includes authentication, messaging, and real-time features.")
+                        .title("Blink Professional Chat Service API")
+                        .version("v1.0.0")
+                        .description("<h2>High-Performance Real-Time Messaging Gateway</h2>" +
+                                "<p>Welcome to the <b>Blink</b> Backend API. This service handles the core orchestration for messaging, AI assistant interactions, and WebRTC signaling.</p>" +
+                                "<h3>🚀 Key Features</h3>" +
+                                "<ul>" +
+                                "  <li><b>Secure Auth:</b> Standardized JWT-based stateless authentication flow.</li>" +
+                                "  <li><b>Real-time:</b> WebSocket-driven message broadcasting and presence tracking.</li>" +
+                                "  <li><b>AI Integrated:</b> Native support for LLM-orchestrated tasks and AI-driven and MCP chat analysis and more.</li>" +
+                                "  <li><b>Media-Ready:</b> Robust signaling infrastructure for peer-to-peer Video/Audio calls.</li>" +
+                                "</ul>" +
+                                "<p><i>For support or enterprise licensing, contact the platform team at <a href='mailto:dev-support@blink.com'>dev-support@blink.com</a></i></p>")
+                        .termsOfService("https://blink.com/terms")
                         .contact(new io.swagger.v3.oas.models.info.Contact()
-                                .name("Blink Backend Team")
-                                .email("support@blink.com")
+                                .name("Blink Engineering")
+                                .email("dev-support@blink.com")
                                 .url("https://blink.com"))
                         .license(new io.swagger.v3.oas.models.info.License()
-                                .name("MIT")
-                                .url("https://opensource.org/licenses/MIT"))
+                                .name("COMMERCIAL")
+                                .url("https://blink.com/license"))
                 )
                 .addServersItem(new io.swagger.v3.oas.models.servers.Server()
                         .url(serverUrl)
-                        .description("API Server"))
+                        .description("Cloud Gateway - Production"))
                 .components(new Components()
                         .addSecuritySchemes("bearerToken", new io.swagger.v3.oas.models.security.SecurityScheme()
                                 .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("JWT Bearer token for authentication")))
+                                .description("<b>Standard JWT Authorization.</b><br/>Provide token in format: <code>Bearer {token}</code>")))
                 .addSecurityItem(new io.swagger.v3.oas.models.security.SecurityRequirement()
                         .addList("bearerToken"));
     }
