@@ -65,18 +65,19 @@ html,
     border-color: var(--color-border);
 }
 
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--color-background);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
     background: var(--color-border);
-    border-radius: 9999px;
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -95,10 +96,7 @@ html,
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.animate-slide-in-up {
-    animation: slideInUp 0.2s ease-out;
-}
-
+/* Animations */
 @keyframes slideInUp {
     from {
         transform: translateY(10px);
@@ -109,4 +107,13 @@ html,
         transform: translateY(0);
         opacity: 1;
     }
+}
+
+.animate-slide-in-up {
+    animation: slideInUp 0.2s ease-out;
+}
+
+/* Video mirror effect for local camera */
+.mirror {
+    transform: scaleX(-1);
 }
