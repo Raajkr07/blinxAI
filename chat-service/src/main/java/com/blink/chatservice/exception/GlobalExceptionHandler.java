@@ -45,6 +45,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
+    // Handling @Valid failures for JSON bodies.
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,
             HttpHeaders headers,
@@ -73,6 +74,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BindException.class)
+    // Handling query param binding failures.
     public ResponseEntity<ErrorResponse> handleBindException(
             BindException ex,
             HttpServletRequest request
@@ -142,6 +144,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
+    // Catch-all for unhandled runtimes. Logging stack trace here is critical.
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, WebRequest request) {
         String path = getPath(request);
         log.error("Unhandled exception for {}: {}", path, ex.getMessage(), ex);
