@@ -34,6 +34,7 @@ public class AiChatController {
 
             Conversation aiConv = aiService.getOrCreateAiConversation(userId);
 
+            // Triggering AI processing. This involves a loop of tool calls if needed.
             Message aiResponse = aiService.processAiMessage(
                     userId,
                     aiConv.getId(),

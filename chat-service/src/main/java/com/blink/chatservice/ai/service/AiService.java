@@ -23,6 +23,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+// Service wrapper for OpenAI / MCP tool calls.
+// Acts as an orchestration layer between ChatService and LLMs.
 @Service
 @Slf4j
 public class AiService {
@@ -70,7 +72,8 @@ public class AiService {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Save user message FIRST before processing AI response
+            // Save user message FIRST before processing AI response.
+            // This ensures if AI fails/timeouts, user at least sees their own message.
             Message userMsg = new Message();
             userMsg.setConversationId(conversationId);
             userMsg.setSenderId(userId);
@@ -269,7 +272,7 @@ public class AiService {
                 // 2. Execute tools and add results
                 executeToolsSafely(userId, responseMessage.tool_calls(), conversation);
                 
-                // 3. Loop again to let AI process tool outputs
+                // 3. Loop again to let AI process tool outputs and generate final response.
                 continue;
             }
 

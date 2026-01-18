@@ -26,7 +26,7 @@ public class AiAnalysisController {
     public ResponseEntity<ConversationAnalysis> summarizeConversation(
             @PathVariable String conversationId
     ) {
-        // Fetch last 50 messages for context
+        // Fetching last 50 messages to give enough context for a meaningful summary.
         List<Message> messages = messageRepository.findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(
                 conversationId, 
                 PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"))
@@ -45,8 +45,7 @@ public class AiAnalysisController {
     public ResponseEntity<AutoReplySuggestions> generateAutoReplies(
             @RequestBody AutoReplyRequest request
     ) {
-        // We can either fetch by ID or use provided text.
-        // If messageId is provided, fetch it.
+        // Flexible input: can take a message ID or raw text.
         Message message;
         if (request.messageId() != null) {
             message = messageRepository.findById(request.messageId()).orElse(null);
