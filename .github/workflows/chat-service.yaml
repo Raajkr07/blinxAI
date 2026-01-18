@@ -36,7 +36,7 @@ jobs:
       - name: Run tests
         run: |
           cd chat-service
-          ../mvnw test -B
+          mvn test -B
 
   build-push:
     name: Build & Push Docker Image
@@ -55,10 +55,15 @@ jobs:
           distribution: temurin
           cache: maven
 
+      - name: Test Chat Service
+        run: |
+          cd chat-service
+          mvn test -B
+
       - name: Build application
         run: |
           cd chat-service
-          ../mvnw clean package -DskipTests
+          mvn clean package -DskipTests
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
