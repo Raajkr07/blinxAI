@@ -23,11 +23,10 @@ public class JwtUtil {
 
     private Key getKey() {
         try {
-            // Try to decode as Base64 first
+            // Trying Base64 decode first, falling back to raw bytes. Flexible for dev/prod secrets.
             byte[] keyBytes = java.util.Base64.getDecoder().decode(jwtConfig.getSecret());
             return Keys.hmacShaKeyFor(keyBytes);
         } catch (IllegalArgumentException e) {
-            // If not Base64 (for development)
             return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
         }
     }
@@ -43,14 +42,11 @@ public class JwtUtil {
         if (user.getUsername() != null) {
             claims.put("username", user.getUsername());
         }
-        claims.put("type", "access"); // Mark as access token
+        claims.put("type", "access");
         return createToken(claims, user.getId(), jwtConfig.getExpiration());
     }
 
-    /**
-     * Generate a refresh token for long-term authentication (7-30 days)
-     * Refresh tokens have minimal claims and longer expiration
-     */
+    // Minimal claims for refresh token, just needs type and userID. Keeps payload small.
     public String generateRefreshToken(String userId) {
         if (userId == null || userId.trim().isEmpty()) {
             throw new IllegalArgumentException("User ID cannot be null or empty");
@@ -72,18 +68,15 @@ public class JwtUtil {
                 .compact();
     }
     
-    // Check if a token is a refresh token
     public boolean isRefreshToken(String token) {
         String tokenType = extractClaim(token, claims -> claims.get("type", String.class));
         return "refresh".equals(tokenType);
     }
     
-    // Get token expiration date
     public Date getExpirationDate(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
     
-    // Check if token is expired
     public boolean isTokenExpired(String token) {
         Date expiration = getExpirationDate(token);
         return expiration != null && expiration.before(new Date());
@@ -114,6 +107,7 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
+            // If parsing fails (expired, modified, etc.), we return false. Caller handles generic 401.
             return false;
         }
     }

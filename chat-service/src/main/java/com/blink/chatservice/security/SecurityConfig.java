@@ -20,8 +20,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // Disabling CSRF because we use stateless JWT authentication, so browser CSRF attacks are not a concern.
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {})
+                // No server-side sessions, fully stateless.
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -33,6 +35,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/index.html",
+                                // Allowing public access to ws handshake, socket security is handled separately.
                                 "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()

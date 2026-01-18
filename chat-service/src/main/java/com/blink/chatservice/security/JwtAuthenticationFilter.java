@@ -22,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
+        // Skip JWT check for auth endpoints (login/signup) to improve performance.
         return path.startsWith("/api/v1/auth/");
     }
 
@@ -32,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        // If no bearer token, proceed without auth (Spring Security will reject if endpoint requires it).
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
@@ -47,6 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String userId = jwtUtil.extractUserId(jwt);
 
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // Explicitly setting Authentication in context so Controllers can access the user ID.
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(userId, null, null);
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
