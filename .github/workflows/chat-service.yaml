@@ -6,13 +6,13 @@ on:
     paths:
       - 'chat-service/**'
       - 'Dockerfile.chat-service'
-      - '.github/workflows/chat-service.yml'
+      - '.github/workflows/chat-service.yaml'
   pull_request:
     branches: [ main ]
     paths:
       - 'chat-service/**'
       - 'Dockerfile.chat-service'
-      - '.github/workflows/chat-service.yml'
+      - '.github/workflows/chat-service.yaml'
 
 env:
   IMAGE_REPO: raajkr07/blink

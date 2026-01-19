@@ -11,11 +11,25 @@ RUN mvn clean package -DskipTests
 
 # ---------------------------------------------------------#
 
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
+# curl for healthcheck
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
 COPY --from=build /app/target/*.jar app.jar
+
+# Change ownership to non-root user
+RUN chown appuser:appuser app.jar
+
+USER appuser
 
 EXPOSE 8080
 
