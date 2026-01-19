@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 export function ConversationList() {
     const queryClient = useQueryClient();
     const { activeConversationId, setActiveConversation, clearActiveConversation } = useChatStore();
-    const { openTab, getTabByConversationId, closeTab } = useTabsStore();
+    const { openTab, getTabByConversationId, closeTab, activeTabId, tabs } = useTabsStore();
     const { user: currentUser } = useAuthStore();
     const [conversationToDelete, setConversationToDelete] = useState(null);
 
@@ -18,6 +18,16 @@ export function ConversationList() {
         queryKey: queryKeys.conversations,
         queryFn: chatApi.listConversations,
     });
+
+    const conversationsArray = Array.isArray(conversations)
+        ? conversations
+        : (conversations?.conversations || conversations?.content || conversations?.data || []);
+
+    const filteredConversations = conversationsArray.filter(c =>
+        c.type?.toUpperCase() !== 'AI_ASSISTANT'
+    );
+
+
 
     const deleteMutation = useMutation({
         mutationFn: (id) => chatApi.deleteConversation(id),
@@ -38,11 +48,8 @@ export function ConversationList() {
         // Prevent click if clicking on the dropdown or its items
         if (event.defaultPrevented) return;
 
-        if (event.ctrlKey || event.metaKey) {
-            openTab(conversation);
-        } else {
-            setActiveConversation(conversation.id);
-        }
+        openTab(conversation);
+        setActiveConversation(conversation.id);
     };
 
     if (isLoading) {
@@ -65,7 +72,7 @@ export function ConversationList() {
         );
     }
 
-    if (!conversations || conversations.length === 0) {
+    if (!conversationsArray || conversationsArray.length === 0) {
         return (
             <EmptyState
                 icon={<NoConversationsIcon />}
@@ -78,14 +85,16 @@ export function ConversationList() {
     return (
         <>
             <div className="space-y-1">
-                {conversations.map((conversation) => {
+                {filteredConversations.map((conversation) => {
+                    const activeTab = tabs?.find(t => t.id === activeTabId);
+                    const highlightId = activeTab?.conversationId || activeConversationId;
                     const hasTab = getTabByConversationId(conversation.id);
                     return (
                         <ConversationItem
                             key={conversation.id}
                             conversation={conversation}
                             currentUser={currentUser}
-                            isActive={activeConversationId === conversation.id}
+                            isActive={highlightId === conversation.id}
                             hasTab={!!hasTab}
                             onClick={(e) => handleConversationClick(conversation, e)}
                             onDelete={() => setConversationToDelete(conversation)}

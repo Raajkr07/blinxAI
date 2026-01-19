@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { motion as Motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { callsApi } from '../../api/calls';
 import { useAuthStore, useCallStore } from '../../stores';
@@ -9,10 +10,21 @@ import { formatDistanceToNow } from 'date-fns';
 export function CallLogs() {
     const { user } = useAuthStore();
     const { initiateCall } = useCallStore();
-    const [filter, setFilter] = useState('all'); // all, video, audio
-    const [statusFilter, setStatusFilter] = useState('all'); // all, missed, completed
+    const [filter, setFilterState] = useState('all');
+    const [statusFilter, setStatusFilterState] = useState('all');
     const [page, setPage] = useState(0);
     const pageSize = 20;
+
+    // Wrapper functions to reset page when filters change
+    const setFilter = (newFilter) => {
+        setFilterState(newFilter);
+        setPage(0);
+    };
+
+    const setStatusFilter = (newStatusFilter) => {
+        setStatusFilterState(newStatusFilter);
+        setPage(0);
+    };
 
     // Prepare API params based on what user has selected in filters
     const queryParams = {
@@ -30,7 +42,6 @@ export function CallLogs() {
         queryParams.status = 'ENDED';
     }
 
-    // Fetch call history from backend, auto-refresh every 30 seconds
     const { data: historyData, isLoading, error, refetch } = useQuery({
         queryKey: ['callHistory', queryParams],
         queryFn: () => callsApi.getCallHistory(queryParams),
@@ -99,14 +110,20 @@ export function CallLogs() {
         return call.callerId === user?.id ? call.receiverId : call.callerId;
     };
 
-    // When user changes filter, bring them back to first page
-    useEffect(() => {
-        setPage(0);
-    }, [filter, statusFilter]);
+
+    const animationProps = {
+        initial: { x: 50, opacity: 0 },
+        animate: { x: 0, opacity: 1 },
+        exit: { x: 50, opacity: 0 },
+        transition: { duration: 0.4, ease: 'easeOut' },
+    };
 
     if (isLoading) {
         return (
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <Motion.div
+                {...animationProps}
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+            >
                 {[...Array(8)].map((_, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
                         <Skeleton className="w-12 h-12 rounded-full" />
@@ -120,13 +137,16 @@ export function CallLogs() {
                         </div>
                     </div>
                 ))}
-            </div>
+            </Motion.div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex-1 flex items-center justify-center p-4">
+            <Motion.div
+                {...animationProps}
+                className="flex-1 flex items-center justify-center p-4"
+            >
                 <EmptyState
                     title="Failed to load call logs"
                     description="There was an error loading your call history. Please try again."
@@ -136,13 +156,16 @@ export function CallLogs() {
                         </Button>
                     }
                 />
-            </div>
+            </Motion.div>
         );
     }
 
     if (!callLogs || callLogs.length === 0) {
         return (
-            <div className="flex-1 flex items-center justify-center p-4">
+            <Motion.div
+                {...animationProps}
+                className="flex-1 flex items-center justify-center p-4"
+            >
                 <EmptyState
                     icon={
                         <svg width="48" height="48" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-gray-400">
@@ -154,12 +177,15 @@ export function CallLogs() {
                         ? "You haven't made or received any calls yet."
                         : "No calls match the selected filters."}
                 />
-            </div>
+            </Motion.div>
         );
     }
 
     return (
-        <div className="flex-1 overflow-y-auto">
+        <Motion.div
+            {...animationProps}
+            className="flex-1 overflow-y-auto"
+        >
             {/* Filter Tabs */}
             <div className="sticky top-0 bg-[var(--color-background)] border-b border-[var(--color-border)] z-10">
                 <div className="flex items-center gap-2 p-4 overflow-x-auto">
@@ -327,6 +353,6 @@ export function CallLogs() {
                     </div>
                 </div>
             )}
-        </div>
+        </Motion.div>
     );
 }

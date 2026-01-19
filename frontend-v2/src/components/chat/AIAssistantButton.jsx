@@ -4,6 +4,7 @@ import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useUIStore } from '../../stores';
 import { Button } from '../ui';
 import { cn } from '../../lib/utils';
+import toast from 'react-hot-toast';
 
 export function AIAssistantButton({ compact }) {
     const { setActiveConversation } = useChatStore();
@@ -17,7 +18,23 @@ export function AIAssistantButton({ compact }) {
 
     const handleOpenAI = () => {
         if (aiConversation?.id) {
-            setActiveConversation(aiConversation.id);
+            const promise = new Promise((resolve) => setTimeout(resolve, 1000));
+
+            toast.promise(
+                promise,
+                {
+                    loading: 'Opening...',
+                    success: <b>Here I am, grateful for you! 💖</b>,
+                    error: <b>I am deeply sorry... all connections are lost. 🥀</b>,
+                },
+                {
+                    position: 'top-center',
+                }
+            );
+
+            promise.then(() => {
+                setActiveConversation(aiConversation.id);
+            });
         }
     };
 

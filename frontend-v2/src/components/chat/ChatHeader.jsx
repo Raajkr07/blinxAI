@@ -170,15 +170,14 @@ export function ChatHeader() {
                             aria-label="AI Insights"
                         >
                             <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 15 15"
                                 fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 25 25"
+                                stroke="currentColor"
                             >
                                 <path
-                                    d="M7.5 0.875C5.49797 0.875 3.875 2.49797 3.875 4.5C3.875 6.50203 5.49797 8.125 7.5 8.125C9.50203 8.125 11.125 6.50203 11.125 4.5C11.125 2.49797 9.50203 0.875 7.5 0.875ZM1.5 13.5C1.5 11.433 3.183 9.75 5.25 9.75H9.75C11.817 9.75 13.5 11.433 13.5 13.5C13.5 13.7761 13.2761 14 13 14H2C1.72386 14 1.5 13.7761 1.5 13.5Z"
-                                    fill="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                                 />
                             </svg>
                         </Button>
@@ -188,8 +187,17 @@ export function ChatHeader() {
                         <SimpleDropdown
                             trigger={
                                 <Button variant="ghost" size="icon" aria-label="Start Call">
-                                    <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M7.5 1C6.67157 1 6 1.67157 6 2.5V7.5C6 8.32843 6.67157 9 7.5 9C8.32843 9 9 8.32843 9 7.5V2.5C9 1.67157 8.32843 1 7.5 1ZM4 6.5C4.27614 6.5 4.5 6.72386 4.5 7V7.5C4.5 9.15685 5.84315 10.5 7.5 10.5C9.15685 10.5 10.5 9.15685 10.5 7.5V7C10.5 6.72386 10.7239 6.5 11 6.5C11.2761 6.5 11.5 6.72386 11.5 7V7.5C11.5 9.70914 9.70914 11.5 7.5 11.5V13H9C9.27614 13 9.5 13.2239 9.5 13.5C9.5 13.7761 9.27614 14 9 14H6C5.72386 14 5.5 13.7761 5.5 13.5C5.5 13.2239 5.72386 13 6 13H7.5V11.5C5.29086 11.5 3.5 9.70914 3.5 7.5V7C3.5 6.72386 3.72386 6.5 4 6.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round">
+                                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                                     </svg>
                                 </Button>
                             }
@@ -207,6 +215,9 @@ export function ChatHeader() {
                             const tab = getTabByConversationId(activeConversationId);
                             if (tab) closeTab(tab.id);
                             clearActiveConversation();
+                            toast.success(<b>Chat closed!</b>, {
+                                position: 'top-center',
+                            });
                         }}
                         aria-label="Close Chat"
                     >

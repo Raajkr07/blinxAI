@@ -21,7 +21,7 @@ export function NewChatModal({ open, onOpenChange }) {
         queryKey: ['userSearch', searchQuery],
         queryFn: () => userApi.searchUsers(searchQuery),
         enabled: searchQuery.length > 0,
-        staleTime: 30000, // 30 seconds
+        staleTime: 30000,
     });
 
 

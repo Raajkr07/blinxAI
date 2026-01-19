@@ -2,6 +2,7 @@ import { useTabsStore } from '../../stores';
 import { Button, Avatar } from '../ui';
 import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export function ChatTabs() {
     const { tabs, activeTabId, setActiveTab, closeTab } = useTabsStore();
@@ -33,7 +34,7 @@ export function ChatTabs() {
                                 <Avatar src={tab.avatar} name={tab.title} size="xs" />
                             ) : (
                                 <div className="w-5 h-5 rounded-md bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] text-[10px] font-bold">
-                                    G
+                                    🟢
                                 </div>
                             )}
                             <span className="text-sm font-medium truncate flex-1">
@@ -43,6 +44,9 @@ export function ChatTabs() {
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     closeTab(tab.id);
+                                    toast.success(<b>Chat closed!</b>, {
+                                        position: 'top-center',
+                                    });
                                 }}
                                 className="p-0.5 rounded-full hover:bg-[var(--color-border)] text-[var(--color-gray-500)]"
                             >
@@ -60,7 +64,12 @@ export function ChatTabs() {
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => useTabsStore.getState().closeAllTabs()}
+                        onClick={() => {
+                            useTabsStore.getState().closeAllTabs();
+                            toast.success(<b>All chats closed!</b>, {
+                                position: 'top-center',
+                            });
+                        }}
                         className="text-xs"
                     >
                         Close All

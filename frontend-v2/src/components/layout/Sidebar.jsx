@@ -4,7 +4,7 @@ import { useUIStore } from '../../stores';
 import { Button } from '../ui';
 
 export function Sidebar({ children }) {
-    const { isSidebarOpen, isSidebarCollapsed, toggleSidebar, isMobile, sidebarWidth, setSidebarWidth } = useUIStore();
+    const { isSidebarOpen, toggleSidebar, isMobile, sidebarWidth, setSidebarWidth } = useUIStore();
     const [isResizing, setIsResizing] = useState(false);
     const sidebarRef = useRef(null);
 
@@ -12,12 +12,12 @@ export function Sidebar({ children }) {
     useEffect(() => {
         if (isMobile) {
             setSidebarWidth(window.innerWidth);
-        } else if (!isSidebarCollapsed) {
+        } else {
             if (sidebarWidth < 240 || sidebarWidth > 600) {
                 setSidebarWidth(300);
             }
         }
-    }, [isMobile, isSidebarCollapsed, setSidebarWidth, sidebarWidth]);
+    }, [isMobile, setSidebarWidth, sidebarWidth]);
 
     const startResizing = useCallback((e) => {
         e.preventDefault();
@@ -32,7 +32,7 @@ export function Sidebar({ children }) {
 
     const resize = useCallback(
         (e) => {
-            if (isResizing && !isMobile && !isSidebarCollapsed) {
+            if (isResizing && !isMobile) {
                 e.preventDefault();
                 const newWidth = e.clientX;
                 if (newWidth >= 240 && newWidth <= 600) {
@@ -40,7 +40,7 @@ export function Sidebar({ children }) {
                 }
             }
         },
-        [isResizing, isMobile, isSidebarCollapsed, setSidebarWidth]
+        [isResizing, isMobile, setSidebarWidth]
     );
 
     useEffect(() => {
@@ -79,14 +79,14 @@ export function Sidebar({ children }) {
                     'pointer-events-auto'
                 )}
                 style={{
-                    width: isMobile ? '100%' : isSidebarCollapsed ? 80 : sidebarWidth,
-                    minWidth: isSidebarCollapsed ? 80 : 240,
-                    maxWidth: isSidebarCollapsed ? 80 : 600
+                    width: isMobile ? '100%' : sidebarWidth,
+                    minWidth: 240,
+                    maxWidth: 600
                 }}
             >
                 {children}
 
-                {!isMobile && !isSidebarCollapsed && (
+                {!isMobile && (
                     <div
                         className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 active:bg-blue-500 transition-colors z-50"
                         onMouseDown={startResizing}
@@ -114,17 +114,11 @@ export function SidebarContent({ children, className }) {
 }
 
 export function SidebarFooter({ children }) {
-    const { theme, toggleTheme, isSidebarCollapsed } = useUIStore();
+    const { theme, toggleTheme } = useUIStore();
 
     return (
-        <div className={cn(
-            "flex items-center justify-between border-t border-[var(--color-border)] flex-shrink-0 transition-all",
-            isSidebarCollapsed ? "h-auto py-4 flex-col gap-4 px-0" : "h-16 px-4"
-        )}>
-            <div className={cn(
-                "flex items-center gap-2",
-                !isSidebarCollapsed && "flex-1"
-            )}>
+        <div className="flex items-center justify-between border-t border-[var(--color-border)] flex-shrink-0 transition-all h-16 px-4">
+            <div className="flex items-center gap-2 flex-1">
                 {children}
             </div>
 
@@ -133,7 +127,6 @@ export function SidebarFooter({ children }) {
                 size="icon"
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
-                className={cn(isSidebarCollapsed && "text-gray-400 hover:text-white")}
             >
                 {theme === 'dark' ? (
                     <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">

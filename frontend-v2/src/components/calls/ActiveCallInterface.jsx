@@ -23,7 +23,7 @@ export function ActiveCallInterface() {
 
     const [callDuration, setCallDuration] = useState(0);
     const [mediaStream, setMediaStream] = useState(null);
-    const [permissionError, setPermissionError] = useState(null);
+    const [hasRemoteStream, setHasRemoteStream] = useState(false);
 
     // Video element refs for displaying streams
     const localVideoRef = useRef(null);
@@ -55,7 +55,6 @@ export function ActiveCallInterface() {
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 setMediaStream(stream);
-                setPermissionError(null);
 
                 // Attach stream to local video element
                 if (localVideoRef.current && isVideo) {
@@ -65,7 +64,6 @@ export function ActiveCallInterface() {
                 console.log('Media stream acquired for call');
             } catch (error) {
                 console.error('Media stream error:', error);
-                setPermissionError(error.message);
                 toast.error('Failed to access camera/microphone. Please check permissions.');
             }
         };
@@ -75,9 +73,10 @@ export function ActiveCallInterface() {
         // Clean up media stream when component unmounts
         return () => {
             if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
             }
         };
-    }, [activeCall]);
+    }, [activeCall, mediaStream]);
 
     // Update video element when stream changes
     useEffect(() => {
@@ -85,6 +84,23 @@ export function ActiveCallInterface() {
             localVideoRef.current.srcObject = mediaStream;
         }
     }, [mediaStream]);
+
+    // Monitor remote video stream
+    useEffect(() => {
+        const checkRemoteStream = () => {
+            if (remoteVideoRef.current?.srcObject) {
+                setHasRemoteStream(true);
+            } else {
+                setHasRemoteStream(false);
+            }
+        };
+
+        // Check immediately and set up an interval to keep checking
+        checkRemoteStream();
+        const interval = setInterval(checkRemoteStream, 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (callStatus === 'active' && activeCall) {
@@ -140,7 +156,7 @@ export function ActiveCallInterface() {
                         />
 
                         {/* Placeholder when no remote stream */}
-                        {!remoteVideoRef.current?.srcObject && (
+                        {!hasRemoteStream && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center">
                                     <div className="mb-4">

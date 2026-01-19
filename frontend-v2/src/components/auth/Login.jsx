@@ -97,7 +97,7 @@ export function Login({ onSwitchToSignup }) {
                         </label>
                         <Input
                             type="text"
-                            placeholder="+1234567890 or email@example.com"
+                            placeholder="9876543100 or rajkumar07.dev@gmail.com"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             disabled={requestOtpMutation.isPending}
