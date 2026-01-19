@@ -6,11 +6,13 @@ on:
     paths:
       - 'frontend-v2/**'
       - 'Dockerfile.frontend-v2'
+      - '.github/workflows/frontend-v2.yaml'
   pull_request:
     branches: [ main ]
     paths:
       - 'frontend-v2/**'
       - 'Dockerfile.frontend-v2'
+      - '.github/workflows/frontend-v2.yaml'
 
 env:
   IMAGE_REPO: raajkr07/blink
