@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-v2
+  namespace: blink-chat
+  labels:
+    app: frontend-v2
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9091
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: frontend-v2
