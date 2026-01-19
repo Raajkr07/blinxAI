@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import toast from 'react-hot-toast';
 
 
 
 export const useUIStore = create((set) => ({
 
     isSidebarOpen: true,
-    isSidebarCollapsed: false,
     sidebarWidth: 320,
     setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
@@ -30,11 +30,7 @@ export const useUIStore = create((set) => ({
         return { isSidebarCollapsed: !state.isSidebarCollapsed };
     }),
 
-    collapseSidebar: () => set({ isSidebarCollapsed: true }),
 
-    expandSidebar: () => set({ isSidebarCollapsed: false }),
-
-    setSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),
 
     openModal: (modalName, data = null) =>
         set({ activeModal: modalName, modalData: data }),
@@ -50,6 +46,29 @@ export const useUIStore = create((set) => ({
         set((state) => {
             const newTheme = state.theme === 'dark' ? 'light' : 'dark';
             storage.set(STORAGE_KEYS.THEME, newTheme);
+
+            if (newTheme === 'dark') {
+                toast('Hello BatMan!', {
+                    icon: '🦇',
+                    position: 'bottom-left',
+                    style: {
+                        borderRadius: '10px',
+                        background: '#333',
+                        color: '#fff',
+                    },
+                });
+            } else {
+                toast('Changed to light!', {
+                    icon: '🌞',
+                    position: 'bottom-left',
+                    style: {
+                        borderRadius: '10px',
+                        background: '#333',
+                        color: '#fff',
+                    },
+                });
+            }
+
             return { theme: newTheme };
         }),
 
