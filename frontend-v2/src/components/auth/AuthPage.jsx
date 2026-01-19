@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Login } from './Login';
 import { Signup } from './Signup';
+import { BlinkingFace } from './BlinkingFace';
 
 export function AuthPage() {
     const [mode, setMode] = useState('login');
@@ -19,6 +20,9 @@ export function AuthPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-8"
                 >
+                    <div className="flex justify-center mb-4">
+                        <BlinkingFace className="w-20 h-20" />
+                    </div>
                     <h1 className="text-5xl font-bold tracking-tight glow-strong mb-2">
                         Blink
                     </h1>

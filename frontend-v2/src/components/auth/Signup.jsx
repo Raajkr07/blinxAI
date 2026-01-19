@@ -125,7 +125,7 @@ export function Signup({ onSwitchToLogin }) {
                         </label>
                         <Input
                             type="text"
-                            placeholder="9876543210"
+                            placeholder="CONTACT"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             disabled={requestOtpMutation.isPending}
@@ -138,7 +138,7 @@ export function Signup({ onSwitchToLogin }) {
                         </label>
                         <Input
                             type="email"
-                            placeholder="rajkumar07.dev@gmail.com"
+                            placeholder="EMAIL"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             disabled={requestOtpMutation.isPending}
