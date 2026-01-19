@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+// Mock Test for this project
 @SpringBootTest
 @EnableAutoConfiguration(exclude = {
 		MongoAutoConfiguration.class,
