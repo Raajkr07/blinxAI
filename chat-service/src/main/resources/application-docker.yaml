@@ -55,9 +55,7 @@ app:
       from-number: ${TWILIO_FROM_NUMBER:+12052674639}
 
   cors:
-    allowed-origins:
-      - "https://blinx-app.netlify.app"
-      - "http://localhost:8080"
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://blinx-app.netlify.app,http://k8s-blinkcha-blinkcha-15ee8fd614-2137738643.ap-south-1.elb.amazonaws.com,http://localhost:8080,http://localhost:5173,http://localhost:5174}
 
 api:
   server:

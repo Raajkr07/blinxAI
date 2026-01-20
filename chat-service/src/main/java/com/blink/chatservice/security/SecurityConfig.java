@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
@@ -24,9 +25,6 @@ public class SecurityConfig {
                 // Disabling CSRF because we use stateless JWT authentication, so browser CSRF attacks are not a concern.
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(withDefaults())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
                 // No server-side sessions, fully stateless.
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
