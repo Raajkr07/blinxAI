@@ -19,13 +19,14 @@ public class CorsConfig {
                 "http://localhost:8080",
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://blinx-app.netlify.app/"
+                "https://blinx-app.netlify.app"
         ));
         config.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
