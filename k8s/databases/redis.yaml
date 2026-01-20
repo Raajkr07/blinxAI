@@ -1,3 +1,5 @@
+#I've used redis clous that's why redis pod, deployment, service are not required
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

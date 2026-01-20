@@ -13,17 +13,16 @@ metadata:
     alb.ingress.kubernetes.io/healthy-threshold-count: '2'
     alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
     alb.ingress.kubernetes.io/success-codes: '200'
-    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
-    # at the time of deployment I'll replace it with ACM certificate ARN
-    alb.ingress.kubernetes.io/certificate-arn: "YOUR_ACM_CERT_ARN_HERE"
-    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # add ACM certificate ARN for HTTPS:
+    # alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    # alb.ingress.kubernetes.io/certificate-arn: "YOUR_ACM_CERT_ARN_HERE"
+    # alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
     alb.ingress.kubernetes.io/tags: Environment=production,Project=blink-chat
 spec:
   ingressClassName: alb
   rules:
-  - host: api.blinkchat.com
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix

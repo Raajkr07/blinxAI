@@ -15,15 +15,16 @@ resources:
   - storage-class.yaml
   - backend/service.yaml
   - databases/mongodb.yaml
-  - databases/redis.yaml
   - backend/hpa.yaml
   - ingress.yaml
 
 images:
   - name: raajkr07/blink-chat-service
-    newTag: main-07d1a7a
+    newTag: main-1cf0001
 
-commonLabels:
-  app.kubernetes.io/name: blink-chat
-  app.kubernetes.io/version: "1.0.0"
-  app.kubernetes.io/managed-by: argocd
+labels:
+  - pairs:
+      app.kubernetes.io/name: blink-chat
+      app.kubernetes.io/version: "1.0.0"
+      app.kubernetes.io/managed-by: argocd
+    includeSelectors: false
