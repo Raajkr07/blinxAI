@@ -54,6 +54,11 @@ app:
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_FROM_NUMBER:+12052674639}
 
+  cors:
+    allowed-origins:
+      - "https://blinx-app.netlify.app"
+      - "http://localhost:8080"
+
 api:
   server:
     # Here I have to use service DNS or public URL instead of localhost
