@@ -13,8 +13,7 @@ public class AiHttpConfig {
     public RestTemplate aiRestTemplate(RestTemplateBuilder builder) {
         return builder
                 .setConnectTimeout(Duration.ofSeconds(10))
-                // AI calls can be slow, so increasing read timeout to avoid premature failures.
-                .setReadTimeout(Duration.ofSeconds(30))
+                .setReadTimeout(Duration.ofSeconds(60))
                 .build();
     }
 }

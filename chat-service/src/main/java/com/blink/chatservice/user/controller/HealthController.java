@@ -12,6 +12,6 @@ public class HealthController {
 
     @GetMapping("/ping")
     public String ping() {
-        return "Hey Auth Endpoint is working, what about others?";
+        return "Auth Service is up and running";
     }
 }

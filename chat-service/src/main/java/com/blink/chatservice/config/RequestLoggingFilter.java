@@ -32,7 +32,6 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         
         try {
-            log.info("Started request {} {}", method, path);
             filterChain.doFilter(request, response);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
