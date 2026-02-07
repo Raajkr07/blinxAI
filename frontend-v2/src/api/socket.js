@@ -17,7 +17,12 @@ class SocketService {
 
         this.connectionPromise = new Promise((resolve, reject) => {
             const token = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
-            const socketUrl = env.WS_URL.replace(/^ws(s)?:\/\//, 'http$1://');
+            let socketUrl = env.WS_URL.replace(/^ws(s)?:\/\//, 'http$1://');
+
+            // Force HTTPS if running on HTTPS (to prevent Mixed Content errors)
+            if (window.location.protocol === 'https:' && socketUrl.startsWith('http:')) {
+                socketUrl = socketUrl.replace('http:', 'https:');
+            }
 
             this.client = new Client({
                 webSocketFactory: () => new SockJS(socketUrl),
