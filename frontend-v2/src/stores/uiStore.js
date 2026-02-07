@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import toast from 'react-hot-toast';
 
 export const useUIStore = create((set) => ({
     isSidebarOpen: true,

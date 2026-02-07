@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Button, Input } from '../ui';
 import { chatApi } from '../../api';
 import toast from 'react-hot-toast';
@@ -34,7 +34,7 @@ export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
             } else {
                 toast.error('Failed to send email');
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to send email');
         } finally {
             setIsSending(false);

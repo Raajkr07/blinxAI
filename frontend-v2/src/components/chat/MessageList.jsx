@@ -41,11 +41,11 @@ export function MessageList({ conversationId }) {
         optimisticMessagesRef.current = optimisticMessages;
     }, [optimisticMessages]);
 
-    // Clear live messages when conversation changes
-    useEffect(() => {
-        // Reset live messages for new conversation
-        setLiveMessages([]);
-    }, [conversationId]);
+    // Clear live messages when conversation changes - handled by key prop remounting
+    // useEffect(() => {
+    //     // Reset live messages for new conversation
+    //     setLiveMessages([]);
+    // }, [conversationId]);
 
     useEffect(() => {
         let subscription = null;
@@ -134,7 +134,7 @@ export function MessageList({ conversationId }) {
                 subscription.unsubscribe();
             }
         };
-    }, [conversationId, removeOptimisticMessage]);
+    }, [conversationId, removeOptimisticMessage, user?.id]);
 
     const parseMessages = (page) => {
         if (!page) return [];
