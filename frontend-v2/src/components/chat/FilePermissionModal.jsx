@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Button, Input } from '../ui';
 import { chatApi } from '../../api';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
     const [editedFileName, setEditedFileName] = useState('');
