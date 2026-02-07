@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { chatApi, socketService, aiApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
-import { Button, Input } from '../ui';
+import { Button, Textarea } from '../ui';
 import { AutoReplySuggestions } from './AutoReplySuggestions';
 import { generateId } from '../../lib/utils';
 import toast from 'react-hot-toast';
@@ -89,13 +89,6 @@ export function MessageInput({ conversationId }) {
         setMessage('');
     };
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit(e);
-        }
-    };
-
     const handleSuggestionSelect = (suggestion) => {
         sendMessageMutation.mutate(suggestion);
     };
@@ -119,13 +112,18 @@ export function MessageInput({ conversationId }) {
 
             <form onSubmit={handleSubmit} className="flex items-end gap-3">
                 <div className="flex-1">
-                    <Input
+                    <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={handleKeyDown}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                            }
+                        }}
                         placeholder="Type a message..."
                         disabled={sendMessageMutation.isPending}
-                        className="h-12"
+                        className="h-12 min-h-[48px] py-3"
                     />
                 </div>
                 <Button
