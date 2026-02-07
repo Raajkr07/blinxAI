@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { Button, Input } from '../ui';
 import { chatApi } from '../../api';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
 
 export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
     const [recipient, setRecipient] = useState('');
@@ -46,7 +45,7 @@ export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
@@ -116,7 +115,7 @@ export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
                                 {isSending ? 'Sending...' : 'Send Email'}
                             </Button>
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 </div>
             )}
         </AnimatePresence>

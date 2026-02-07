@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { Button, Input } from '../ui';
 import { chatApi } from '../../api';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
 
 export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
     const [editedFileName, setEditedFileName] = useState('');
@@ -44,7 +43,7 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
             {isOpen && (
                 <>
                     {/* Backdrop */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -53,7 +52,7 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                     />
 
                     {/* Modal */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -156,7 +155,7 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                                 </Button>
                             </div>
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 </>
             )}
         </AnimatePresence>
