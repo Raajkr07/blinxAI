@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { authApi } from '../api';
-
-
-
 export const useAuthStore = create((set, get) => ({
     user: storage.get(STORAGE_KEYS.USER),
     accessToken: storage.get(STORAGE_KEYS.ACCESS_TOKEN),

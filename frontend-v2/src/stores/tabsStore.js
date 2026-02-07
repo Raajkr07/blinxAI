@@ -1,29 +1,26 @@
 import { create } from 'zustand';
 
-
-
 export const useTabsStore = create((set, get) => ({
-
     tabs: [],
     activeTabId: null,
-
 
     openTab: (conversation) => {
         const { tabs } = get();
 
-
+        // Check if a tab already exists for this conversation
         const existingTab = tabs.find((tab) => tab.conversationId === conversation.id);
 
         if (existingTab) {
-
+            // Tab exists - just switch to it
             set({ activeTabId: existingTab.id });
         } else {
-
+            // Create a new tab
             const newTab = {
-                id: `tab-${Date.now()}`,
+                id: `tab-${Date.now()}-${conversation.id}`,
                 conversationId: conversation.id,
-                title: conversation.title,
-                type: conversation.type,
+                title: conversation.title || 'Chat',
+                type: conversation.type || 'DIRECT',
+                avatar: conversation.avatarUrl,
             };
 
             set({
@@ -41,11 +38,9 @@ export const useTabsStore = create((set, get) => ({
 
         const newTabs = tabs.filter((tab) => tab.id !== tabId);
 
-
         let newActiveTabId = activeTabId;
         if (activeTabId === tabId) {
             if (newTabs.length > 0) {
-
                 const newIndex = tabIndex > 0 ? tabIndex - 1 : 0;
                 newActiveTabId = newTabs[newIndex]?.id || null;
             } else {
@@ -66,7 +61,6 @@ export const useTabsStore = create((set, get) => ({
     closeAllTabs: () => {
         set({ tabs: [], activeTabId: null });
     },
-
 
     getActiveTab: () => {
         const { tabs, activeTabId } = get();

@@ -1,22 +1,15 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import toast from 'react-hot-toast';
-
-
 
 export const useUIStore = create((set) => ({
-
     isSidebarOpen: true,
     sidebarWidth: 320,
     setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
-
     activeModal: null,
     modalData: null,
 
-
     theme: storage.get(STORAGE_KEYS.THEME) || 'dark',
-
 
     isMobile: window.innerWidth < 768,
 
@@ -29,8 +22,6 @@ export const useUIStore = create((set) => ({
         }
         return { isSidebarCollapsed: !state.isSidebarCollapsed };
     }),
-
-
 
     openModal: (modalName, data = null) =>
         set({ activeModal: modalName, modalData: data }),

@@ -36,7 +36,6 @@ export const useCallStore = create((set, get) => ({
                     type: response.type,
                     conversationId: response.conversationId,
                 });
-                console.log('Call notification sent to receiver');
             } catch (wsError) {
                 console.error('Failed to send call notification:', wsError);
                 // Don't fail the call if notification fails

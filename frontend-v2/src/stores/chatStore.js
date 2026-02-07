@@ -1,22 +1,11 @@
 import { create } from 'zustand';
 
-
-
 export const useChatStore = create((set) => ({
-
     activeConversationId: null,
-
-
     typingUsers: {},
-
-
     optimisticMessages: {},
-
-
     searchQuery: '',
     searchResults: [],
-
-
     setActiveConversation: (conversationId) =>
         set({ activeConversationId: conversationId }),
 
