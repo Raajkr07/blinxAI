@@ -11,7 +11,10 @@ export function formatRelativeTime(date) {
     if (!date) return '';
 
     const now = new Date();
-    const then = new Date(date);
+    // Ensure date is treated as UTC if it doesn't have timezone info
+    const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? `${date}Z` : date;
+    const then = new Date(dateStr);
+
     const diffMs = now - then;
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
@@ -24,13 +27,16 @@ export function formatRelativeTime(date) {
     if (diffDay === 1) return 'Yesterday';
     if (diffDay < 7) return `${diffDay}d ago`;
 
-    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 
 export function formatTime(date) {
     if (!date) return '';
-    return new Date(date).toLocaleTimeString('en-US', {
+    // Ensure date is treated as UTC if it doesn't have timezone info
+    const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? `${date}Z` : date;
+    // undefined locale uses the browser's default locale (user's system settings)
+    return new Date(dateStr).toLocaleTimeString(undefined, {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,

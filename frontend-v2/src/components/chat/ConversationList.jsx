@@ -23,9 +23,16 @@ export function ConversationList() {
         ? conversations
         : (conversations?.conversations || conversations?.content || conversations?.data || []);
 
-    const filteredConversations = conversationsArray.filter(c =>
-        c.type?.toUpperCase() !== 'AI_ASSISTANT'
-    );
+    const filteredConversations = conversationsArray
+        .map(c => ({
+            ...c,
+            lastMessageAt: c.lastMessageAt && !c.lastMessageAt.endsWith('Z')
+                ? `${c.lastMessageAt}Z`
+                : c.lastMessageAt
+        }))
+        .filter(c =>
+            c.type?.toUpperCase() !== 'AI_ASSISTANT'
+        );
 
     const deleteMutation = useMutation({
         mutationFn: (id) => chatApi.deleteConversation(id),

@@ -57,8 +57,16 @@ export function MessageList({ conversationId }) {
                 if (!isMounted) return;
 
                 const topic = `/topic/conversations/${conversationId}`;
-                subscription = socketService.subscribe(topic, (message) => {
+                subscription = socketService.subscribe(topic, (rawMessage) => {
                     if (!isMounted) return;
+
+                    // Normalize message timestamp to UTC if needed
+                    const message = {
+                        ...rawMessage,
+                        createdAt: rawMessage.createdAt && !rawMessage.createdAt.endsWith('Z')
+                            ? `${rawMessage.createdAt}Z`
+                            : rawMessage.createdAt
+                    };
 
                     setLiveMessages((prev) => {
                         const existingIndex = prev.findIndex((m) => m.id === message.id);
@@ -72,8 +80,6 @@ export function MessageList({ conversationId }) {
 
                     const currentOptimisticMessages = optimisticMessagesRef.current;
                     const optimisticEntries = Object.entries(currentOptimisticMessages);
-
-
 
                     // Find matching optimistic message to remove
                     const candidates = optimisticEntries.filter(([, optMsg]) => {
@@ -107,11 +113,11 @@ export function MessageList({ conversationId }) {
                             return currentDiff < bestDiff ? current : best;
                         });
 
-                        // Remove if within reasonable time window (60s)
+                        // Remove if within reasonable time window (5 minutes to handle clock skew)
                         const bestMsg = bestMatch[1];
                         const timeDiff = Math.abs(new Date(bestMsg.createdAt).getTime() - msgTime);
 
-                        if (timeDiff < 60000) {
+                        if (timeDiff < 300000) { // Increased to 5 minutes
                             removeOptimisticMessage(bestMatch[0]);
                         }
                     }
@@ -153,7 +159,14 @@ export function MessageList({ conversationId }) {
     // Deduplicate history messages by ID (in case API returns overlapping pages)
     const allHistoryMessages = data?.pages.flatMap(parseMessages) || [];
     const historyMessagesMap = new Map();
-    allHistoryMessages.forEach(msg => {
+    allHistoryMessages.forEach(rxMsg => {
+        // Normalize timestamp to UTC if needed
+        const msg = {
+            ...rxMsg,
+            createdAt: rxMsg.createdAt && !rxMsg.createdAt.endsWith('Z')
+                ? `${rxMsg.createdAt}Z`
+                : rxMsg.createdAt
+        };
         historyMessagesMap.set(msg.id, msg);
     });
     const historyMessages = Array.from(historyMessagesMap.values());
@@ -188,9 +201,9 @@ export function MessageList({ conversationId }) {
                 (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
                 (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
 
-            // Time check (allow 60s drift to be safe)
+            // Time check (allow 5m drift to be safe - handles clock skew)
             const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
-            const timeMatch = timeDiff < 60000;
+            const timeMatch = timeDiff < 300000;
 
             return contentMatch && senderMatch && timeMatch;
         });
