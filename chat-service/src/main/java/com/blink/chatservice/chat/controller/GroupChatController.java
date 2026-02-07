@@ -18,6 +18,7 @@ import java.util.List;
 @RequestMapping("/api/v1/chat/groups")
 @RequiredArgsConstructor
 @Tag(name = "Group Chat", description = "Endpoints for listing and joining group chats")
+@lombok.extern.slf4j.Slf4j
 public class GroupChatController {
 
     private final ChatService chatService;
@@ -33,6 +34,7 @@ public class GroupChatController {
             List<Conversation> groups = chatService.listGroupsVisibleToUser(userId);
             return ResponseEntity.ok(groups);
         } catch (Exception e) {
+            log.error("Error listing groups", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -53,6 +55,7 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("Error joining group", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -65,6 +68,7 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
+            log.error("Error getting group", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -83,6 +87,7 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("Error updating group", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -106,6 +111,7 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("Error adding participants", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -124,6 +130,7 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("Error removing participant", e);
             return ResponseEntity.status(500).build();
         }
     }
@@ -141,12 +148,10 @@ public class GroupChatController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
-            System.err.println("Error leaving group: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error leaving group: {}", e.getMessage(), e);
             return ResponseEntity.status(500).build();
         }
     }
 
 }
-
 ;

@@ -65,8 +65,7 @@ public class ChatServiceImpl implements ChatService {
         List<String> pair1 = List.of(me, otherUserId);
         List<String> pair2 = List.of(otherUserId, me);
         
-        // Handling race condition where two DMs might be created if both users click 'message' at same time. 
-        // Checking both pair directions to ensure uniqueness.
+        // Prevent duplicate DM creation from race conditions
         Optional<Conversation> existing = conversationRepository.findDirectByParticipants(ConversationType.DIRECT, pair1);
         if (existing.isEmpty()) {
             existing = conversationRepository.findDirectByParticipants(ConversationType.DIRECT, pair2);
@@ -80,7 +79,6 @@ public class ChatServiceImpl implements ChatService {
             conv.setUpdatedAt(LocalDateTime.now());
             Conversation saved = conversationRepository.save(conv);
             
-            // Notify participants
             saved.getParticipants().forEach(userId -> 
                 messagingTemplate.convertAndSendToUser(
                     userId, 
@@ -223,7 +221,6 @@ public class ChatServiceImpl implements ChatService {
         if (senderId == null || senderId.trim().isEmpty()) throw new IllegalArgumentException("Sender ID is required");
         if (body == null || body.trim().isEmpty()) throw new IllegalArgumentException("Message body is required");
         
-        // Truncating long messages to 4000 chars to avoid DB bloat, but logging a warning.
         if (body.length() > 4000) {
             log.warn("Message body truncated for conversation {}", conversationId);
             body = body.substring(0, 4000);
@@ -276,7 +273,6 @@ public class ChatServiceImpl implements ChatService {
             String conversationTopic = "/topic/conversations/" + saved.getConversationId();
             messagingTemplate.convertAndSend(conversationTopic, resp);
             
-            // Sending to user specific queues for notifications/list updates.
             if (saved.getRecipientId() != null && saved.getSenderId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         saved.getRecipientId(),

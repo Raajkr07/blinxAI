@@ -48,7 +48,7 @@ public class ChatWsController {
         // 2. Trigger AI Processing asynchronously (optional, but good for performance)
         // For now, we'll keep it simple/synchronous as per your previous HTTP controller logic
         try {
-            Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body());
+            Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body(), false);
 
             // 3. Broadcast AI Response
             // Note: processAiMessage likely saves it DB-side. We need to push it to WS.
@@ -80,8 +80,6 @@ public class ChatWsController {
             String senderId = principal.getName();
             // This will save AND broadcast via ChatServiceImpl
             chatService.sendMessage(request.conversationId(), senderId, request.body());
-            
-            log.debug("WS message processed for conversation {}", request.conversationId());
         } catch (Exception e) {
             log.error("Error processing WebSocket message from {}: {}", principal.getName(), e.getMessage());
         }
@@ -107,8 +105,7 @@ public class ChatWsController {
                     response
             );
         } catch (Exception e) {
-            System.err.println("Error handling typing indicator: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error handling typing indicator: {}", e.getMessage(), e);
         }
     }
 }
