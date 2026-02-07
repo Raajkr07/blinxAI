@@ -6,14 +6,10 @@ import { ChatInterface } from './components/chat/ChatInterface';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
 import toast from 'react-hot-toast';
 
-
-
 function App() {
   const { isAuthenticated, user } = useAuthStore();
   const { setIsMobile, theme } = useUIStore();
   const { hasActiveCall, hasIncomingCall, receiveIncomingCall } = useCallStore();
-
-
 
   useEffect(() => {
     const handleResize = () => {
@@ -21,11 +17,9 @@ function App() {
       setIsMobile(isMobile);
     };
 
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [setIsMobile]);
-
 
   useEffect(() => {
     if (theme === 'light') {
@@ -34,8 +28,6 @@ function App() {
       document.documentElement.classList.remove('light');
     }
   }, [theme]);
-
-
 
   // Listen for incoming call notifications via WebSocket
   useEffect(() => {
@@ -49,14 +41,10 @@ function App() {
         await socketService.connect();
         if (!isMounted) return;
 
-        // Subscribe to call notifications as per API documentation
         const topic = `/user/queue/video/call-notification`;
         subscription = socketService.subscribe(topic, (callData) => {
           if (!isMounted) return;
 
-          console.log('Received call notification:', callData);
-
-          // Show incoming call dialog when someone calls us
           if (callData.receiverId === user.id) {
             receiveIncomingCall({
               id: callData.callId,
@@ -69,15 +57,12 @@ function App() {
               callerName: `User ${callData.callerId}`,
             });
 
-            // Show toast notification as well
             toast(`Incoming ${callData.type?.toLowerCase() || 'call'} from User ${callData.callerId}`, {
               icon: '📞',
               duration: 5000,
             });
           }
         });
-
-        console.log('Call notification listener setup complete');
       } catch (error) {
         console.error('Failed to setup call listener:', error);
       }
@@ -93,21 +78,14 @@ function App() {
     };
   }, [isAuthenticated, user?.id, receiveIncomingCall]);
 
-
   if (!isAuthenticated) {
     return <AuthPage />;
   }
 
-
   return (
     <>
-
       {hasActiveCall() && <ActiveCallInterface />}
-
-
       {!hasActiveCall() && <ChatInterface />}
-
-
       {hasIncomingCall() && <IncomingCallDialog />}
     </>
   );

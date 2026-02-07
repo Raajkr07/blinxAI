@@ -69,3 +69,24 @@ export function debounce(func, wait) {
 export function generateId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
+
+export function stripMarkdown(text) {
+    if (!text) return '';
+
+    return text
+        // Remove bold: **text** or __text__
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/__(.+?)__/g, '$1')
+        // Remove italic: *text* or _text_
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/_(.+?)_/g, '$1')
+        // Remove inline code: `text`
+        .replace(/`(.+?)`/g, '$1')
+        // Remove headers: # text, ## text, etc.
+        .replace(/^#{1,6}\s+/gm, '')
+        // Remove strikethrough: ~~text~~
+        .replace(/~~(.+?)~~/g, '$1')
+        // Clean up any remaining artifacts
+        .trim();
+}
+

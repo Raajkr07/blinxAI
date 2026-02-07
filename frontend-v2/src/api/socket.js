@@ -64,10 +64,14 @@ class SocketService {
 
         return this.client.subscribe(topic, (message) => {
             try {
-                const body = JSON.parse(message.body);
-                callback(body);
+                if (message.body) {
+                    const body = JSON.parse(message.body);
+                    callback(body);
+                } else {
+                    callback(null);
+                }
             } catch (error) {
-                console.error('Error parsing WS message:', error);
+                console.error('[Socket] Error parsing message:', error, message);
             }
         });
     }

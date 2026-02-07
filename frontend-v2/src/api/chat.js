@@ -93,4 +93,21 @@ export const chatApi = {
         );
         return response.data;
     },
+
+    saveFile: async (fileName, content) => {
+        const response = await apiClient.post('/api/v1/chat/save-file', {
+            fileName,
+            content,
+        });
+        return response.data;
+    },
+
+    sendEmail: async (to, subject, body) => {
+        const response = await apiClient.post('/api/v1/chat/send-email', {
+            to,
+            subject,
+            body,
+        });
+        return response.data;
+    },
 };
