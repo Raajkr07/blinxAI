@@ -9,7 +9,6 @@ import toast from 'react-hot-toast';
 export function Signup({ onSwitchToLogin }) {
     const [step, setStep] = useState('phone');
     const [identifier, setIdentifier] = useState('');
-    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [profile, setProfile] = useState({
         username: '',
@@ -19,7 +18,7 @@ export function Signup({ onSwitchToLogin }) {
     const { setUser, setTokens } = useAuthStore();
 
     const requestOtpMutation = useMutation({
-        mutationFn: () => authApi.requestOtp(identifier, email || null),
+        mutationFn: () => authApi.requestOtp(identifier, undefined),
         onSuccess: (data) => {
             toast.success(data.message || 'OTP sent successfully');
             setStep('otp');
@@ -64,8 +63,17 @@ export function Signup({ onSwitchToLogin }) {
 
     const handleRequestOtp = (e) => {
         e.preventDefault();
-        if (!identifier.trim()) {
-            toast.error('Please enter your phone number');
+        const value = identifier.trim();
+        if (!value) {
+            toast.error('Please enter your phone number or email');
+            return;
+        }
+
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        const isPhone = /^\+?[0-9]{10,15}$/.test(value);
+
+        if (!isEmail && !isPhone) {
+            toast.error('Please enter a valid email or phone number');
             return;
         }
         requestOtpMutation.mutate();
@@ -87,11 +95,14 @@ export function Signup({ onSwitchToLogin }) {
             return;
         }
 
+        const value = identifier.trim();
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
         signupMutation.mutate({
-            identifier,
+            identifier: value,
             username: profile.username,
-            email: email || identifier,
-            phone: identifier,
+            email: isEmail ? value : undefined,
+            phone: !isEmail ? value : undefined,
             bio: profile.bio || undefined,
             avatarUrl: profile.avatarUrl || undefined,
         });
@@ -121,26 +132,13 @@ export function Signup({ onSwitchToLogin }) {
                 <form onSubmit={handleRequestOtp} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-2">
-                            Phone Number *
+                            Email or Phone Number *
                         </label>
                         <Input
                             type="text"
-                            placeholder="CONTACT"
+                            placeholder="user@example.com or +91..."
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
-                            disabled={requestOtpMutation.isPending}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-2">
-                            Email (Optional)
-                        </label>
-                        <Input
-                            type="email"
-                            placeholder="EMAIL"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
                             disabled={requestOtpMutation.isPending}
                         />
                     </div>

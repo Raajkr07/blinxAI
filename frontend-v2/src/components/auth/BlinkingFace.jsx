@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 
 export function BlinkingFace({ className = "w-16 h-16" }) {
   const [isBlinking, setIsBlinking] = useState(false);
@@ -42,7 +42,7 @@ export function BlinkingFace({ className = "w-16 h-16" }) {
           strokeWidth="2"
         />
 
-        <motion.ellipse
+        <Motion.ellipse
           cx="35"
           cy="42"
           rx="5"
@@ -51,7 +51,7 @@ export function BlinkingFace({ className = "w-16 h-16" }) {
           transition={{ duration: 0.15, ease: "easeInOut" }}
         />
 
-        <motion.ellipse
+        <Motion.ellipse
           cx="65"
           cy="42"
           rx="5"
