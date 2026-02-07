@@ -68,11 +68,13 @@ public class AiAnalysisService {
                 Return a JSON object with:
                 - suggested_replies: array of strings (3-5 items)
                 
-                Rules:
-                - Each reply under 20-30 words
+                CRITICAL RULES:
+                - Each reply MUST be 5-10 words maximum
+                - MUST be complete sentences (no truncation, no ellipsis)
                 - Match conversation tone (formal / informal)
                 - No repetition
-                - No unnecessary questions
+                - Be natural and conversational
+                - Examples: "Thanks for the update!", "I'll get back to you soon.", "Sounds good to me!"
                 """);
     }
 
@@ -155,9 +157,6 @@ public class AiAnalysisService {
             String content = (String) message.get("content");
 
             if (content == null || content.trim().isEmpty()) return null;
-
-            // Log raw response for debugging
-            log.debug("AI Analysis Response: {}", content);
 
             // Special case for TaskExtraction returning null logic
             // If the prompt says "return null", OpenAI might return a JSON with null fields or literal string "null" or empty JSON.
