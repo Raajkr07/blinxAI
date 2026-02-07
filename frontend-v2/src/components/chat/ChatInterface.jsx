@@ -1,7 +1,9 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { useAuthStore, useChatStore, useTabsStore, useUIStore } from '../../stores';
 import { cn } from '../../lib/utils';
 import { Avatar, Button, SimpleDropdown, SimpleDropdownItem } from '../ui';
+import { socketService } from '../../api';
+import toast from 'react-hot-toast';
 import {
     AppShell,
     Sidebar,
@@ -20,6 +22,8 @@ import {
     ChatHeader,
     ChatTabs,
 } from '../chat';
+import { FilePermissionModal } from './FilePermissionModal';
+import { EmailPreviewModal } from './EmailPreviewModal';
 import { CallLogs } from '../calls';
 import { AIAssistantButton } from './AIAssistantButton';
 
@@ -35,6 +39,46 @@ export function ChatInterface() {
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [showNewGroupModal, setShowNewGroupModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [filePermissionRequest, setFilePermissionRequest] = useState(null);
+    const [emailPreviewRequest, setEmailPreviewRequest] = useState(null);
+
+    useEffect(() => {
+        let sub;
+        let isMounted = true;
+
+        const connectAndSubscribe = async () => {
+            try {
+                // Ensure socket is connected before subscribing
+                await socketService.connect();
+                if (!isMounted) return;
+
+                if (!user?.id) return;
+
+                const topic = `/topic/user/${user.id}/actions`;
+                sub = socketService.subscribe(topic, (message) => {
+                    // Accept explicitly typed requests OR implicit ones with file data
+                    if (message?.type === 'SAVE_FILE_REQUEST' || (message?.fileName && message?.content)) {
+                        toast.success('Received file save request', { duration: 5000 });
+                        setFilePermissionRequest(message.payload || message);
+                    } else if (message?.type === 'SEND_EMAIL_REQUEST') {
+                        toast.success('Received email draft', { duration: 5000 });
+                        setEmailPreviewRequest(message.payload || message);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to subscribe to file actions:', error);
+            }
+        };
+
+        connectAndSubscribe();
+
+        return () => {
+            isMounted = false;
+            if (sub && sub.unsubscribe) {
+                sub.unsubscribe();
+            }
+        };
+    }, [user?.id]);
 
     const activeTab = getActiveTab();
     const displayConversationId = activeTab?.conversationId || activeConversationId;
@@ -253,10 +297,10 @@ export function ChatInterface() {
                             }
                         </>
                     )}
-                </ChatWindow >
-            </AppShell >
+                </ChatWindow>
+            </AppShell>
 
-            < Suspense fallback={null} >
+            <Suspense fallback={null}>
                 <NewChatModal
                     open={showNewChatModal}
                     onOpenChange={setShowNewChatModal}
@@ -270,7 +314,31 @@ export function ChatInterface() {
                     open={showSettingsModal}
                     onOpenChange={setShowSettingsModal}
                 />
-            </Suspense >
+            </Suspense>
+
+            {/* File Permission Modal */}
+            <FilePermissionModal
+                isOpen={!!filePermissionRequest}
+                fileInfo={filePermissionRequest}
+                onApprove={() => {
+                    // File is already saved by the backend
+                    // Just acknowledge and close
+                    setFilePermissionRequest(null);
+                }}
+                onDeny={() => {
+                    // Close modal - file is already saved, this is just for user awareness
+                    setFilePermissionRequest(null);
+                }}
+                onClose={() => setFilePermissionRequest(null)}
+            />
+
+            {/* Email Preview Modal */}
+            <EmailPreviewModal
+                isOpen={!!emailPreviewRequest}
+                emailInfo={emailPreviewRequest}
+                onApprove={() => setEmailPreviewRequest(null)}
+                onDeny={() => setEmailPreviewRequest(null)}
+            />
         </>
     );
 }

@@ -27,8 +27,6 @@ export function ConversationList() {
         c.type?.toUpperCase() !== 'AI_ASSISTANT'
     );
 
-
-
     const deleteMutation = useMutation({
         mutationFn: (id) => chatApi.deleteConversation(id),
         onSuccess: (_, deletedId) => {

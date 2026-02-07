@@ -4,7 +4,7 @@ import { chatApi, socketService } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
 import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon } from '../ui';
-import { cn, formatTime } from '../../lib/utils';
+import { cn, formatTime, stripMarkdown } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 export function MessageList({ conversationId }) {
@@ -41,6 +41,12 @@ export function MessageList({ conversationId }) {
         optimisticMessagesRef.current = optimisticMessages;
     }, [optimisticMessages]);
 
+    // Clear live messages when conversation changes
+    useEffect(() => {
+        // Reset live messages for new conversation
+        setLiveMessages([]);
+    }, [conversationId]);
+
     useEffect(() => {
         let subscription = null;
         let isMounted = true;
@@ -69,15 +75,25 @@ export function MessageList({ conversationId }) {
 
 
 
-                    const candidates = optimisticEntries.filter(([, optMsg]) =>
-                        optMsg.conversationId === conversationId &&
-                        optMsg.body === message.body &&
-                        optMsg.senderId === message.senderId
-                    );
+                    // Find matching optimistic message to remove
+                    const candidates = optimisticEntries.filter(([, optMsg]) => {
+                        // Content check
+                        const contentMatch = optMsg.body?.trim() === message.body?.trim();
+
+                        // Sender check
+                        const senderMatch = optMsg.senderId === message.senderId ||
+                            (optMsg.senderId === 'me' && message.senderId === user?.id) ||
+                            (message.senderId === 'me' && optMsg.senderId === user?.id);
+
+                        return optMsg.conversationId === conversationId &&
+                            contentMatch &&
+                            senderMatch;
+                    });
 
                     if (candidates.length > 0) {
                         const msgTime = new Date(message.createdAt).getTime();
 
+                        // Find best match by time proximity
                         const bestMatch = candidates.reduce((best, current) => {
                             const [, currentMsg] = current;
                             const [, bestMsg] = best;
@@ -91,7 +107,11 @@ export function MessageList({ conversationId }) {
                             return currentDiff < bestDiff ? current : best;
                         });
 
-                        if (bestMatch) {
+                        // Remove if within reasonable time window (60s)
+                        const bestMsg = bestMatch[1];
+                        const timeDiff = Math.abs(new Date(bestMsg.createdAt).getTime() - msgTime);
+
+                        if (timeDiff < 60000) {
                             removeOptimisticMessage(bestMatch[0]);
                         }
                     }
@@ -130,18 +150,55 @@ export function MessageList({ conversationId }) {
         return [];
     };
 
-    const historyMessages = data?.pages.flatMap(parseMessages) || [];
-
-
+    // Deduplicate history messages by ID (in case API returns overlapping pages)
+    const allHistoryMessages = data?.pages.flatMap(parseMessages) || [];
+    const historyMessagesMap = new Map();
+    allHistoryMessages.forEach(msg => {
+        historyMessagesMap.set(msg.id, msg);
+    });
+    const historyMessages = Array.from(historyMessagesMap.values());
 
     const optimisticArray = Object.values(optimisticMessages).filter(
         (msg) => msg.conversationId === conversationId
     );
 
+    // COMPREHENSIVE DEDUPLICATION LOGIC
+    // Step 1: Deduplicate by ID (handles history + live message overlap)
     const allMessagesMap = new Map();
 
-    [...historyMessages, ...liveMessages, ...optimisticArray].forEach(msg => {
+    // Add history messages first
+    historyMessages.forEach(msg => {
         allMessagesMap.set(msg.id, msg);
+    });
+
+    // Add live messages (will overwrite if same ID, which is fine - live is more recent)
+    liveMessages.forEach(msg => {
+        allMessagesMap.set(msg.id, msg);
+    });
+
+    // Step 2: Add optimistic messages ONLY if no real message exists with same content
+    optimisticArray.forEach(optMsg => {
+        // Check if this optimistic message already exists as a real message
+        const isDuplicate = Array.from(allMessagesMap.values()).some(realMsg => {
+            // Content check (normalized)
+            const contentMatch = realMsg.body?.trim() === optMsg.body?.trim();
+
+            // Sender check (handle 'me' vs actual ID)
+            const senderMatch = realMsg.senderId === optMsg.senderId ||
+                (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
+                (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
+
+            // Time check (allow 60s drift to be safe)
+            const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
+            const timeMatch = timeDiff < 60000;
+
+            return contentMatch && senderMatch && timeMatch;
+        });
+
+        // Only add optimistic message if it's not a duplicate
+        if (!isDuplicate) {
+            allMessagesMap.set(optMsg.id, optMsg);
+        }
     });
 
     const sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) =>
@@ -322,7 +379,11 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
                                 : 'bg-[var(--color-border)] rounded-bl-sm text-[var(--color-foreground)]'
                         )}
                     >
-                        <p className="text-sm whitespace-pre-wrap">{message.body}</p>
+                        <p className="text-sm whitespace-pre-wrap">
+                            {message.senderId === 'ai-assistant'
+                                ? stripMarkdown(message.body)
+                                : message.body}
+                        </p>
 
                         <div className={cn(
                             'flex items-center gap-2 mt-1',

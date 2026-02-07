@@ -23,7 +23,6 @@ export function SettingsModal({ open, onOpenChange }) {
             onOpenChange(false);
         },
         onError: (error) => {
-            console.error('[SettingsModal] Update failed:', error);
             if (error.response?.status === 500) {
                 toast.error('Server error: Possible duplicate username or data issue.');
             } else {
@@ -97,7 +96,7 @@ export function SettingsModal({ open, onOpenChange }) {
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="+1 234 567 8900"
+                            placeholder="+91 98765 43210"
                         />
                     </div>
 

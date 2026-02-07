@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { chatApi, socketService, aiApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
@@ -12,7 +12,6 @@ export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
     const user = useAuthStore((state) => state.user);
     const { addOptimisticMessage, removeOptimisticMessage } = useChatStore();
-    const queryClient = useQueryClient();
 
     const { data: messagesPage } = useQuery({
         queryKey: queryKeys.messages(conversationId, 0),
@@ -69,10 +68,10 @@ export function MessageInput({ conversationId }) {
             return { tempId };
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });
+            // Don't invalidate queries - WebSocket will handle real-time updates
+            // Invalidating causes refetch which can create duplicates
         },
         onError: (error, variables, context) => {
-            console.error('Send message failed:', error);
             if (context?.tempId) {
                 removeOptimisticMessage(context.tempId);
             }
@@ -101,9 +100,13 @@ export function MessageInput({ conversationId }) {
         sendMessageMutation.mutate(suggestion);
     };
 
+    // Check if this is an AI conversation
+    const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
+
     return (
         <div className="space-y-2">
-            {lastReceivedMessage && (
+            {/* Only show suggestions for non-AI conversations */}
+            {!isAiChat && lastReceivedMessage && (
                 <AutoReplySuggestions
                     conversationId={conversationId}
                     messageId={lastReceivedMessage.id}

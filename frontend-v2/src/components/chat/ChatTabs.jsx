@@ -1,4 +1,4 @@
-import { useTabsStore } from '../../stores';
+import { useTabsStore, useChatStore } from '../../stores';
 import { Button, Avatar } from '../ui';
 import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -43,7 +43,14 @@ export function ChatTabs() {
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
+                                    const wasActive = tab.id === useTabsStore.getState().activeTabId;
                                     closeTab(tab.id);
+                                    
+                                    // If we closed the active tab and there are no tabs left, clear the main active conversation
+                                    if (wasActive && !useTabsStore.getState().activeTabId) {
+                                        useChatStore.getState().clearActiveConversation();
+                                    }
+
                                     toast.success(<b>Chat closed!</b>, {
                                         position: 'top-center',
                                     });
@@ -66,6 +73,7 @@ export function ChatTabs() {
                         size="sm"
                         onClick={() => {
                             useTabsStore.getState().closeAllTabs();
+                            useChatStore.getState().clearActiveConversation();
                             toast.success(<b>All chats closed!</b>, {
                                 position: 'top-center',
                             });
@@ -79,3 +87,4 @@ export function ChatTabs() {
         </div>
     );
 }
+

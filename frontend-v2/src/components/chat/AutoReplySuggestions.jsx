@@ -36,18 +36,12 @@ export function AutoReplySuggestions({ conversationId, messageId, messageContent
     };
 
     const replies = suggestions?.suggested_replies || [];
-    const filteredReplies = replies
-        .map(reply => {
-            const words = reply.trim().split(/\s+/);
-            if (words.length > 7) {
-                return words.slice(0, 7).join(' ') + '...';
-            }
-            return reply;
-        })
-        .filter(reply => {
-            const words = reply.replace('...', '').trim().split(/\s+/);
-            return words.length >= 4;
-        });
+
+    // Filter out empty or very short replies (less than 2 words)
+    const filteredReplies = replies.filter(reply => {
+        const words = reply.trim().split(/\s+/);
+        return words.length >= 2;
+    });
 
     if (filteredReplies.length === 0 && !isLoading) return null;
 

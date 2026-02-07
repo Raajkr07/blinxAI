@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { aiApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
-import { useChatStore, useUIStore } from '../../stores';
+import { useChatStore, useTabsStore, useUIStore } from '../../stores';
 import { Button } from '../ui';
 import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 export function AIAssistantButton({ compact }) {
     const { setActiveConversation } = useChatStore();
+    const { openTab } = useTabsStore();
     const { openModal } = useUIStore();
 
     const { data: aiConversation, isLoading } = useQuery({
@@ -33,6 +34,8 @@ export function AIAssistantButton({ compact }) {
             );
 
             promise.then(() => {
+                // Open AI conversation in its own tab
+                openTab(aiConversation);
                 setActiveConversation(aiConversation.id);
             });
         }

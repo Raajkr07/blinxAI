@@ -15,16 +15,20 @@ export function ChatHeader() {
     const { user: currentUser } = useAuthStore();
     const { isMobile } = useUIStore();
     const { initiateCall, setCallActive } = useCallStore();
-    const { closeTab, getTabByConversationId } = useTabsStore();
+    const { closeTab, getTabByConversationId, getActiveTab } = useTabsStore();
     const [showAnalysisModal, setShowAnalysisModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
 
+    // Use active tab's conversation ID if available, otherwise fall back to activeConversationId
+    const activeTab = getActiveTab();
+    const displayConversationId = activeTab?.conversationId || activeConversationId;
+
     const { data: conversation } = useQuery({
-        queryKey: queryKeys.conversation(activeConversationId),
-        queryFn: () => chatApi.getConversation(activeConversationId),
-        enabled: !!activeConversationId,
+        queryKey: queryKeys.conversation(displayConversationId),
+        queryFn: () => chatApi.getConversation(displayConversationId),
+        enabled: !!displayConversationId,
     });
 
     const isGroup = conversation?.type === 'GROUP' || conversation?.type === 'COMMUNITY';
@@ -58,10 +62,10 @@ export function ChatHeader() {
     });
 
     const deleteConversationMutation = useMutation({
-        mutationFn: () => chatApi.deleteConversation(activeConversationId),
+        mutationFn: () => chatApi.deleteConversation(displayConversationId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
-            const tab = getTabByConversationId(activeConversationId);
+            const tab = getTabByConversationId(displayConversationId);
             if (tab) closeTab(tab.id);
             clearActiveConversation();
             toast.success('Conversation deleted');
@@ -72,11 +76,11 @@ export function ChatHeader() {
     });
 
     const leaveGroupMutation = useMutation({
-        mutationFn: () => chatApi.leaveGroup(activeConversationId),
+        mutationFn: () => chatApi.leaveGroup(displayConversationId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             queryClient.invalidateQueries({ queryKey: queryKeys.groups });
-            const tab = getTabByConversationId(activeConversationId);
+            const tab = getTabByConversationId(displayConversationId);
             if (tab) closeTab(tab.id);
             clearActiveConversation();
             toast.success('Left group');
@@ -91,13 +95,13 @@ export function ChatHeader() {
         if (!conversation) return;
 
         initiateCall(
-            activeConversationId,
+            displayConversationId,
             'video',
             conversation.participants || []
         );
 
         initiateCallMutation.mutate({
-            conversationId: activeConversationId,
+            conversationId: displayConversationId,
             callType: 'video',
         });
     };
@@ -106,13 +110,13 @@ export function ChatHeader() {
         if (!conversation) return;
 
         initiateCall(
-            activeConversationId,
+            displayConversationId,
             'audio',
             conversation.participants || []
         );
 
         initiateCallMutation.mutate({
-            conversationId: activeConversationId,
+            conversationId: displayConversationId,
             callType: 'audio',
         });
     };
@@ -212,7 +216,7 @@ export function ChatHeader() {
                         variant="ghost"
                         size="icon"
                         onClick={() => {
-                            const tab = getTabByConversationId(activeConversationId);
+                            const tab = getTabByConversationId(displayConversationId);
                             if (tab) closeTab(tab.id);
                             clearActiveConversation();
                             toast.success(<b>Chat closed!</b>, {
@@ -273,13 +277,13 @@ export function ChatHeader() {
             <ConversationAnalysisModal
                 open={showAnalysisModal}
                 onOpenChange={setShowAnalysisModal}
-                conversationId={activeConversationId}
+                conversationId={displayConversationId}
             />
 
             <ProfileModal
                 isOpen={showProfileModal}
                 onClose={() => setShowProfileModal(false)}
-                conversationId={activeConversationId}
+                conversationId={displayConversationId}
                 type={isGroup ? 'group' : isAI ? 'ai' : 'user'}
             />
 

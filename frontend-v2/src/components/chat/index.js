@@ -11,3 +11,4 @@ export { NewGroupModal } from './NewGroupModal';
 export { AIAssistantButton } from './AIAssistantButton';
 export { AutoReplySuggestions } from './AutoReplySuggestions';
 export { ConversationAnalysisModal } from './ConversationAnalysisModal';
+export { FilePermissionModal } from './FilePermissionModal';
