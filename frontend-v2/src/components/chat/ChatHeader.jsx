@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chatApi, callsApi, userApi } from '../../api';
+import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useUIStore, useCallStore, useTabsStore, useAuthStore } from '../../stores';
 import { Avatar, Button, SimpleDropdown, SimpleDropdownItem, ConfirmDialog } from '../ui';
@@ -14,7 +14,7 @@ export function ChatHeader() {
     const { activeConversationId, clearActiveConversation } = useChatStore();
     const { user: currentUser } = useAuthStore();
     const { isMobile } = useUIStore();
-    const { initiateCall, setCallActive } = useCallStore();
+    const { initiateCall } = useCallStore();
     const { closeTab, getTabByConversationId, getActiveTab } = useTabsStore();
     const [showAnalysisModal, setShowAnalysisModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -27,7 +27,7 @@ export function ChatHeader() {
 
     const { data: conversation } = useQuery({
         queryKey: queryKeys.conversation(displayConversationId),
-        queryFn: () => chatApi.getConversation(displayConversationId),
+        queryFn: () => chatService.getConversation(displayConversationId),
         enabled: !!displayConversationId,
     });
 
@@ -35,25 +35,31 @@ export function ChatHeader() {
     const isAI = conversation?.type === 'AI_ASSISTANT';
 
     // Safely identify the other participant in direct chats
-    const otherUserId = !isGroup && !isAI && conversation?.participants && currentUser
+    const otherUserIdRaw = !isGroup && !isAI && conversation?.participants && currentUser
         ? conversation.participants?.find((p) => {
             const id = typeof p === 'string' ? p : p.id;
             return id !== currentUser.id;
         })
         : null;
 
+    // Extract the actual ID string
+    const otherUserId = otherUserIdRaw
+        ? (typeof otherUserIdRaw === 'string' ? otherUserIdRaw : otherUserIdRaw.id)
+        : null;
+
     const { data: otherUser } = useQuery({
         queryKey: ['user', otherUserId],
-        queryFn: () => userApi.getUserById(otherUserId),
-        enabled: !!otherUserId && !conversation?.title,
-        staleTime: 1000 * 60 * 5,
+        queryFn: () => userService.getUserById(otherUserId),
+        enabled: !!otherUserId,
+        staleTime: 1000 * 10, // 10 seconds for fresh online status
+        refetchInterval: 1000 * 30, // Refetch every 30 seconds
     });
 
     const initiateCallMutation = useMutation({
-        mutationFn: ({ conversationId, callType }) =>
-            callsApi.initiateCall(conversationId, callType),
-        onSuccess: (data) => {
-            setCallActive(data.id);
+        mutationFn: ({ callType, targetUserId }) =>
+            // Use store action to ensure WebRTC setup and state updates happen
+            initiateCall(targetUserId, callType),
+        onSuccess: () => {
             toast.success('Call started');
         },
         onError: () => {
@@ -62,7 +68,7 @@ export function ChatHeader() {
     });
 
     const deleteConversationMutation = useMutation({
-        mutationFn: () => chatApi.deleteConversation(displayConversationId),
+        mutationFn: () => chatService.deleteConversation(displayConversationId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             const tab = getTabByConversationId(displayConversationId);
@@ -76,7 +82,7 @@ export function ChatHeader() {
     });
 
     const leaveGroupMutation = useMutation({
-        mutationFn: () => chatApi.leaveGroup(displayConversationId),
+        mutationFn: () => chatService.leaveGroup(displayConversationId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             queryClient.invalidateQueries({ queryKey: queryKeys.groups });
@@ -94,30 +100,25 @@ export function ChatHeader() {
     const handleVideoCall = () => {
         if (!conversation) return;
 
-        initiateCall(
-            displayConversationId,
-            'video',
-            conversation.participants || []
-        );
+        const targetId = isGroup ? conversation.id : otherUserId;
 
         initiateCallMutation.mutate({
             conversationId: displayConversationId,
             callType: 'video',
+            targetUserId: targetId
         });
     };
 
     const handleAudioCall = () => {
         if (!conversation) return;
 
-        initiateCall(
-            displayConversationId,
-            'audio',
-            conversation.participants || []
-        );
+        const targetId = isGroup ? conversation.id : otherUserId;
 
+        // initiateCall store action removed - using mutation instead
         initiateCallMutation.mutate({
             conversationId: displayConversationId,
             callType: 'audio',
+            targetUserId: targetId
         });
     };
 
@@ -147,7 +148,8 @@ export function ChatHeader() {
                     src={displayAvatar}
                     name={displayTitle}
                     size="md"
-                    online={false}
+                    online={otherUser?.online}
+                    showOffline={!otherUser?.online && !isGroup && !isAI}
                 />
 
                 <div className="flex-1 min-w-0">
@@ -160,7 +162,7 @@ export function ChatHeader() {
                         ) : isGroup ? (
                             `${conversation.participants?.length || 0} members`
                         ) : (
-                            'Online'
+                            otherUser?.online ? 'Online' : 'Offline'
                         )}
                     </p>
                 </div>

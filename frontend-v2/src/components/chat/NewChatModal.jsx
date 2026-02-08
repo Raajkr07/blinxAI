@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userApi, chatApi } from '../../api';
+import { userService, chatService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore } from '../../stores';
 import { Modal, ModalFooter, Button, Input, Avatar, EmptyState, NoSearchResultsIcon } from '../ui';
@@ -19,7 +19,7 @@ export function NewChatModal({ open, onOpenChange }) {
 
     const { data: searchResults, isLoading: isSearching } = useQuery({
         queryKey: ['userSearch', searchQuery],
-        queryFn: () => userApi.searchUsers(searchQuery),
+        queryFn: () => userService.searchUsers(searchQuery),
         enabled: searchQuery.length > 0,
         staleTime: 30000,
     });
@@ -27,7 +27,7 @@ export function NewChatModal({ open, onOpenChange }) {
 
 
     const createChatMutation = useMutation({
-        mutationFn: (userContact) => chatApi.createDirectChat(userContact),
+        mutationFn: (userContact) => chatService.createDirectChat(userContact),
         onSuccess: (conversation) => {
             toast.success('Chat created successfully');
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { aiApi } from '../../api';
+import { aiService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useTabsStore, useUIStore } from '../../stores';
 import { Button } from '../ui';
@@ -13,7 +13,7 @@ export function AIAssistantButton({ compact }) {
 
     const { data: aiConversation, isLoading } = useQuery({
         queryKey: queryKeys.aiConversation,
-        queryFn: aiApi.getAiConversation,
+        queryFn: aiService.getAiConversation,
         staleTime: Infinity,
     });
 

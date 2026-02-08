@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { chatApi, socketService, aiApi } from '../../api';
+import { chatService, socketService, aiService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
 import { Button, Textarea } from '../ui';
@@ -28,14 +28,14 @@ export function MessageInput({ conversationId }) {
 
     const { data: messagesPage } = useQuery({
         queryKey: queryKeys.messages(conversationId, 0),
-        queryFn: () => chatApi.getMessages(conversationId, 0, 50),
+        queryFn: () => chatService.getMessages(conversationId, 0, 50),
         enabled: !!conversationId,
         staleTime: 5000,
     });
 
     const { data: aiConversation } = useQuery({
         queryKey: queryKeys.aiConversation,
-        queryFn: aiApi.getAiConversation,
+        queryFn: aiService.getAiConversation,
         staleTime: Infinity,
     });
 

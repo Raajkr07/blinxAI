@@ -42,7 +42,6 @@ export function SimpleDropdown({ trigger, children, align = 'start' }) {
 
     const handleTriggerClick = (e) => {
         e.preventDefault();
-        e.stopPropagation();
         setIsOpen(!isOpen);
     };
 
@@ -76,7 +75,6 @@ export function SimpleDropdown({ trigger, children, align = 'start' }) {
 export function SimpleDropdownItem({ children, onClick, icon, destructive = false }) {
     const handleClick = (e) => {
         e.preventDefault();
-        e.stopPropagation();
         if (onClick) {
             onClick(e);
         }

@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { Button } from '../components/ui';
+import { Button } from './ui';
 
 class ErrorBoundary extends Component {
     constructor(props) {

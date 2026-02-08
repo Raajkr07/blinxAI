@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { aiApi } from '../../api';
+import { aiService } from '../../services';
 import { cn } from '../../lib/utils';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -8,7 +8,7 @@ export function AutoReplySuggestions({ conversationId, messageId, messageContent
     const [isOpen, setIsOpen] = useState(true);
     const { data: suggestions, isLoading } = useQuery({
         queryKey: ['autoReplies', conversationId, messageId],
-        queryFn: () => aiApi.generateAutoReplies({
+        queryFn: () => aiService.generateAutoReplies({
             messageId,
             content: messageContent,
             senderId,

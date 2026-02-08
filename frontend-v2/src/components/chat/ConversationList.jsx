@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chatApi, userApi } from '../../api';
+import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useTabsStore, useAuthStore } from '../../stores';
 import { Avatar, SkeletonConversation, EmptyState, NoConversationsIcon, SimpleDropdown, SimpleDropdownItem, ConfirmDialog } from '../ui';
@@ -16,7 +16,7 @@ export function ConversationList() {
 
     const { data: conversations, isLoading, error } = useQuery({
         queryKey: queryKeys.conversations,
-        queryFn: chatApi.listConversations,
+        queryFn: chatService.listConversations,
     });
 
     const conversationsArray = Array.isArray(conversations)
@@ -35,7 +35,7 @@ export function ConversationList() {
         );
 
     const deleteMutation = useMutation({
-        mutationFn: (id) => chatApi.deleteConversation(id),
+        mutationFn: (id) => chatService.deleteConversation(id),
         onSuccess: (_, deletedId) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             const tab = getTabByConversationId(deletedId);
@@ -136,7 +136,7 @@ function ConversationItem({ conversation, currentUser, isActive, hasTab, onClick
 
     const { data: otherUser } = useQuery({
         queryKey: ['user', otherUserId],
-        queryFn: () => userApi.getUserById(otherUserId),
+        queryFn: () => userService.getUserById(otherUserId),
         enabled: !!otherUserId && !conversation.title,
         staleTime: 1000 * 60 * 5,
     });

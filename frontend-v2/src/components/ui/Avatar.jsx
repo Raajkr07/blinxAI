@@ -15,6 +15,7 @@ export function Avatar({
     name,
     size = 'md',
     online = false,
+    showOffline = false,
     className,
 }) {
     const initials = getInitials(name || alt);
@@ -51,12 +52,13 @@ export function Avatar({
                     {initials}
                 </div>
             </div>
-            {online && (
+            {(online || showOffline) && (
                 <span
                     className={cn(
                         'absolute bottom-0 right-0',
                         'h-3 w-3 rounded-full',
-                        'bg-green-500 border-2 border-black',
+                        'border-2 border-black',
+                        online ? 'bg-green-500' : 'bg-red-500',
                         size === 'xs' && 'h-2 w-2 border',
                         size === 'sm' && 'h-2.5 w-2.5 border',
                         (size === 'xl' || size === '2xl') && 'h-4 w-4'

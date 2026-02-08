@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { Button, Input } from '../ui';
-import { chatApi } from '../../api';
+import { chatService } from '../../services';
 import toast from 'react-hot-toast';
 
 export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
@@ -26,7 +26,7 @@ export function EmailPreviewModal({ isOpen, onApprove, onDeny, emailInfo }) {
 
         try {
             setIsSending(true);
-            const response = await chatApi.sendEmail(recipient, subject, body);
+            const response = await chatService.sendEmail(recipient, subject, body);
 
             if (response.success) {
                 toast.success('Email sent successfully!');

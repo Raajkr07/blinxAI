@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState, useLayoutEffect } from 'react';
-import { chatApi, socketService } from '../../api';
+import { chatService, socketService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
 import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon } from '../ui';
@@ -26,7 +26,7 @@ export function MessageList({ conversationId }) {
         error
     } = useInfiniteQuery({
         queryKey: queryKeys.messages(conversationId),
-        queryFn: ({ pageParam = 0 }) => chatApi.getMessages(conversationId, pageParam, 20),
+        queryFn: ({ pageParam = 0 }) => chatService.getMessages(conversationId, pageParam, 20),
         initialPageParam: 0,
         getNextPageParam: (lastPage) => {
             const pageData = lastPage.content || lastPage;
@@ -251,17 +251,59 @@ export function MessageList({ conversationId }) {
         return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
     });
 
+    // Track if this is the initial load
+    const isInitialLoadRef = useRef(true);
+    const prevMessagesLengthRef = useRef(0);
+
     useEffect(() => {
+        // Only scroll to bottom on initial load, not when loading previous messages
         if (!isFetchingNextPage && sortedMessages.length > 0 && !prevScrollHeightRef.current) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+            if (isInitialLoadRef.current && !isLoading) {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                isInitialLoadRef.current = false;
+            }
         }
     }, [conversationId, isLoading, isFetchingNextPage, sortedMessages.length]);
 
     useEffect(() => {
-        if (liveMessages.length > 0 || optimisticArray.length > 0) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Only scroll to bottom when NEW messages arrive (not when loading history)
+        const prevLength = prevMessagesLengthRef.current;
+        const currentLength = sortedMessages.length;
+
+        if (currentLength > prevLength && !isFetchingNextPage && !isLoading) {
+            if (scrollContainerRef.current) {
+                const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+                const isNearBottom = scrollHeight - scrollTop - clientHeight < 250;
+
+                if (isNearBottom || (currentLength - prevLength === 1 && sortedMessages[currentLength - 1].senderId === 'me')) {
+                    // Use 'auto' behavior for instant feedback on your own messages or when near bottom
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+                }
+            }
         }
-    }, [liveMessages.length, optimisticArray.length]);
+
+        prevMessagesLengthRef.current = currentLength;
+    }, [sortedMessages, isFetchingNextPage, isLoading]);
+
+    useEffect(() => {
+        const footer = document.querySelector('.chat-window-footer');
+        if (!footer) return;
+
+        const observer = new ResizeObserver(() => {
+            if (scrollContainerRef.current) {
+                requestAnimationFrame(() => {
+                    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+                    // Proactive anchoring: If user is within 300px of bottom, stay glued during resize
+                    if (scrollHeight - scrollTop - clientHeight < 300) {
+                        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+                    }
+                });
+            }
+        });
+
+        observer.observe(footer);
+        return () => observer.disconnect();
+    }, [conversationId]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -333,7 +375,9 @@ export function MessageList({ conversationId }) {
     }
 
     return (
-        <div className="space-y-2 px-4 py-2">
+        <div
+            className="space-y-4 px-4 py-2 pb-6"
+        >
             <div ref={topSentinelRef} className="h-4 w-full" />
 
             {isFetchingNextPage && (
@@ -377,9 +421,59 @@ export function MessageList({ conversationId }) {
                 </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-1 w-full" />
         </div>
     );
+}
+
+// Helper function to render message text with clickable links
+function renderMessageWithLinks(text, isOwn) {
+    if (!text) return null;
+
+    // Regex to match markdown-style links: [text](url)
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+        // Add text before the link
+        if (match.index > lastIndex) {
+            parts.push(text.substring(lastIndex, match.index));
+        }
+
+        // Add the clickable link
+        const linkText = match[1];
+        const url = match[2];
+
+        parts.push(
+            <a
+                key={match.index}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                    "underline hover:opacity-80 transition-opacity",
+                    isOwn
+                        ? "text-[var(--color-background)]"
+                        : "text-blue-600 dark:text-blue-400"
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {linkText}
+            </a>
+        );
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text after the last link
+    if (lastIndex < text.length) {
+        parts.push(text.substring(lastIndex));
+    }
+
+    // If no links found, return the original text
+    return parts.length > 0 ? parts : text;
 }
 
 function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
@@ -388,7 +482,7 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
     const queryClient = useQueryClient();
 
     const deleteMessageMutation = useMutation({
-        mutationFn: () => chatApi.deleteMessage(message.id),
+        mutationFn: () => chatService.deleteMessage(message.id),
         onSuccess: async () => {
             await queryClient.invalidateQueries({
                 queryKey: queryKeys.messages(message.conversationId),
@@ -445,11 +539,14 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
                                 : 'bg-[var(--color-border)] rounded-bl-sm text-[var(--color-foreground)]'
                         )}
                     >
-                        <p className="text-sm whitespace-pre-wrap">
-                            {message.senderId === 'ai-assistant'
-                                ? stripMarkdown(message.body)
-                                : message.body}
-                        </p>
+                        <div className="text-sm whitespace-pre-wrap">
+                            {renderMessageWithLinks(
+                                message.senderId === 'ai-assistant'
+                                    ? stripMarkdown(message.body)
+                                    : message.body,
+                                isOwn
+                            )}
+                        </div>
 
                         <div className={cn(
                             'flex items-center gap-2 mt-1',

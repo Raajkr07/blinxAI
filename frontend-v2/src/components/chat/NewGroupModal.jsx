@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userApi, chatApi } from '../../api';
+import { userService, chatService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore } from '../../stores';
 import { Modal, ModalFooter, Button, Input, Avatar } from '../ui';
@@ -19,14 +19,14 @@ export function NewGroupModal({ open, onOpenChange }) {
 
     const { data: searchResults } = useQuery({
         queryKey: ['userSearch', searchQuery],
-        queryFn: () => userApi.searchUsers(searchQuery),
+        queryFn: () => userService.searchUsers(searchQuery),
         enabled: searchQuery.length > 0 && step === 'members',
     });
 
 
 
     const createGroupMutation = useMutation({
-        mutationFn: (data) => chatApi.createGroup(data.title, data.participantIds),
+        mutationFn: (data) => chatService.createGroup(data.title, data.participantIds),
         onSuccess: (conversation) => {
             toast.success('Group created successfully');
             queryClient.invalidateQueries({ queryKey: queryKeys.conversations });

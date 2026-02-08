@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { chatApi, userApi } from '../../api';
+import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores';
 import { Modal, Avatar, Button } from '../ui';
@@ -9,7 +9,7 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
 
     const { data: conversation, isLoading: isLoadingConv } = useQuery({
         queryKey: queryKeys.conversation(conversationId),
-        queryFn: () => chatApi.getConversation(conversationId),
+        queryFn: () => chatService.getConversation(conversationId),
         enabled: !!conversationId && isOpen,
     });
 
@@ -22,11 +22,37 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
 
     const { data: userProfile, isLoading: isLoadingUser } = useQuery({
         queryKey: ['user', otherUserId],
-        queryFn: () => userApi.getUserById(otherUserId),
+        queryFn: () => userService.getUserById(otherUserId),
         enabled: !!otherUserId && isOpen,
     });
 
-    const isLoading = isLoadingConv || (!!otherUserId && isLoadingUser);
+    // Fetch all participants for group chats
+    const { data: groupParticipants, isLoading: isLoadingParticipants } = useQuery({
+        queryKey: ['group-participants', conversationId],
+        queryFn: async () => {
+            if (!conversation?.participants) return [];
+
+            const participantPromises = conversation.participants.map(async (participantId) => {
+                try {
+                    const user = await userService.getUserById(participantId);
+                    return user;
+                } catch (error) {
+                    console.error(`Failed to fetch user ${participantId}:`, error);
+                    return {
+                        id: participantId,
+                        username: 'Unknown User',
+                        email: null,
+                        phone: null,
+                    };
+                }
+            });
+
+            return Promise.all(participantPromises);
+        },
+        enabled: isGroup && !!conversation?.participants && isOpen,
+    });
+
+    const isLoading = isLoadingConv || (!!otherUserId && isLoadingUser) || (isGroup && isLoadingParticipants);
 
     const displayData = isGroup || isAI ? conversation : (userProfile || conversation);
 
@@ -87,15 +113,15 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                         </div>
                     )}
 
-                    {isGroup && conversation?.participants && (
+                    {isGroup && groupParticipants && (
                         <div className="space-y-3">
                             <h3 className="text-sm font-medium text-[var(--color-gray-500)]">
-                                Members ({conversation.participants.length})
+                                Members ({groupParticipants.length})
                             </h3>
                             <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {conversation.participants.map((participant) => (
+                                {groupParticipants.map((participant) => (
                                     <div
-                                        key={participant.id || participant}
+                                        key={participant.id}
                                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-border)] transition-colors"
                                     >
                                         <Avatar
@@ -106,11 +132,11 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-baseline">
                                                 <p className="text-sm font-medium text-[var(--color-foreground)] truncate">
-                                                    {participant.username || participant.name || 'Unknown'}
+                                                    {participant.username || participant.name || 'Unknown User'}
                                                 </p>
-                                                {participant.role && (
-                                                    <span className="text-xs text-[var(--color-gray-500)] ml-2">
-                                                        {participant.role}
+                                                {participant.id === currentUser?.id && (
+                                                    <span className="text-xs text-[var(--color-primary)] ml-2">
+                                                        You
                                                     </span>
                                                 )}
                                             </div>
@@ -143,7 +169,7 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                                     />
                                 </svg>
                                 <h3 className="text-sm font-medium text-[var(--color-foreground)]">
-                                    AI-Powered Assistant
+                                    AI & MCP based Assistant
                                 </h3>
                             </div>
                             <p className="text-sm text-[var(--color-gray-400)]">

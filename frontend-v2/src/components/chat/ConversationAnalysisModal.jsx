@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { aiApi } from '../../api';
+import { aiService } from '../../services';
 import { Modal, ModalFooter, Button } from '../ui';
 import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
 
     const { data: analysis, isLoading, refetch } = useQuery({
         queryKey: ['conversationAnalysis', conversationId],
-        queryFn: () => aiApi.summarizeConversation(conversationId),
+        queryFn: () => aiService.summarizeConversation(conversationId),
         enabled: false,
     });
 

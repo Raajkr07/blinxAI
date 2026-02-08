@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { userApi } from '../../api';
+import { userService } from '../../services';
 import { useAuthStore } from '../../stores';
 import { Modal, ModalFooter, Button, Input, Avatar } from '../ui';
 import toast from 'react-hot-toast';
@@ -16,7 +16,7 @@ export function SettingsModal({ open, onOpenChange }) {
     }));
 
     const updateProfileMutation = useMutation({
-        mutationFn: (data) => userApi.updateProfile(data),
+        mutationFn: (data) => userService.updateProfile(data),
         onSuccess: (updatedUser) => {
             setUser(updatedUser);
             toast.success('Profile updated');

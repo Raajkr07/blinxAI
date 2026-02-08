@@ -5,7 +5,7 @@ export function ChatWindow({ children, className }) {
     const { activeConversationId } = useChatStore();
 
     return (
-        <div className={cn('h-full flex flex-col bg-[var(--color-background)]', className)}>
+        <div className={cn('h-full flex flex-col overflow-hidden bg-[var(--color-background)]', className)}>
             {activeConversationId ? (
                 children
             ) : (
@@ -25,7 +25,7 @@ export function ChatWindowHeader({ children }) {
 
 export function ChatWindowContent({ children, className }) {
     return (
-        <div className={cn('flex-1 overflow-y-auto px-6', className)}>
+        <div className={cn('flex-1 overflow-y-auto min-h-0 px-6', className)}>
             {children}
         </div>
     );
@@ -33,7 +33,7 @@ export function ChatWindowContent({ children, className }) {
 
 export function ChatWindowFooter({ children }) {
     return (
-        <div className="px-6 pt-[4px] pb-[2px] border-t border-gray-800 flex-shrink-0">
+        <div className="chat-window-footer px-6 pt-[4px] pb-[2px] border-t border-gray-800 flex-shrink-0 bg-[var(--color-background)] z-10">
             {children}
         </div>
     );

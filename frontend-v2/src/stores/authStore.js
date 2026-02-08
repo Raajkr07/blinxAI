@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { authApi } from '../api';
+import { authService } from '../services';
 export const useAuthStore = create((set, get) => ({
     user: storage.get(STORAGE_KEYS.USER),
     accessToken: storage.get(STORAGE_KEYS.ACCESS_TOKEN),
@@ -27,7 +27,7 @@ export const useAuthStore = create((set, get) => ({
 
         try {
             if (refreshToken) {
-                await authApi.logout(refreshToken);
+                await authService.logout(refreshToken);
             }
         } catch (error) {
             console.error('Logout error:', error);
@@ -35,6 +35,10 @@ export const useAuthStore = create((set, get) => ({
             storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
             storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
             storage.remove(STORAGE_KEYS.USER);
+
+            // Clear chat tabs from localStorage
+            localStorage.removeItem('chat-tabs-storage');
+
             set({
                 user: null,
                 accessToken: null,
