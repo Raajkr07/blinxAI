@@ -152,7 +152,7 @@ export function CallLogs() {
     return (
         <Motion.div
             {...animationProps}
-            className="flex-1 flex flex-col overflow-hidden bg-slate-950/20"
+            className="flex-1 flex flex-col overflow-hidden bg-slate-950/20 relative"
         >
             {/* Filter Tabs */}
             <div className="sticky top-0 glass-strong border-b border-white/5 z-10 shrink-0">
@@ -304,35 +304,43 @@ export function CallLogs() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="absolute bottom-0 left-0 right-0 glass-strong border-t border-white/5 p-4 flex items-center justify-between">
+                <div className="absolute bottom-0 left-0 right-0 glass-strong border-t border-white/5 p-4 flex items-center justify-between z-20">
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setPage(p => p - 1)}
-                        disabled={!hasPrevious}
-                        className="rounded-xl px-4"
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={!hasPrevious || page === 0}
+                        className="rounded-xl px-4 min-w-[100px]"
                     >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="m15 18-6-6 6-6" /></svg>
                         Previous
                     </Button>
-                    <div className="flex gap-1.5">
-                        {[...Array(totalPages)].map((_, i) => (
-                            <div
-                                key={i}
-                                className={cn(
-                                    "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                    page === i ? "bg-blue-500 w-4" : "bg-white/20"
-                                )}
-                            />
-                        ))}
+                    <div className="flex gap-1.5 flex-wrap justify-center max-w-[50%]">
+                        {totalPages <= 8 ? (
+                            [...Array(totalPages)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={cn(
+                                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                        page === i ? "bg-blue-500 w-4" : "bg-white/20"
+                                    )}
+                                />
+                            ))
+                        ) : (
+                            <span className="text-xs font-medium text-slate-400">
+                                Page <span className="text-white">{page + 1}</span> of {totalPages}
+                            </span>
+                        )}
                     </div>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setPage(p => p + 1)}
                         disabled={!hasNext}
-                        className="rounded-xl px-4"
+                        className="rounded-xl px-4 min-w-[100px]"
                     >
                         Next
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-2"><path d="m9 18 6-6-6-6" /></svg>
                     </Button>
                 </div>
             )}

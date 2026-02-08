@@ -6,7 +6,7 @@ export function ChatWindow({ children, className }) {
 
     return (
         <div className={cn('h-full flex flex-col overflow-hidden bg-[var(--color-background)]', className)}>
-            {activeConversationId ? (
+            {activeConversationId || children ? (
                 children
             ) : (
                 <ChatWindowEmpty />
