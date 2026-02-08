@@ -27,14 +27,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.time.ZoneId;
 
-/**
- * AI Chat Service - Production-grade implementation with:
- * - Autonomous tool execution (like Claude/ChatGPT)
- * - Retry logic with exponential backoff
- * - Proper error handling and sanitization
- * - Structured logging and metrics
- * - Separation of concerns (tool execution delegated)
- */
+// AI Chat Service - Production-grade implementation with:
+// - Autonomous tool execution (like Claude/ChatGPT)
+// - Retry logic with exponential backoff
+// - Proper error handling and sanitization
+// - Structured logging and metrics
+// - Separation of concerns (tool execution delegated)
 @Service
 @Slf4j
 public class AiService {
@@ -76,7 +74,6 @@ public class AiService {
         long startTime = System.currentTimeMillis();
         
         try {
-            log.info("[AI] Processing message from user: {} in conversation: {}", userId, conversationId);
             
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -96,7 +93,6 @@ public class AiService {
             Message savedMessage = saveAiMessage(conversationId, aiResponse);
             
             long duration = System.currentTimeMillis() - startTime;
-            log.info("[AI] Completed in {}ms for user: {}", duration, userId);
             
             return savedMessage;
 
@@ -158,9 +154,7 @@ public class AiService {
         return "Your request is too complex. Please break it down into smaller steps.";
     }
 
-    /**
-     * Execute a single tool call using the dedicated executor.
-     */
+    // Execute a single tool call using the dedicated executor.
     private void executeToolAndAddResult(String userId, ToolCall toolCall, List<Map<String, Object>> messages) {
         String toolName = toolCall.function().name();
         String arguments = toolCall.function().arguments();
@@ -177,9 +171,7 @@ public class AiService {
         ));
     }
 
-    /**
-     * Call OpenAI API with exponential backoff retry.
-     */
+    // Call OpenAI API with exponential backoff retry.
     private OpenAiResponse callOpenAiApiWithRetry(List<Map<String, Object>> messages) 
             throws JsonProcessingException {
         
@@ -212,9 +204,7 @@ public class AiService {
         throw new RuntimeException(AiConstants.ERROR_AI_API_FAILED, lastException);
     }
 
-    /**
-     * Call OpenAI API (single attempt).
-     */
+    // Call OpenAI API (single attempt).
     private OpenAiResponse callOpenAiApi(List<Map<String, Object>> messages) throws JsonProcessingException {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("AI API key not configured");
@@ -244,9 +234,7 @@ public class AiService {
         return restTemplate.postForObject(url, entity, OpenAiResponse.class);
     }
 
-    /**
-     * Build conversation messages from database history + system prompt.
-     */
+    // Build conversation messages from database history + system prompt.
     private List<Map<String, Object>> buildConversationMessages(String conversationId, User user) {
         List<Map<String, Object>> messages = new ArrayList<>();
 
@@ -277,9 +265,7 @@ public class AiService {
         return messages;
     }
 
-    /**
-     * Build system prompt that explains AI capabilities and available tools.
-     */
+    // Build system prompt that explains AI capabilities and available tools.
     private String buildSystemPrompt(User user) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are ").append(AiConstants.AI_USER_NAME)
@@ -317,9 +303,7 @@ public class AiService {
         return prompt.toString();
     }
 
-    /**
-     * Build OpenAI tool definitions from MCP tools.
-     */
+    // Build OpenAI tool definitions from MCP tools.
     private List<Map<String, Object>> buildToolDefinitions() {
         return toolRegistry.all().stream()
                 .map(tool -> Map.of(
@@ -333,9 +317,7 @@ public class AiService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Build assistant message with tool calls (OpenAI format).
-     */
+    // Build assistant message with tool calls (OpenAI format).
     private Map<String, Object> buildAssistantToolCallMessage(OpenAiMessage aiMessage) {
         Map<String, Object> msg = new HashMap<>();
         msg.put("role", "assistant");

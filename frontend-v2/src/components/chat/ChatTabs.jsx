@@ -10,7 +10,7 @@ export function ChatTabs() {
     if (tabs.length === 0) return null;
 
     return (
-        <div className="flex h-12 bg-[var(--color-bg-sidebar)] border-b border-[var(--color-border)] overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex h-10 bg-[var(--color-bg-sidebar)] border-b border-[var(--color-border)] overflow-x-auto no-scrollbar scroll-smooth">
             <AnimatePresence mode="popLayout">
                 {tabs.map((tab) => {
                     const isActive = tab.id === activeTabId;

@@ -11,6 +11,7 @@ export function MessageList({ conversationId }) {
     const { user } = useAuthStore();
     const { optimisticMessages, removeOptimisticMessage } = useChatStore();
     const [liveMessages, setLiveMessages] = useState([]);
+    const [typingUsers, setTypingUsers] = useState(new Set());
     const messagesEndRef = useRef(null);
     const topSentinelRef = useRef(null);
     const scrollContainerRef = useRef(null);
@@ -49,6 +50,7 @@ export function MessageList({ conversationId }) {
 
     useEffect(() => {
         let subscription = null;
+        let typingSubscription = null;
         let isMounted = true;
 
         const setupConnection = async () => {
@@ -122,6 +124,25 @@ export function MessageList({ conversationId }) {
                         }
                     }
                 });
+
+                if (user?.id) {
+                    const typingTopic = `/topic/conversations/${conversationId}/typing`;
+                    typingSubscription = socketService.subscribe(typingTopic, (payload) => {
+                        if (!isMounted) return;
+
+                        if (payload && payload.userId !== user.id) {
+                            setTypingUsers(prev => {
+                                const next = new Set(prev);
+                                if (payload.typing === true) {
+                                    next.add(payload.userId);
+                                } else {
+                                    next.delete(payload.userId);
+                                }
+                                return next;
+                            });
+                        }
+                    });
+                }
             } catch (err) {
                 console.error('Failed to connect to WebSocket:', err);
                 if (isMounted) {
@@ -138,6 +159,9 @@ export function MessageList({ conversationId }) {
             isMounted = false;
             if (subscription) {
                 subscription.unsubscribe();
+            }
+            if (typingSubscription) {
+                typingSubscription.unsubscribe();
             }
         };
     }, [conversationId, removeOptimisticMessage, user?.id]);
@@ -214,9 +238,18 @@ export function MessageList({ conversationId }) {
         }
     });
 
-    const sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) =>
-        new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp)
-    );
+    const sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => {
+        // Use MongoDB ID for sorting real messages to ensure chronological order
+        // despite potential timestamp skews (e.g. UTC vs Local)
+        const isRealA = a.id && /^[0-9a-fA-F]{24}$/.test(a.id);
+        const isRealB = b.id && /^[0-9a-fA-F]{24}$/.test(b.id);
+
+        if (isRealA && isRealB) {
+            return a.id.localeCompare(b.id);
+        }
+
+        return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
+    });
 
     useEffect(() => {
         if (!isFetchingNextPage && sortedMessages.length > 0 && !prevScrollHeightRef.current) {
@@ -324,6 +357,26 @@ export function MessageList({ conversationId }) {
                     />
                 );
             })}
+
+            {/* Typing Indicator */}
+            {typingUsers.size > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 text-xs text-[var(--color-gray-500)] animate-pulse">
+                    <div className="flex gap-0.5">
+                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></span>
+                    </div>
+                    <span>
+                        {Array.from(typingUsers).map(uid => {
+                            if (uid === 'ai-assistant') return 'Assistant is responding...';
+                            const userMsg = sortedMessages.find(m => m.senderId === uid);
+                            const name = userMsg?.senderName || 'Someone';
+                            return `${name} is typing...`;
+                        }).join(', ')}
+                    </span>
+                </div>
+            )}
+
             <div ref={messagesEndRef} />
         </div>
     );

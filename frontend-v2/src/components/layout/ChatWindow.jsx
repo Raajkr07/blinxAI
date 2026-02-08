@@ -17,7 +17,7 @@ export function ChatWindow({ children, className }) {
 
 export function ChatWindowHeader({ children }) {
     return (
-        <div className="h-16 px-6 flex items-center justify-between border-b border-gray-800 flex-shrink-0">
+        <div className="h-12 px-6 flex items-center justify-between border-b border-gray-800 flex-shrink-0">
             {children}
         </div>
     );
@@ -33,7 +33,7 @@ export function ChatWindowContent({ children, className }) {
 
 export function ChatWindowFooter({ children }) {
     return (
-        <div className="px-6 py-4 border-t border-gray-800 flex-shrink-0">
+        <div className="px-6 pt-[4px] pb-[2px] border-t border-gray-800 flex-shrink-0">
             {children}
         </div>
     );

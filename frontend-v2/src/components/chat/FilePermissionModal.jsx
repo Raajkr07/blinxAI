@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { Button, Input } from '../ui';
-import { chatApi } from '../../api';
 import toast from 'react-hot-toast';
 
 export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
@@ -24,15 +23,43 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
 
         setIsSaving(true);
         try {
-            const response = await chatApi.saveFile(editedFileName, content);
-            if (response.success) {
-                toast.success(`Saved to ${response.filePath}`);
+            // Use File System Access API if supported
+            if ('showSaveFilePicker' in window) {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: editedFileName.includes('.') ? editedFileName : `${editedFileName}.txt`,
+                    types: [{
+                        description: 'Text File',
+                        accept: { 'text/plain': ['.txt', '.md', '.json', '.csv'] },
+                    }],
+                });
+
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+
+                toast.success('File saved successfully');
                 onApprove();
             } else {
-                toast.error('Failed to save file');
+                // Fallback: Create blob and trigger download
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = editedFileName.includes('.') ? editedFileName : `${editedFileName}.txt`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                toast.success('File downloaded successfully');
+                onApprove();
             }
         } catch (error) {
-            toast.error(error.response?.data || 'Failed to save file');
+            // Don't show error if user simply cancelled the picker
+            if (error.name !== 'AbortError') {
+                console.error('Save failed:', error);
+                toast.error('Failed to save file');
+            }
         } finally {
             setIsSaving(false);
         }

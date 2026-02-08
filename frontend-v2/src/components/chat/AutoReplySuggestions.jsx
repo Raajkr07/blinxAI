@@ -80,7 +80,7 @@ export function AutoReplySuggestions({ conversationId, messageId, messageContent
                             ))}
                         </div>
                     ) : (
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-[2px]">
                             {filteredReplies.map((suggestion, index) => (
                                 <button
                                     key={index}

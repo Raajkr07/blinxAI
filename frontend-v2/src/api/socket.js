@@ -30,8 +30,9 @@ class SocketService {
                     Authorization: `Bearer ${token}`,
                 },
                 onConnect: () => {
+                    // Force connected state true immediately
                     this.connected = true;
-                    resolve();
+                    if (resolve) resolve();
                 },
                 onDisconnect: () => {
                     this.connected = false;

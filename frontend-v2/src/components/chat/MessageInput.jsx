@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { chatApi, socketService, aiApi } from '../../api';
 import { queryKeys } from '../../lib/queryClient';
@@ -12,6 +12,19 @@ export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
     const user = useAuthStore((state) => state.user);
     const { addOptimisticMessage, removeOptimisticMessage } = useChatStore();
+
+    // Typing indicator refs
+    const typingTimeoutRef = useRef(null);
+    const isTypingRef = useRef(false);
+
+    // Cleanup typing timer on unmount
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const { data: messagesPage } = useQuery({
         queryKey: queryKeys.messages(conversationId, 0),
@@ -38,13 +51,16 @@ export function MessageInput({ conversationId }) {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     }, [messagesPage, user]);
 
+    // Check if this is an AI conversation
+    const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
+
     const sendMessageMutation = useMutation({
         mutationFn: async (body) => {
-            if (!socketService.connected) {
+            // Use local check or closure variable. Closure variable 'isAiChat' is defined at line 55.
+            if (!isAiChat && !socketService.connected) {
                 await socketService.connect();
             }
 
-            const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
             const destination = isAiChat ? '/app/ai.chat' : '/app/chat.sendMessage';
 
             const payload = { conversationId, body };
@@ -93,8 +109,27 @@ export function MessageInput({ conversationId }) {
         sendMessageMutation.mutate(suggestion);
     };
 
-    // Check if this is an AI conversation
-    const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
+    const handleInputChange = (e) => {
+        const newValue = e.target.value;
+        setMessage(newValue);
+
+        // Typing indicator logic
+        if (!isAiChat && socketService.connected) {
+            if (!isTypingRef.current) {
+                isTypingRef.current = true;
+                socketService.send('/app/chat.typing', { conversationId, typing: true });
+            }
+
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            typingTimeoutRef.current = setTimeout(() => {
+                isTypingRef.current = false;
+                socketService.send('/app/chat.typing', { conversationId, typing: false });
+            }, 2000);
+        }
+    };
 
     return (
         <div className="space-y-2">
@@ -110,11 +145,11 @@ export function MessageInput({ conversationId }) {
                 />
             )}
 
-            <form onSubmit={handleSubmit} className="flex items-end gap-3">
+            <form onSubmit={handleSubmit} className="flex gap-3">
                 <div className="flex-1">
                     <Textarea
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={handleInputChange}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -123,7 +158,7 @@ export function MessageInput({ conversationId }) {
                         }}
                         placeholder="Type a message..."
                         disabled={sendMessageMutation.isPending}
-                        className="h-12 min-h-[48px] py-3"
+                        className="h-12 min-h-[48px]"
                     />
                 </div>
                 <Button

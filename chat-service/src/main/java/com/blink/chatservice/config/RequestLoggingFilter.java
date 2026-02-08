@@ -39,7 +39,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             // Logging user ID if available, helps in debugging user-specific issues.
             String userId = request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "anonymous";
 
-            log.info("Finished request {} {} status={} time={}ms user={}", 
+            log.debug("Finished request {} {} status={} time={}ms user={}", 
                     method, path, status, duration, userId);
             
             MDC.clear();
