@@ -7,19 +7,25 @@ metadata:
     app: chat-service
 type: Opaque
 data:
-  JWT_SECRET: "MmU4MDRXQll3Nk************************"
-  
-  MONGODB_URI: "bW9uZ29kYjovL2FkbW****************************"
+  # JWT configuration
+  JWT_SECRET: <BASE64_ENCODED_JWT_SECRET>
 
-  REDIS_HOST: "cmVkaXMtMTA3OTAuY3JjZTI3Ni***************************"
-  REDIS_PORT: "*****"
-  REDIS_USERNAME: "*******"
-  REDIS_PASSWORD: "*******************BWb1I2Q1g3aUl2WGI="
+  # MongoDB connection
+  MONGODB_URI: <BASE64_ENCODED_MONGODB_URI>
 
-  SPRING_MAIL_USERNAME: "****************GdtYWlsLmNvbQ=="
-  SPRING_MAIL_PASSWORD: "cmphbXFran**************************="
+  # Redis configuration
+  REDIS_HOST: <BASE64_ENCODED_REDIS_HOST>
+  REDIS_PORT: <BASE64_ENCODED_REDIS_PORT>
+  REDIS_USERNAME: <BASE64_ENCODED_REDIS_USERNAME>
+  REDIS_PASSWORD: <BASE64_ENCODED_REDIS_PASSWORD>
 
-  TWILIO_ACCOUNT_SID: "U0szMzAxZjgwY******************************wZTc4ZA=="
-  TWILIO_AUTH_TOKEN: "RVN3cF*****************************4SWc4ZkJPSjk="
-  
-  AI_API_KEY: "c2s************************************************************************ST2FIOHEzaWxpelJ5SUE="
+  # Email (SMTP / Email provider)
+  SPRING_MAIL_USERNAME: <BASE64_ENCODED_EMAIL_USERNAME>
+  SPRING_MAIL_PASSWORD: <BASE64_ENCODED_EMAIL_PASSWORD>
+
+  # Twilio SMS configuration
+  TWILIO_ACCOUNT_SID: <BASE64_ENCODED_TWILIO_ACCOUNT_SID>
+  TWILIO_AUTH_TOKEN: <BASE64_ENCODED_TWILIO_AUTH_TOKEN>
+
+  # AI / External API keys
+  AI_API_KEY: <BASE64_ENCODED_AI_API_KEY>
