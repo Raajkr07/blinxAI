@@ -238,7 +238,10 @@ export function ChatInterface() {
                                 variant="ghost"
                                 size={isSidebarCollapsed ? "icon" : "sm"}
                                 className={cn("justify-start", isSidebarCollapsed && "w-10 h-10")}
-                                onClick={logout}
+                                onClick={() => {
+                                    logout();
+                                    toast.success("Logout successful, we'll miss you!");
+                                }}
                                 title="Logout"
                             >
                                 <svg

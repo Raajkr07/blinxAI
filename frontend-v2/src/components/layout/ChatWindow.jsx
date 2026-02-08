@@ -25,7 +25,7 @@ export function ChatWindowHeader({ children }) {
 
 export function ChatWindowContent({ children, className }) {
     return (
-        <div className={cn('flex-1 overflow-y-auto px-6 py-4', className)}>
+        <div className={cn('flex-1 overflow-y-auto px-6', className)}>
             {children}
         </div>
     );

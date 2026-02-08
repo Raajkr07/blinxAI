@@ -333,7 +333,7 @@ export function MessageList({ conversationId }) {
     }
 
     return (
-        <div className="space-y-4 p-4">
+        <div className="space-y-2 px-4 py-2">
             <div ref={topSentinelRef} className="h-4 w-full" />
 
             {isFetchingNextPage && (
