@@ -1,29 +1,23 @@
 package com.blink.chatservice.videochat.service;
 
+import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
-import com.blink.chatservice.videochat.dto.CallHistoryResponse;
-import com.blink.chatservice.videochat.dto.CallNotification;
-import com.blink.chatservice.videochat.dto.CallRequest;
-import com.blink.chatservice.videochat.dto.CallResponse;
-import com.blink.chatservice.videochat.dto.WebRtcSignal;
+import com.blink.chatservice.videochat.dto.*;
 import com.blink.chatservice.videochat.entity.Call;
 import com.blink.chatservice.videochat.repository.CallRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class CallServiceImpl implements CallService {
 
@@ -34,380 +28,138 @@ public class CallServiceImpl implements CallService {
     @Override
     @Transactional
     public CallResponse initiateCall(String callerId, CallRequest request) {
-        log.info("Initiating call from {} to {}", callerId, request.receiverId());
+        if (callerId.equals(request.receiverId())) throw new IllegalArgumentException("Cannot call yourself");
 
-        if (callerId == null || callerId.isBlank()) {
-            throw new IllegalArgumentException("Caller ID cannot be null or empty");
-        }
+        User caller = findUser(callerId);
+        User receiver = findUser(request.receiverId());
+        if (receiver == null) throw new IllegalArgumentException("Receiver not found");
 
-        // can't call yourself, that would be weird
-        if (callerId.equals(request.receiverId())) {
-            throw new IllegalArgumentException("Cannot call yourself");
-        }
+        var activeCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(receiver.getId(), receiver.getId(), Call.CallStatus.ANSWERED);
+        if (!activeCalls.isEmpty()) throw new IllegalStateException("Receiver busy");
 
-        // checking if receiver exists - but not blocking the call if check fails
-        // sometimes user might exist but repository lookup fails due to caching issues
-        try {
-            if (!userRepository.existsById(request.receiverId())) {
-                log.warn("Receiver {} not found in user repository, but allowing call to proceed", request.receiverId());
-            }
-        } catch (Exception e) {
-            log.warn("Failed to verify receiver existence: {}", e.getMessage());
-        }
-
-        // cleaning up any stuck calls before starting new one
-        cleanupZombieCalls(callerId);
-        cleanupZombieCalls(request.receiverId());
-
-        // checking if caller is already in another call
-        List<Call> activeCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                callerId, callerId, Call.CallStatus.ANSWERED);
-        
-        if (!activeCalls.isEmpty()) {
-            log.info("Caller {} has active calls, ending them.", callerId);
-            for (Call activeCall : activeCalls) {
-                endCallInDb(activeCall, Call.CallStatus.ENDED);
-            }
-        }
-
-        // checking if receiver is busy - we don't want to disturb them if they're already on a call
-        List<Call> receiverActiveCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                request.receiverId(), request.receiverId(), Call.CallStatus.ANSWERED);
-        
-        if (!receiverActiveCalls.isEmpty()) {
-            throw new IllegalStateException("Receiver is already in another call");
-        }
-
-        // creating the call record in database
         Call call = new Call();
-        call.setCallerId(callerId);
-        call.setReceiverId(request.receiverId());
-        call.setType(request.type() == CallRequest.CallType.VIDEO 
-                ? Call.CallType.VIDEO 
-                : Call.CallType.AUDIO);
-        call.setStatus(Call.CallStatus.INITIATED);
-        call.setStartedAt(LocalDateTime.now());
-        call.setCreatedAt(LocalDateTime.now());
-        if (request.conversationId() != null) {
-            call.setConversationId(request.conversationId());
-        }
-
-        call = callRepository.save(call);
-        
-        // sending notification to receiver through websocket
-        sendCallNotification(call, callerId, request.receiverId());
-        
-        // marking call as ringing now that receiver has been notified
+        call.setCallerId(caller.getId());
+        call.setReceiverId(receiver.getId());
+        call.setType(request.type() == CallRequest.CallType.VIDEO ? Call.CallType.VIDEO : Call.CallType.AUDIO);
         call.setStatus(Call.CallStatus.RINGING);
+        call.setStartedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        call.setConversationId(request.conversationId());
         call = callRepository.save(call);
-        
-        return CallResponse.from(call);
-    }
-    
-    private void sendCallNotification(Call call, String callerId, String receiverId) {
-        try {
-            messagingTemplate.convertAndSendToUser(
-                    receiverId,
-                    "/queue/video/call-notification",
-                    new CallNotification(
-                            call.getId(),
-                            callerId,
-                            receiverId,
-                            call.getType().name(),
-                            call.getConversationId()
-                    )
-            );
-        } catch (Exception e) {
-            log.error("Failed to send call notification to user {}", receiverId, e);
-            // not throwing error here because call is already saved in DB
-        }
-    }
 
+        messagingTemplate.convertAndSend("/topic/video/" + receiver.getId() + "/notification",
+            new CallNotification(call.getId(), caller.getId(), receiver.getId(), call.getType().name(), 
+            call.getConversationId(), caller.getUsername(), caller.getAvatarUrl()));
+
+        return CallResponse.from(call, caller, receiver);
+    }
 
     @Override
     @Transactional
     public CallResponse acceptCall(String callId, String userId) {
         Call call = getCallOrThrow(callId);
-
-        // only receiver can accept the call
-        if (!call.getReceiverId().equals(userId)) {
-            throw new IllegalArgumentException("You are not the receiver of this call");
-        }
-
-        // can only accept if call is still ringing or just initiated
-        if (call.getStatus() != Call.CallStatus.INITIATED && 
-            call.getStatus() != Call.CallStatus.RINGING) {
-            throw new IllegalStateException("Call cannot be accepted in current status: " + call.getStatus());
-        }
+        if (!call.getReceiverId().equals(userId)) throw new IllegalArgumentException("Not authorized");
 
         call.setStatus(Call.CallStatus.ANSWERED);
-        call.setAnsweredAt(LocalDateTime.now());
-        call = callRepository.save(call);
-        
-        log.info("Call {} accepted by user {}", callId, userId);
-        return CallResponse.from(call);
+        call.setAnsweredAt(LocalDateTime.now(ZoneId.of("UTC")));
+        return createCallResponse(callRepository.save(call));
     }
 
     @Override
     @Transactional
     public CallResponse rejectCall(String callId, String userId) {
         Call call = getCallOrThrow(callId);
+        if (!call.getReceiverId().equals(userId)) throw new IllegalArgumentException("Not authorized");
 
-        // only receiver can reject
-        if (!call.getReceiverId().equals(userId)) {
-            throw new IllegalArgumentException("You are not the receiver of this call");
-        }
+        call.setStatus(Call.CallStatus.REJECTED);
+        call.setEndedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        callRepository.save(call);
 
-        endCallInDb(call, Call.CallStatus.REJECTED);
-        return CallResponse.from(call);
+        sendSignal(call.getCallerId(), new WebRtcSignal(callId, WebRtcSignal.SignalType.CALL_ENDED, "Rejected", userId));
+        return createCallResponse(call);
     }
 
     @Override
     @Transactional
     public CallResponse endCall(String callId, String userId) {
         Call call = getCallOrThrow(callId);
+        if (!call.getCallerId().equals(userId) && !call.getReceiverId().equals(userId)) throw new IllegalArgumentException("Not authorized");
 
-        // both caller and receiver can end the call
-        if (!call.getCallerId().equals(userId) && !call.getReceiverId().equals(userId)) {
-            throw new IllegalArgumentException("You are not a participant of this call");
-        }
+        call.setStatus(call.getStatus() == Call.CallStatus.ANSWERED ? Call.CallStatus.ENDED : Call.CallStatus.MISSED);
+        call.setEndedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        callRepository.save(call);
 
-        Call.CallStatus endStatus = Call.CallStatus.ENDED;
-        // if call was never picked up and receiver is ending it, mark as missed
-        if (call.getStatus() == Call.CallStatus.INITIATED || 
-            call.getStatus() == Call.CallStatus.RINGING) {
-            if (call.getReceiverId().equals(userId)) {
-                endStatus = Call.CallStatus.MISSED;
-            }
-        }
-        
-        endCallInDb(call, endStatus);
-        
-        // letting the other person know call has ended
-        String otherUser = call.getCallerId().equals(userId) ? call.getReceiverId() : call.getCallerId();
-        sendSignal(otherUser, new WebRtcSignal(callId, WebRtcSignal.SignalType.CALL_ENDED, "Call ended", otherUser));
-        
-        return CallResponse.from(call);
+        String other = call.getCallerId().equals(userId) ? call.getReceiverId() : call.getCallerId();
+        sendSignal(other, new WebRtcSignal(callId, WebRtcSignal.SignalType.CALL_ENDED, "Ended", userId));
+
+        return createCallResponse(call);
     }
 
     @Override
-    public Call getCall(String callId) {
-        return getCallOrThrow(callId);
+    public Call getCall(String callId) { return getCallOrThrow(callId); }
+
+    @Override
+    public CallResponse getCallDetails(String callId, String userId) {
+        Call call = getCallOrThrow(callId);
+        if (!call.getCallerId().equals(userId) && !call.getReceiverId().equals(userId)) throw new IllegalArgumentException("Not authorized");
+        return createCallResponse(call);
     }
 
     @Override
     public List<CallResponse> getActiveCalls(String userId) {
-        // cleaning up any zombie calls while we're here
-        cleanupZombieCalls(userId);
-        
-        List<Call> calls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                userId, userId, Call.CallStatus.ANSWERED);
-        return calls.stream()
-                .map(CallResponse::from)
-                .collect(Collectors.toList());
+        return callRepository.findByCallerIdOrReceiverIdAndStatus(userId, userId, Call.CallStatus.ANSWERED)
+            .stream().map(this::createCallResponse).toList();
     }
 
     @Override
     @Transactional
     public void updateCallOffer(String callId, String offer) {
-        Call call = getCallOrThrow(callId);
-        call.setCallerOffer(offer);
-        callRepository.save(call);
+        Call c = getCallOrThrow(callId);
+        c.setCallerOffer(offer);
+        callRepository.save(c);
     }
 
     @Override
     @Transactional
     public void updateCallAnswer(String callId, String answer) {
-        Call call = getCallOrThrow(callId);
-        call.setReceiverAnswer(answer);
-        callRepository.save(call);
+        Call c = getCallOrThrow(callId);
+        c.setReceiverAnswer(answer);
+        callRepository.save(c);
     }
 
     @Override
-    public void addIceCandidate(String callId, String userId, String candidate) {
-        if (candidate == null || candidate.isBlank()) {
-            log.warn("Received empty ICE candidate for call {}", callId);
-            return;
-        }
+    public CallHistoryResponse getCallHistory(String userId, int page, int size, Call.CallStatus status, Call.CallType type, LocalDateTime start, LocalDateTime end) {
+        var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
+        var callPage = (start != null && end != null) 
+            ? callRepository.findCallHistoryByUserIdAndDateRange(userId, start, end, pageable)
+            : callRepository.findCallHistoryByUserId(userId, pageable);
 
-        Call call = callRepository.findById(callId).orElse(null);
-        if (call == null) {
-            log.warn("Attempted to add ICE candidate for non-existent call: {}", callId);
-            return;
-        }
+        var responses = callPage.getContent().stream().map(this::createCallResponse).toList();
+        return CallHistoryResponse.of(responses, callPage.getNumber(), callPage.getTotalPages(), callPage.getTotalElements(), callPage.getSize(), callPage.hasNext(), callPage.hasPrevious());
+    }
 
-        // figuring out who to send this ICE candidate to
-        String targetUserId;
-        if (userId.equals(call.getCallerId())) {
-            targetUserId = call.getReceiverId();
-        } else if (userId.equals(call.getReceiverId())) {
-            targetUserId = call.getCallerId();
-        } else {
-            log.warn("User {} is not a participant in call {}", userId, callId);
-            return;
-        }
-
-        // relaying the ICE candidate to the other person
-        WebRtcSignal signal = new WebRtcSignal(
-            callId, 
-            WebRtcSignal.SignalType.ICE_CANDIDATE, 
-            candidate, 
-            targetUserId
-        );
-        sendSignal(targetUserId, signal);
-        log.debug("Relayed ICE candidate from {} to {} for call {}", userId, targetUserId, callId);
+    @Scheduled(fixedRate = 60000)
+    public void performCallMaintenance() {
+        var threshold = LocalDateTime.now(ZoneId.of("UTC")).minusMinutes(1);
+        callRepository.findByStatusAndCreatedAtBefore(Call.CallStatus.RINGING, threshold).forEach(c -> {
+            c.setStatus(Call.CallStatus.MISSED);
+            c.setEndedAt(LocalDateTime.now(ZoneId.of("UTC")));
+            callRepository.save(c);
+        });
     }
 
     private void sendSignal(String userId, WebRtcSignal signal) {
-        try {
-            messagingTemplate.convertAndSendToUser(userId, "/queue/video/signal", signal);
-        } catch (Exception e) {
-            log.error("Failed to send WebRTC signal to user {}", userId, e);
-        }
+        messagingTemplate.convertAndSend("/topic/video/" + userId + "/signal", signal);
     }
 
-    // finding and ending calls that have been stuck for too long
-    // this happens when client crashes or internet dies during a call
-    private void cleanupZombieCalls(String userId) {
-        try {
-            LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
-            
-            List<Call> activeCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                    userId, userId, Call.CallStatus.ANSWERED);
-            List<Call> ringingCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                    userId, userId, Call.CallStatus.RINGING);
-            List<Call> initiatedCalls = callRepository.findByCallerIdOrReceiverIdAndStatus(
-                    userId, userId, Call.CallStatus.INITIATED);
-            
-            activeCalls.addAll(ringingCalls);
-            activeCalls.addAll(initiatedCalls);
-            
-            for (Call call : activeCalls) {
-                // if call is older than 1 hour, it's definitely stuck
-                if (call.getCreatedAt() != null && call.getCreatedAt().isBefore(oneHourAgo)) {
-                    log.warn("Cleaning up zombie call {} for user {}: status={}, age={} minutes", 
-                            call.getId(), userId, call.getStatus(), 
-                            java.time.Duration.between(call.getCreatedAt(), LocalDateTime.now()).toMinutes());
-                    endCallInDb(call, Call.CallStatus.ENDED);
-                    
-                    // notifying the other person that call has been cleaned up
-                    String otherUser = call.getCallerId().equals(userId) 
-                            ? call.getReceiverId() 
-                            : call.getCallerId();
-                    sendSignal(otherUser, new WebRtcSignal(
-                            call.getId(), 
-                            WebRtcSignal.SignalType.CALL_ENDED, 
-                            "Call ended due to timeout", 
-                            otherUser));
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error cleaning up zombie calls for user {}: {}", userId, e.getMessage(), e);
-        }
-    }
-    
-    private void endCallInDb(Call call, Call.CallStatus status) {
-        call.setStatus(status);
-        call.setEndedAt(LocalDateTime.now());
-        callRepository.save(call);
+    private Call getCallOrThrow(String id) {
+        return callRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Call not found"));
     }
 
-    private Call getCallOrThrow(String callId) {
-        return callRepository.findById(callId)
-                .orElseThrow(() -> new IllegalArgumentException("Call not found: " + callId));
+    private User findUser(String id) {
+        return userRepository.findById(id).or(() -> userRepository.findByUsername(id)).orElse(null);
     }
 
-    @Override
-    public CallHistoryResponse getCallHistory(
-            String userId,
-            int page,
-            int size,
-            Call.CallStatus status,
-            Call.CallType type,
-            LocalDateTime startDate,
-            LocalDateTime endDate) {
-        
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("User ID cannot be null or empty");
-        }
-
-        log.info("Fetching call history for user: {}, page: {}, size: {}, status: {}, type: {}", 
-                userId, page, size, status, type);
-
-        // making sure page and size are reasonable
-        if (page < 0) {
-            page = 0;
-        }
-
-        if (size <= 0 || size > 100) {
-            size = 20; // default to 20 if invalid
-        }
-
-        // sorting by newest first - that's what users usually want to see
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Call> callPage;
-
-        try {
-            // applying filters based on what user has requested
-            if (startDate != null && endDate != null) {
-                if (startDate.isAfter(endDate)) {
-                    throw new IllegalArgumentException("Start date must be before end date");
-                }
-                log.debug("Querying with date range: {} to {}", startDate, endDate);
-                callPage = callRepository.findCallHistoryByUserIdAndDateRange(userId, startDate, endDate, pageable);
-            } else if (status != null && type != null) {
-                // when both filters are there, we fetch all and filter in memory
-                // not ideal for huge datasets but works fine for most cases
-                log.debug("Querying with status: {} and type: {}", status, type);
-                callPage = callRepository.findCallHistoryByUserId(userId, pageable);
-                List<Call> filteredCalls = callPage.getContent().stream()
-                        .filter(call -> call.getStatus() == status && call.getType() == type)
-                        .collect(Collectors.toList());
-                log.debug("Filtered {} calls from {} total", filteredCalls.size(), callPage.getContent().size());
-            } else if (status != null) {
-                log.debug("Querying with status: {}", status);
-                callPage = callRepository.findCallHistoryByUserIdAndStatus(userId, status, pageable);
-            } else if (type != null) {
-                log.debug("Querying with type: {}", type);
-                callPage = callRepository.findCallHistoryByUserIdAndType(userId, type, pageable);
-            } else {
-                // no filters, just give everything
-                log.debug("Querying all calls for user: {}", userId);
-                callPage = callRepository.findCallHistoryByUserId(userId, pageable);
-            }
-
-            // logging what we found for debugging
-            log.info("Found {} calls for user {} (total elements: {}, total pages: {})", 
-                    callPage.getContent().size(), userId, callPage.getTotalElements(), callPage.getTotalPages());
-            
-            // logging first few calls to see if user is caller or receiver
-            callPage.getContent().stream().limit(3).forEach(call -> 
-                log.debug("Call {}: caller={}, receiver={}, status={}, type={}", 
-                        call.getId(), call.getCallerId(), call.getReceiverId(), 
-                        call.getStatus(), call.getType())
-            );
-
-            List<CallResponse> callResponses = callPage.getContent().stream()
-                    .map(CallResponse::from)
-                    .collect(Collectors.toList());
-
-            log.debug("Retrieved {} call history records for user {} (page {}/{})", 
-                    callResponses.size(), userId, page, callPage.getTotalPages());
-
-            return CallHistoryResponse.of(
-                    callResponses,
-                    callPage.getNumber(),
-                    callPage.getTotalPages(),
-                    callPage.getTotalElements(),
-                    callPage.getSize(),
-                    callPage.hasNext(),
-                    callPage.hasPrevious()
-            );
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error retrieving call history for user {}: {}", userId, e.getMessage(), e);
-            throw new RuntimeException("Failed to retrieve call history", e);
-        }
+    private CallResponse createCallResponse(Call call) {
+        return CallResponse.from(call, findUser(call.getCallerId()), findUser(call.getReceiverId()));
     }
 }

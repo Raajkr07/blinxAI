@@ -1,23 +1,19 @@
 package com.blink.chatservice.mcp.tool;
 
-import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.repository.MessageRepository;
-import lombok.extern.slf4j.Slf4j;
+import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Component
-@Slf4j
+@RequiredArgsConstructor
 public class ViewConversationTool implements McpTool {
 
     private final MessageRepository messageRepository;
-
-    public ViewConversationTool(MessageRepository messageRepository) {
-        this.messageRepository = messageRepository;
-    }
+    private final UserLookupHelper userLookupHelper;
 
     @Override
     public String name() {
@@ -26,73 +22,45 @@ public class ViewConversationTool implements McpTool {
 
     @Override
     public String description() {
-        return "Get recent messages from a conversation. Returns message details including sender, content, and timestamp.";
+        return "Get recent messages from a conversation.";
     }
 
     @Override
     public Map<String, Object> inputSchema() {
         return Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "conversationId", Map.of(
-                                "type", "string",
-                                "description", "The ID of the conversation to view"
-                        ),
-                        "limit", Map.of(
-                                "type", "integer",
-                                "description", "Maximum number of messages to retrieve (default: 20, max: 100)",
-                                "default", 20
-                        )
-                ),
-                "required", List.of("conversationId")
+            "type", "object",
+            "properties", Map.of(
+                "conversationId", Map.of("type", "string", "description", "Conversation ID"),
+                "limit", Map.of("type", "integer", "description", "Max messages", "default", 20)
+            ),
+            "required", List.of("conversationId")
         );
     }
 
     @Override
     public Object execute(String userId, Map<Object, Object> args) {
-        try {
-            String conversationId = (String) args.get("conversationId");
-            if (conversationId == null || conversationId.trim().isEmpty()) {
-                return Map.of(
-                        "error", true,
-                        "message", "conversationId is required"
-                );
-            }
+        String convId = (String) args.get("conversationId");
+        if (convId == null || convId.isBlank()) return Map.of("error", true, "message", "conversationId required");
 
-            // Limit to max 100 messages for performance
-            Integer limit = args.get("limit") != null ? (Integer) args.get("limit") : 20;
-            limit = Math.min(limit, 100);
+        int limit = args.get("limit") != null ? ((Number) args.get("limit")).intValue() : 20;
+        limit = Math.min(limit, 100);
 
-            List<Message> messages = messageRepository
-                    .findByConversationIdAndDeletedFalseOrderByIdDesc(conversationId,
-                            org.springframework.data.domain.PageRequest.of(0, limit))
-                    .getContent()
-                    .stream()
-                    .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
-                    .toList();
+        var messages = messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(convId, PageRequest.of(0, limit))
+            .getContent().stream()
+            .sorted(Comparator.comparing(m -> m.getCreatedAt()))
+            .toList();
 
-            log.info("Retrieved {} messages from conversation: {} for user: {}", 
-                    messages.size(), conversationId, userId);
+        var senderIds = messages.stream().map(m -> m.getSenderId()).collect(java.util.stream.Collectors.toSet());
+        var userInfoMap = userLookupHelper.getUserInfoBatch(senderIds);
 
-            return Map.of(
-                    "messages", messages.stream()
-                            .map(m -> Map.of(
-                                    "id", m.getId(),
-                                    "senderId", m.getSenderId(),
-                                    "content", m.getBody(),
-                                    "createdAt", m.getCreatedAt().toString(),
-                                    "seen", m.isSeen()
-                            ))
-                            .collect(Collectors.toList()),
-                    "count", messages.size(),
-                    "conversationId", conversationId
-            );
-        } catch (Exception e) {
-            log.error("Error viewing conversation", e);
-            return Map.of(
-                    "error", true,
-                    "message", "Failed to view conversation: " + e.getMessage()
-            );
-        }
+        var list = messages.stream().map(m -> Map.of(
+            "id", m.getId(),
+            "senderId", m.getSenderId(),
+            "content", m.getBody(),
+            "createdAt", m.getCreatedAt(),
+            "sender", userInfoMap.getOrDefault(m.getSenderId(), Map.of("id", m.getSenderId(), "displayName", "Unknown"))
+        )).toList();
+
+        return Map.of("messages", list, "count", list.size(), "conversationId", convId);
     }
 }

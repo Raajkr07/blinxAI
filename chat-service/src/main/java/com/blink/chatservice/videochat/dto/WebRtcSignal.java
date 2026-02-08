@@ -11,6 +11,8 @@ public record WebRtcSignal(
         OFFER,
         ANSWER,
         ICE_CANDIDATE,
-        CALL_ENDED
+        RINGING,
+        CALL_ENDED,
+        CALL_MISSED
     }
 }

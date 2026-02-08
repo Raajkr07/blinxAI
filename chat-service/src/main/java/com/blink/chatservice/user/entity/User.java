@@ -2,6 +2,8 @@ package com.blink.chatservice.user.entity;
 
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -12,9 +14,10 @@ import java.util.HashSet;
 import java.util.Set;
 import java.time.ZoneId;
 
-@Data
-@Document(collection = "users")
 @Getter
+@Setter
+@NoArgsConstructor
+@Document(collection = "users")
 public class User implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;

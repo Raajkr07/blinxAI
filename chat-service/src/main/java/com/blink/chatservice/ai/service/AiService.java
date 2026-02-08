@@ -12,29 +12,21 @@ import com.blink.chatservice.user.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.time.ZoneId;
 
-// AI Chat Service - Production-grade implementation with:
-// - Autonomous tool execution (like Claude/ChatGPT)
-// - Retry logic with exponential backoff
-// - Proper error handling and sanitization
-// - Structured logging and metrics
-// - Separation of concerns (tool execution delegated)
 @Service
-@Slf4j
 public class AiService {
 
     private final ChatService chatService;
@@ -70,303 +62,129 @@ public class AiService {
         this.objectMapper = objectMapper;
     }
 
-    public Message processAiMessage(String userId, String conversationId, String userMessage, boolean shouldSaveUserMessage) {
-        long startTime = System.currentTimeMillis();
-        
-        try {
-            
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    public Message processAiMessage(String userId, String conversationId, String userMessage, boolean shouldSave) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-            // Save user's message first (ensures persistence even if AI fails)
-            if (shouldSaveUserMessage) {
-                saveUserMessage(userId, conversationId, userMessage);
-            }
-
-            // Build conversation context
-            List<Map<String, Object>> messages = buildConversationMessages(conversationId, user);
-
-            // Execute AI reasoning loop (may involve multiple tool calls)
-            String aiResponse = executeAiReasoningLoop(userId, messages);
-
-            // Save and return AI's response
-            Message savedMessage = saveAiMessage(conversationId, aiResponse);
-            
-            long duration = System.currentTimeMillis() - startTime;
-            
-            return savedMessage;
-
-        } catch (IllegalStateException e) {
-            log.error("[AI] Configuration error", e);
-            return saveAiMessage(conversationId, "I'm currently unavailable. Please try again later.");
-            
-        } catch (Exception e) {
-            log.error("[AI] Processing failed for user: {}", userId, e);
-            return saveAiMessage(conversationId, "I encountered an error. Please try again.");
+        if (shouldSave) {
+            saveMessage(userId, conversationId, userMessage);
         }
+
+        List<Map<String, Object>> context = buildContext(conversationId, user);
+        String response = executeReasoning(userId, context);
+        
+        return saveMessage(AiConstants.AI_USER_ID, conversationId, response);
     }
 
-    /**
-     * Core AI reasoning loop with tool execution.
-     * Implements the thought-action-observation pattern like Claude/ChatGPT.
-     */
-    private String executeAiReasoningLoop(String userId, List<Map<String, Object>> messages) 
-            throws JsonProcessingException {
-        
-        int iteration = 0;
+    private String executeReasoning(String userId, List<Map<String, Object>> messages) {
+        int iterations = 0;
+        while (iterations++ < AiConstants.MAX_TOOL_ITERATIONS) {
+            OpenAiResponse response = callApi(messages);
+            OpenAiMessage lastMsg = response.choices().get(0).message();
 
-        while (iteration++ < AiConstants.MAX_TOOL_ITERATIONS) {
-            
-            // Call OpenAI API with retry logic
-            OpenAiResponse response = callOpenAiApiWithRetry(messages);
+            if (lastMsg.tool_calls() != null && !lastMsg.tool_calls().isEmpty()) {
+                messages.add(Map.of(
+                    "role", "assistant",
+                    "content", lastMsg.content() != null ? lastMsg.content() : "",
+                    "tool_calls", lastMsg.tool_calls()
+                ));
 
-            if (response == null || response.choices() == null || response.choices().isEmpty()) {
-                throw new RuntimeException("Empty AI response");
-            }
-
-            OpenAiMessage aiMessage = response.choices().get(0).message();
-
-            // Check if AI wants to call tools
-            if (aiMessage.tool_calls() != null && !aiMessage.tool_calls().isEmpty()) {
-                log.info("[AI] Requested {} tool call(s)", aiMessage.tool_calls().size());
-
-                // Add AI's tool-calling message to conversation
-                messages.add(buildAssistantToolCallMessage(aiMessage));
-
-                // Execute each tool and add results
-                for (ToolCall toolCall : aiMessage.tool_calls()) {
-                    executeToolAndAddResult(userId, toolCall, messages);
+                for (ToolCall call : lastMsg.tool_calls()) {
+                    executeTool(userId, call, messages);
                 }
-
-                // Continue loop - AI will process tool results and respond
                 continue;
             }
 
-            // AI provided final response (no more tools needed)
-            if (aiMessage.content() != null && !aiMessage.content().trim().isEmpty()) {
-                return aiMessage.content();
+            if (lastMsg.content() != null && !lastMsg.content().isBlank()) {
+                return lastMsg.content();
             }
-
-            throw new RuntimeException("AI returned no content and no tool calls");
         }
-
-        log.warn("[AI] Max iterations reached for user: {}", userId);
-        return "Your request is too complex. Please break it down into smaller steps.";
+        return "I'm sorry, I couldn't complete that request.";
     }
 
-    // Execute a single tool call using the dedicated executor.
-    private void executeToolAndAddResult(String userId, ToolCall toolCall, List<Map<String, Object>> messages) {
-        String toolName = toolCall.function().name();
-        String arguments = toolCall.function().arguments();
-
-        // Delegate to McpToolExecutor (handles timeout, validation, sanitization)
-        McpToolExecutor.ToolExecutionResult result = toolExecutor.execute(userId, toolName, arguments);
-
-        // Add tool result to conversation (OpenAI format)
+    private void executeTool(String userId, ToolCall call, List<Map<String, Object>> messages) {
+        var execution = toolExecutor.execute(userId, call.function().name(), call.function().arguments());
         messages.add(Map.of(
-                "role", "tool",
-                "tool_call_id", toolCall.id(),
-                "name", toolName,
-                "content", result.toJson(objectMapper)
+            "role", "tool",
+            "tool_call_id", call.id(),
+            "name", call.function().name(),
+            "content", execution.toJson(objectMapper)
         ));
     }
 
-    // Call OpenAI API with exponential backoff retry.
-    private OpenAiResponse callOpenAiApiWithRetry(List<Map<String, Object>> messages) 
-            throws JsonProcessingException {
+    private OpenAiResponse callApi(List<Map<String, Object>> messages) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", model);
+        body.put("messages", messages);
+        body.put("max_tokens", AiConstants.DEFAULT_MAX_TOKENS);
         
-        int attempt = 0;
-        Exception lastException = null;
-
-        while (attempt < AiConstants.AI_API_RETRY_ATTEMPTS) {
-            try {
-                return callOpenAiApi(messages);
-            } catch (RestClientException e) {
-                lastException = e;
-                attempt++;
-                
-                if (attempt < AiConstants.AI_API_RETRY_ATTEMPTS) {
-                    long delay = AiConstants.AI_API_RETRY_DELAY_MS * (1L << (attempt - 1)); // Exponential backoff
-                    log.warn("[AI] API call failed (attempt {}/{}), retrying in {}ms", 
-                            attempt, AiConstants.AI_API_RETRY_ATTEMPTS, delay);
-                    
-                    try {
-                        Thread.sleep(delay);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException("Interrupted during retry", ie);
-                    }
-                }
-            }
-        }
-
-        log.error("[AI] API call failed after {} attempts", AiConstants.AI_API_RETRY_ATTEMPTS, lastException);
-        throw new RuntimeException(AiConstants.ERROR_AI_API_FAILED, lastException);
-    }
-
-    // Call OpenAI API (single attempt).
-    private OpenAiResponse callOpenAiApi(List<Map<String, Object>> messages) throws JsonProcessingException {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("AI API key not configured");
-        }
-
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", model);
-        requestBody.put("messages", messages);
-        requestBody.put("max_tokens", AiConstants.DEFAULT_MAX_TOKENS);
-        requestBody.put("temperature", AiConstants.DEFAULT_TEMPERATURE);
-
-        // Include tools if available
-        List<Map<String, Object>> tools = buildToolDefinitions();
+        List<Map<String, Object>> tools = toolRegistry.all().stream()
+            .map(t -> Map.of("type", "function", "function", Map.of(
+                "name", t.name(), "description", t.description(), "parameters", t.inputSchema()
+            ))).toList();
+        
         if (!tools.isEmpty()) {
-            requestBody.put("tools", tools);
-            requestBody.put("tool_choice", "auto");
+            body.put("tools", tools);
+            body.put("tool_choice", "auto");
         }
 
-        String url = baseUrl + "/v1/chat/completions";
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        String jsonBody = objectMapper.writeValueAsString(requestBody);
-
-        HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-        return restTemplate.postForObject(url, entity, OpenAiResponse.class);
+        return restTemplate.postForObject(baseUrl + "/v1/chat/completions", new HttpEntity<>(body, headers), OpenAiResponse.class);
     }
 
-    // Build conversation messages from database history + system prompt.
-    private List<Map<String, Object>> buildConversationMessages(String conversationId, User user) {
+    private List<Map<String, Object>> buildContext(String conversationId, User user) {
         List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", buildPrompt(user)));
 
-        // System prompt (defines AI behavior and available tools)
-        messages.add(Map.of(
-                "role", "system",
-                "content", buildSystemPrompt(user)
-        ));
-
-        // Recent conversation history
-        List<Message> history = messageRepository
-                .findByConversationIdAndDeletedFalseOrderByIdDesc(
-                        conversationId,
-                        org.springframework.data.domain.PageRequest.of(0, AiConstants.MAX_HISTORY_MESSAGES)
-                )
-                .getContent().stream()
-                .sorted(Comparator.comparing(Message::getId))
-                .collect(Collectors.toList());
-
-        for (Message msg : history) {
-            String role = msg.getSenderId().equals(AiConstants.AI_USER_ID) ? "assistant" : "user";
-            messages.add(Map.of(
-                    "role", role,
-                    "content", msg.getBody()
-            ));
-        }
+        messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(
+            conversationId, org.springframework.data.domain.PageRequest.of(0, AiConstants.MAX_HISTORY_MESSAGES)
+        ).getContent().stream()
+            .sorted(Comparator.comparing(Message::getId))
+            .forEach(m -> messages.add(Map.of(
+                "role", m.getSenderId().equals(AiConstants.AI_USER_ID) ? "assistant" : "user",
+                "content", m.getBody()
+            )));
 
         return messages;
     }
 
-    // Build system prompt that explains AI capabilities and available tools.
-    private String buildSystemPrompt(User user) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("You are ").append(AiConstants.AI_USER_NAME)
-              .append(", a helpful assistant in the Blink Chat application.\n\n");
-        prompt.append("User: ").append(user.getUsername())
-              .append(" (ID: ").append(user.getId()).append(")\n");
+    private String buildPrompt(User user) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You are ").append(AiConstants.AI_USER_NAME).append(", a helpful assistant in Blink Chat.\n")
+          .append("User: ").append(user.getUsername()).append(" (ID: ").append(user.getId()).append(")\n")
+          .append("Date: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append("\n\n")
+          .append("Capabilities:\n");
         
-        // Add current date/time context
-        prompt.append("Current Date/Time: ").append(java.time.LocalDateTime.now()
-              .format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy 'at' h:mm a")))
-              .append("\n\n");
-
-        prompt.append("CAPABILITIES:\n");
-        prompt.append("You can chat naturally AND perform actions using the following tools:\n\n");
-
-        toolRegistry.all().forEach(tool -> {
-            prompt.append("- ").append(tool.name()).append(": ")
-                  .append(tool.description()).append("\n");
-        });
-
-        prompt.append("\nGUIDELINES:\n");
-        prompt.append("1. When a user asks you to DO something (send message, search users, etc.), use the appropriate tool.\n");
-        prompt.append("2. For general questions or conversation, respond directly without tools.\n");
-        prompt.append("3. You CAN answer general knowledge questions, provide information, and have natural conversations.\n");
-        prompt.append("4. For date/time questions, use the current date/time provided above.\n");
-        prompt.append("5. BEFORE using save_file tool, ALWAYS ask the user: 'Would you like me to generate this file for you to save as [filename]?' Wait for confirmation.\n");
-        prompt.append("6. When saving files, organize and format the content nicely for readability.\n");
-        prompt.append("7. Be friendly, concise, and helpful.\n");
-        prompt.append("8. If a tool fails, explain the error clearly to the user.\n");
-        prompt.append("9. Always confirm successful actions (e.g., 'Message sent to John').\n");
-        prompt.append("10. IMPORTANT: When using save_file, the tool creates a draft. You MUST tell the user to check the popup to confirm and choose the save location.\n");
-        prompt.append("11. Use plain text formatting - avoid markdown symbols like ** (bold) or * (italics).\n");
-        prompt.append("12. For send_email: ask for recipient, subject, and content if missing. When you call the tool, it will open a preview modal for the user. Tell the user 'I've drafted the email for you to review.'\n");
-
-        return prompt.toString();
+        toolRegistry.all().forEach(t -> sb.append("- ").append(t.name()).append(": ").append(t.description()).append("\n"));
+        
+        sb.append("\nGuidelines:\n")
+          .append("1. Use tools for actions like sending messages or searching and more.\n")
+          .append("2. Be concise and friendly.\n")
+          .append("3. For save_file, ask for confirmation first.\n");
+        
+        return sb.toString();
     }
 
-    // Build OpenAI tool definitions from MCP tools.
-    private List<Map<String, Object>> buildToolDefinitions() {
-        return toolRegistry.all().stream()
-                .map(tool -> Map.of(
-                        "type", "function",
-                        "function", Map.of(
-                                "name", tool.name(),
-                                "description", tool.description(),
-                                "parameters", tool.inputSchema()
-                        )
-                ))
-                .collect(Collectors.toList());
-    }
-
-    // Build assistant message with tool calls (OpenAI format).
-    private Map<String, Object> buildAssistantToolCallMessage(OpenAiMessage aiMessage) {
-        Map<String, Object> msg = new HashMap<>();
-        msg.put("role", "assistant");
-        msg.put("content", aiMessage.content() != null ? aiMessage.content() : "");
-        msg.put("tool_calls", aiMessage.tool_calls().stream()
-                .map(tc -> Map.of(
-                        "id", tc.id(),
-                        "type", "function",
-                        "function", Map.of(
-                                "name", tc.function().name(),
-                                "arguments", tc.function().arguments()
-                        )
-                ))
-                .collect(Collectors.toList()));
-        return msg;
-    }
-
-    private void saveUserMessage(String userId, String conversationId, String content) {
+    private Message saveMessage(String senderId, String conversationId, String content) {
         Message msg = new Message();
         msg.setConversationId(conversationId);
-        msg.setSenderId(userId);
-        msg.setBody(content.trim());
-        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-        msg.setSeen(false);
-        msg.setDeleted(false);
-        messageRepository.save(msg);
-    }
-
-    private Message saveAiMessage(String conversationId, String content) {
-        Message msg = new Message();
-        msg.setConversationId(conversationId);
-        msg.setSenderId(AiConstants.AI_USER_ID);
+        msg.setSenderId(senderId);
         msg.setBody(content);
         msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         msg.setSeen(false);
         msg.setDeleted(false);
-        Message saved = messageRepository.save(msg);
-        return saved;
+        return messageRepository.save(msg);
     }
 
     public Conversation getOrCreateAiConversation(String userId) {
-        List<Conversation> conversations = chatService.listConversationsForUser(userId);
-        return conversations.stream()
-                .filter(c -> "AI_ASSISTANT".equals(c.getType().name()))
-                .findFirst()
-                .orElseGet(() -> chatService.createAiConversation(userId));
+        return chatService.listConversationsForUser(userId).stream()
+            .filter(c -> "AI_ASSISTANT".equals(c.getType().name()))
+            .findFirst()
+            .orElseGet(() -> chatService.createAiConversation(userId));
     }
 
-    // OpenAI API Response DTOs
     @JsonIgnoreProperties(ignoreUnknown = true)
     record OpenAiResponse(List<Choice> choices) {}
 

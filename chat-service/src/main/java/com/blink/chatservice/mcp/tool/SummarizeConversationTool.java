@@ -1,19 +1,17 @@
 package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.ai.service.AiAnalysisService;
-import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class SummarizeConversationTool implements McpTool {
 
     private final AiAnalysisService aiAnalysisService;
@@ -26,66 +24,35 @@ public class SummarizeConversationTool implements McpTool {
 
     @Override
     public String description() {
-        return "Summarize a conversation and extract key points, sentiment, and urgency. Analyzes up to 50 recent messages.";
+        return "Summarize a conversation.";
     }
 
     @Override
     public Map<String, Object> inputSchema() {
         return Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "conversationId", Map.of(
-                                "type", "string",
-                                "description", "The ID of the conversation to summarize"
-                        )
-                ),
-                "required", List.of("conversationId")
+            "type", "object",
+            "properties", Map.of(
+                "conversationId", Map.of("type", "string", "description", "Conversation ID")
+            ),
+            "required", List.of("conversationId")
         );
     }
 
     @Override
     public Object execute(String userId, Map<Object, Object> args) {
-        try {
-            String conversationId = (String) args.get("conversationId");
-            if (conversationId == null || conversationId.trim().isEmpty()) {
-                return Map.of(
-                        "error", true,
-                        "message", "conversationId is required"
-                );
-            }
+        String convId = (String) args.get("conversationId");
+        if (convId == null || convId.isBlank()) return Map.of("error", true, "message", "conversationId required");
 
-            List<Message> messages = messageRepository
-                    .findByConversationIdAndDeletedFalseOrderByIdDesc(conversationId,
-                            org.springframework.data.domain.PageRequest.of(0, 50))
-                    .getContent()
-                    .stream()
-                    .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
-                    .collect(Collectors.toList());
+        var messages = messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(convId, PageRequest.of(0, 50))
+            .getContent().stream()
+            .sorted(Comparator.comparing(m -> m.getCreatedAt()))
+            .toList();
 
-            if (messages.isEmpty()) {
-                return Map.of(
-                        "error", false,
-                        "message", "No messages found in this conversation.",
-                        "summary", ""
-                );
-            }
+        if (messages.isEmpty()) return Map.of("success", true, "summary", "No messages found");
 
-            log.info("Summarizing conversation: {} with {} messages for user: {}", 
-                    conversationId, messages.size(), userId);
-
-            Object summary = aiAnalysisService.analyzeConversation(messages);
-            return Map.of(
-                    "success", true,
-                    "conversationId", conversationId,
-                    "messageCount", messages.size(),
-                    "summary", summary
-            );
-        } catch (Exception e) {
-            log.error("Error summarizing conversation", e);
-            return Map.of(
-                    "error", true,
-                    "message", "Failed to summarize conversation: " + e.getMessage()
-            );
-        }
+        return Map.of(
+            "success", true,
+            "summary", aiAnalysisService.analyzeConversation(messages)
+        );
     }
 }

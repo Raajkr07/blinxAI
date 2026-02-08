@@ -4,7 +4,6 @@ import com.blink.chatservice.ai.service.AiAnalysisService;
 import com.blink.chatservice.ai.model.AiAnalysisModels.*;
 import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.repository.MessageRepository;
-import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,30 +21,17 @@ public class AiAnalysisController {
     private final MessageRepository messageRepository;
 
     @PostMapping("/conversation/{conversationId}/summarize")
-    @Operation(summary = "Summarize conversation and provide insights")
-    public ResponseEntity<ConversationAnalysis> summarizeConversation(
-            @PathVariable String conversationId
-    ) {
-        // Fetching last 50 messages to give enough context for a meaningful summary.
+    public ResponseEntity<ConversationAnalysis> summarizeConversation(@PathVariable String conversationId) {
         List<Message> messages = messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(
-                conversationId, 
-                PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"))
+                conversationId, PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"))
         ).getContent();
 
-        if (messages.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        ConversationAnalysis analysis = aiAnalysisService.analyzeConversation(messages);
-        return ResponseEntity.ok(analysis);
+        if (messages.isEmpty()) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(aiAnalysisService.analyzeConversation(messages));
     }
 
     @PostMapping("/auto-replies")
-    @Operation(summary = "Generate smart auto-replies based on the last message")
-    public ResponseEntity<AutoReplySuggestions> generateAutoReplies(
-            @RequestBody AutoReplyRequest request
-    ) {
-        // Flexible input: can take a message ID or raw text.
+    public ResponseEntity<AutoReplySuggestions> generateAutoReplies(@RequestBody AutoReplyRequest request) {
         Message message;
         if (request.messageId() != null) {
             message = messageRepository.findById(request.messageId()).orElse(null);
@@ -57,42 +43,27 @@ public class AiAnalysisController {
         } else {
             return ResponseEntity.badRequest().build();
         }
-
-        AutoReplySuggestions suggestions = aiAnalysisService.suggestReplies(message);
-        return ResponseEntity.ok(suggestions);
+        return ResponseEntity.ok(aiAnalysisService.suggestReplies(message));
     }
 
     @PostMapping("/search-query")
-    @Operation(summary = "Parse natural language search to structured criteria")
     public ResponseEntity<SearchCriteria> parseSearchQuery(@RequestBody SearchRequest request) {
-        if (request.query() == null || request.query().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        SearchCriteria criteria = aiAnalysisService.extractSearchQuery(request.query());
-        return ResponseEntity.ok(criteria);
+        if (request.query() == null || request.query().isBlank()) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(aiAnalysisService.extractSearchQuery(request.query()));
     }
 
     @PostMapping("/extract-task")
-    @Operation(summary = "Extract task details from a message")
     public ResponseEntity<TaskExtraction> extractTask(@RequestBody TextRequest request) {
-        if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        TaskExtraction task = aiAnalysisService.extractTask(request.text());
-        return ResponseEntity.ok(task);
+        if (request.text() == null || request.text().isBlank()) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(aiAnalysisService.extractTask(request.text()));
     }
 
     @PostMapping("/typing-indicator")
-    @Operation(summary = "Simulate typing behavior for a response")
     public ResponseEntity<TypingSimulation> simulateTyping(@RequestBody TextRequest request) {
-        if (request.text() == null || request.text().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        TypingSimulation simulation = aiAnalysisService.simulateTyping(request.text());
-        return ResponseEntity.ok(simulation);
+        if (request.text() == null || request.text().isBlank()) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(aiAnalysisService.simulateTyping(request.text()));
     }
 
-    // Request Records
     public record AutoReplyRequest(String messageId, String content, String senderId) {}
     public record SearchRequest(String query) {}
     public record TextRequest(String text) {}

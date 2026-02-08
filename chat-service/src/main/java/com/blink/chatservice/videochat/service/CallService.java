@@ -14,10 +14,10 @@ public interface CallService {
     CallResponse rejectCall(String callId, String userId);
     CallResponse endCall(String callId, String userId);
     Call getCall(String callId);
+    CallResponse getCallDetails(String callId, String userId);
     List<CallResponse> getActiveCalls(String userId);
     void updateCallOffer(String callId, String offer);
     void updateCallAnswer(String callId, String answer);
-    void addIceCandidate(String callId, String userId, String candidate);
 
     CallHistoryResponse getCallHistory(
             String userId,

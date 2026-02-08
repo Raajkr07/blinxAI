@@ -5,5 +5,7 @@ public record CallNotification(
         String callerId,
         String receiverId,
         String type,
-        String conversationId
+        String conversationId,
+        String callerName,
+        String callerAvatar
 ) {}

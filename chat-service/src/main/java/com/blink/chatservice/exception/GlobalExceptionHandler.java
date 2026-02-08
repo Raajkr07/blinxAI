@@ -1,11 +1,7 @@
 package com.blink.chatservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -15,150 +11,61 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    public record ErrorResponse(
-            String error,
-            String message,
-            int status,
-            String path,
-            OffsetDateTime timestamp,
-            Map<String, Object> details
-    ) {
-        public static ErrorResponse of(String error, String message, HttpStatus status, String path) {
-            return new ErrorResponse(error, message, status.value(), path, OffsetDateTime.now(), null);
-        }
-
-        public static ErrorResponse of(String error, String message, HttpStatus status, String path, Map<String, Object> details) {
-            return new ErrorResponse(error, message, status.value(), path, OffsetDateTime.now(), details);
-        }
-    }
+    public record ErrorResponse(String error, String message, int status, String path, OffsetDateTime timestamp, Map<String, Object> details) {}
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    // Handling @Valid failures for JSON bodies.
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request
-    ) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, Object> details = new HashMap<>();
-        Map<String, String> fieldErrors = new HashMap<>();
-
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
-        }
-        details.put("fields", fieldErrors);
-
-        String path = request.getDescription(false).replace("uri=", "");
-        ErrorResponse body = ErrorResponse.of(
-                "VALIDATION_ERROR",
-                "Request validation failed",
-                HttpStatus.BAD_REQUEST,
-                path,
-                details
-        );
-
-        log.warn("Validation failed for request: {} - errors: {}", path, fieldErrors);
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        ex.getBindingResult().getFieldErrors().forEach(e -> details.put(e.getField(), e.getDefaultMessage()));
+        return error("VALIDATION_ERROR", "Validation failed", HttpStatus.BAD_REQUEST, request.getRequestURI(), details);
     }
 
     @ExceptionHandler(BindException.class)
-    // Handling query param binding failures.
-    public ResponseEntity<ErrorResponse> handleBindException(
-            BindException ex,
-            HttpServletRequest request
-    ) {
-        Map<String, Object> details = new LinkedHashMap<>();
-        Map<String, String> fieldErrors = new LinkedHashMap<>();
-
-        for (FieldError fe : ex.getBindingResult().getFieldErrors()) {
-            fieldErrors.put(fe.getField(), fe.getDefaultMessage());
-        }
-        details.put("fields", fieldErrors);
-
-        String path = request.getRequestURI();
-
-        ErrorResponse body = ErrorResponse.of(
-                "VALIDATION_ERROR",
-                "Request binding failed",
-                HttpStatus.BAD_REQUEST,
-                path,
-                details
-        );
-
-        log.debug("Bind validation failed for request: {} - errors: {}", path, fieldErrors);
-        return ResponseEntity.badRequest().body(body);
+    public ResponseEntity<ErrorResponse> handleBind(BindException ex, HttpServletRequest request) {
+        Map<String, Object> details = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(e -> details.put(e.getField(), e.getDefaultMessage()));
+        return error("BIND_ERROR", "Binding failed", HttpStatus.BAD_REQUEST, request.getRequestURI(), details);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
-        String path = getPath(request);
-        log.warn("IllegalArgumentException for {}: {}", path, ex.getMessage());
-        return createErrorResponse("BAD_REQUEST", ex.getMessage(), HttpStatus.BAD_REQUEST, path);
+    public ResponseEntity<ErrorResponse> handleIllegalArg(IllegalArgumentException ex, HttpServletRequest request) {
+        return error("BAD_REQUEST", ex.getMessage(), HttpStatus.BAD_REQUEST, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex, WebRequest request) {
-        String path = getPath(request);
-        log.warn("IllegalStateException for {}: {}", path, ex.getMessage());
-        return createErrorResponse("BAD_REQUEST", ex.getMessage(), HttpStatus.BAD_REQUEST, path);
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
+        return error("BAD_REQUEST", ex.getMessage(), HttpStatus.BAD_REQUEST, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
-        String path = getPath(request);
-        log.info("ResourceNotFound for {}: {}", path, ex.getMessage());
-        return createErrorResponse("NOT_FOUND", ex.getMessage(), HttpStatus.NOT_FOUND, path);
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        return error("NOT_FOUND", ex.getMessage(), HttpStatus.NOT_FOUND, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, WebRequest request) {
-        String path = getPath(request);
-        log.warn("AccessDenied for {}: {}", path, ex.getMessage());
-        return createErrorResponse("FORBIDDEN", "Access denied", HttpStatus.FORBIDDEN, path);
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return error("FORBIDDEN", "Access denied", HttpStatus.FORBIDDEN, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex, WebRequest request) {
-        String path = getPath(request);
-        log.warn("Authentication failure for {}: {}", path, ex.getMessage());
-        return createErrorResponse("UNAUTHORIZED", ex.getMessage(), HttpStatus.UNAUTHORIZED, path);
-    }
-
-    @ExceptionHandler(AiException.class)
-    public ResponseEntity<ErrorResponse> handleAiException(AiException ex, WebRequest request) {
-        String path = getPath(request);
-        log.error("AI Service error for {}: {}", path, ex.getMessage());
-        return createErrorResponse("AI_SERVICE_ERROR", "AI service temporarily unavailable", HttpStatus.SERVICE_UNAVAILABLE, path);
+    public ResponseEntity<ErrorResponse> handleAuth(AuthenticationException ex, HttpServletRequest request) {
+        return error("UNAUTHORIZED", ex.getMessage(), HttpStatus.UNAUTHORIZED, request.getRequestURI(), null);
     }
 
     @ExceptionHandler(Exception.class)
-    // Catch-all for unhandled runtimes. Logging stack trace here is critical.
-    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, WebRequest request) {
-        String path = getPath(request);
-        log.error("Unhandled exception for {}: {}", path, ex.getMessage(), ex);
-        return createErrorResponse("INTERNAL_ERROR", "An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR, path);
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+        return error("INTERNAL_ERROR", "An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR, request.getRequestURI(), null);
     }
 
-    private String getPath(WebRequest request) {
-        return request.getDescription(false).replace("uri=", "");
-    }
-
-    private ResponseEntity<ErrorResponse> createErrorResponse(String error, String message, HttpStatus status, String path) {
-        return new ResponseEntity<>(
-                ErrorResponse.of(error, message != null ? message : "Error", status, path),
-                status
-        );
+    private ResponseEntity<ErrorResponse> error(String code, String msg, HttpStatus status, String path, Map<String, Object> details) {
+        return new ResponseEntity<>(new ErrorResponse(code, msg, status.value(), path, OffsetDateTime.now(), details), status);
     }
 }

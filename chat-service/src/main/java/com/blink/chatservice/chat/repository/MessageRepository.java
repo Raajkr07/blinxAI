@@ -5,12 +5,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface MessageRepository extends MongoRepository<Message, String> {
+import java.time.LocalDateTime;
 
-    // Pagination is critical here. Fetches latest messages first (descending).
-    // Using ID for sorting is more robust against timezone changes than CreatedAt
-    Page<Message> findByConversationIdAndDeletedFalseOrderByIdDesc(
-            String conversationId,
-            Pageable pageable
-    );
+public interface MessageRepository extends MongoRepository<Message, String> {
+    Page<Message> findByConversationIdAndDeletedFalseOrderByIdDesc(String conversationId, Pageable pageable);
+    void deleteByCreatedAtBefore(LocalDateTime threshold);
 }

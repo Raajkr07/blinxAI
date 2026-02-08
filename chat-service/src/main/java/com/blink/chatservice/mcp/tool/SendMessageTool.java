@@ -1,27 +1,28 @@
 package com.blink.chatservice.mcp.tool;
 
+import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
+import com.blink.chatservice.chat.model.ConversationType;
+import com.blink.chatservice.chat.repository.ConversationRepository;
 import com.blink.chatservice.chat.repository.MessageRepository;
+import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
 import com.blink.chatservice.websocket.dto.RealtimeMessageResponse;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.util.*;
 
 @Component
-@Slf4j
+@RequiredArgsConstructor
 public class SendMessageTool implements McpTool {
 
     private final MessageRepository messageRepository;
+    private final ConversationRepository conversationRepository;
     private final SimpMessagingTemplate messagingTemplate;
-
-    public SendMessageTool(MessageRepository messageRepository, SimpMessagingTemplate messagingTemplate) {
-        this.messageRepository = messageRepository;
-        this.messagingTemplate = messagingTemplate;
-    }
+    private final UserLookupHelper userLookupHelper;
 
     @Override
     public String name() {
@@ -30,89 +31,75 @@ public class SendMessageTool implements McpTool {
 
     @Override
     public String description() {
-        return "Send a message to a conversation. The message will be sent on behalf of the user who requested it.";
+        return "Send a message to a user or conversation.";
     }
 
     @Override
     public Map<String, Object> inputSchema() {
         return Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "conversationId", Map.of("type", "string", "description", "The ID of the conversation to send the message to"),
-                        "content", Map.of("type", "string", "description", "The message content to send")
-                ),
-                "required", List.of("conversationId", "content")
+            "type", "object",
+            "properties", Map.of(
+                "recipient", Map.of("type", "string", "description", "Recipient identifier"),
+                "conversationId", Map.of("type", "string", "description", "Conversation ID"),
+                "content", Map.of("type", "string", "description", "Message content")
+            ),
+            "required", List.of("content")
         );
     }
 
     @Override
     public Object execute(String userId, Map<Object, Object> args) {
-        try {
-            String conversationId = (String) args.get("conversationId");
-            String content = (String) args.get("content");
+        String content = (String) args.get("content");
+        if (content == null || content.isBlank()) return Map.of("error", true, "message", "Content required");
 
-            if (conversationId == null || conversationId.trim().isEmpty()) {
-                throw new IllegalArgumentException("conversationId is required");
-            }
-            if (content == null || content.trim().isEmpty()) {
-                throw new IllegalArgumentException("content is required");
-            }
+        String convId = (String) args.get("conversationId");
+        String recipient = (String) args.get("recipient");
 
-            Message msg = new Message();
-            msg.setConversationId(conversationId);
-            msg.setSenderId(userId);
-            msg.setBody(content.trim());
-            msg.setCreatedAt(LocalDateTime.now());
-            msg.setSeen(false);
-            msg.setDeleted(false);
-
-            Message saved = messageRepository.save(msg);
-            log.info("MCP tool sent message: conversationId={}, senderId={}, messageId={}", 
-                    conversationId, userId, saved.getId());
-
-            // Broadcasting the message immediately via WebSocket so the UI updates without manual refresh.
-            try {
-                RealtimeMessageResponse resp = new RealtimeMessageResponse(
-                        saved.getId(),
-                        saved.getConversationId(),
-                        saved.getSenderId(),
-                        saved.getRecipientId(),
-                        saved.getBody(),
-                        saved.getCreatedAt()
-                );
-
-                String conversationTopic = "/topic/conversations/" + saved.getConversationId();
-                messagingTemplate.convertAndSend(conversationTopic, resp);
-                log.debug("Broadcasted MCP message to topic: {}", conversationTopic);
-
-                if (saved.getRecipientId() != null) {
-                    messagingTemplate.convertAndSendToUser(
-                            saved.getSenderId(),
-                            "/queue/messages",
-                            resp
-                    );
-                    messagingTemplate.convertAndSendToUser(
-                            saved.getRecipientId(),
-                            "/queue/messages",
-                            resp
-                    );
-                }
-            } catch (Exception e) {
-                // Not throwing exception here. If internal broadcast fails, message is still saved in DB.
-                log.error("Failed to broadcast MCP message via WebSocket", e);
-            }
-
-            return Map.of(
-                    "success", true,
-                    "messageId", saved.getId(),
-                    "conversationId", saved.getConversationId(),
-                    "content", saved.getBody(),
-                    "createdAt", saved.getCreatedAt().toString()
-            );
-        } catch (Exception e) {
-            log.error("Error executing send_message tool", e);
-            throw new RuntimeException("Failed to send message: " + e.getMessage(), e);
+        if (convId == null && recipient != null) {
+            var user = userLookupHelper.findUserByIdentifier(recipient);
+            if (user == null) return Map.of("error", true, "message", "User not found");
+            convId = getConvId(userId, user.getId());
         }
+
+        if (convId == null) return Map.of("error", true, "message", "Recipient or conversationId required");
+
+        return send(userId, convId, content.trim());
+    }
+
+    private String getConvId(String userId, String otherId) {
+        return conversationRepository.findByParticipantsContaining(userId).stream()
+            .filter(c -> c.getParticipants().size() == 2 && c.getParticipants().contains(otherId))
+            .map(Conversation::getId)
+            .findFirst()
+            .orElseGet(() -> {
+                Conversation c = new Conversation();
+                c.setParticipants(new HashSet<>(List.of(userId, otherId)));
+                c.setType(ConversationType.DIRECT);
+                return conversationRepository.save(c).getId();
+            });
+    }
+
+    private Map<String, Object> send(String userId, String convId, String content) {
+        Conversation conv = conversationRepository.findById(convId).orElseThrow(() -> new IllegalArgumentException("Not found"));
+        if (!conv.getParticipants().contains(userId)) throw new IllegalStateException("Not authorized");
+
+        String recipientId = conv.getParticipants().stream().filter(p -> !p.equals(userId)).findFirst().orElse(null);
+
+        Message msg = new Message();
+        msg.setConversationId(convId);
+        msg.setSenderId(userId);
+        msg.setRecipientId(recipientId);
+        msg.setBody(content);
+        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        messageRepository.save(msg);
+
+        conv.setLastMessageAt(LocalDateTime.now(ZoneId.of("UTC")));
+        conv.setLastMessagePreview(content.length() > 50 ? content.substring(0, 50) + "..." : content);
+        conversationRepository.save(conv);
+
+        var wsResp = new RealtimeMessageResponse(msg.getId(), convId, userId, recipientId, content, msg.getCreatedAt());
+        messagingTemplate.convertAndSend("/topic/conversations/" + convId, wsResp);
+        
+        return Map.of("success", true, "messageId", msg.getId());
     }
 }
-

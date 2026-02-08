@@ -8,8 +8,6 @@ import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.RefreshTokenRepository;
 import com.blink.chatservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -27,7 +25,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(\\[\\s]?)?[6-9]\\d{9}$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$");
 
@@ -40,154 +37,114 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String requestOtp(String identifier) {
-        validateIdentifier(identifier);
+        if (!isValidPhone(identifier) && !isValidEmail(identifier)) throw new IllegalArgumentException("Invalid format");
 
         if (isValidPhone(identifier)) {
             userRepository.findByPhone(identifier).orElseGet(() -> {
-                // Creating a stub user so the phone number is 'reserved' immediately. 
-                // Prevents race conditions if two people try to sign up with same number simultaneously.
-                User stub = new User();
-                stub.setPhone(identifier);
-                stub.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-                log.info("Created stub user for phone: {}", identifier);
-                return userRepository.save(stub);
+                User user = new User();
+                user.setPhone(identifier);
+                user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+                return userRepository.save(user);
             });
-        } else if (isValidEmail(identifier)) {
-            String trimmed = identifier.trim().toLowerCase(Locale.ROOT);
-            userRepository.findFirstByEmail(trimmed).orElseGet(() -> {
-                User stub = new User();
-                stub.setEmail(trimmed);
-                stub.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-                log.info("Created stub user for email: {}", trimmed);
-                return userRepository.save(stub);
+        } else {
+            String email = identifier.trim().toLowerCase(Locale.ROOT);
+            userRepository.findFirstByEmail(email).orElseGet(() -> {
+                User user = new User();
+                user.setEmail(email);
+                user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+                return userRepository.save(user);
             });
         }
-
         return otpService.generateOtp(identifier);
     }
 
     @Override
     public boolean verifyOtp(String identifier, String otp) {
         boolean valid = otpService.validateOtp(identifier, otp);
-        if (valid) {
-            // Mark as verified for the login step
-            otpService.markOtpAsVerified(identifier);
-        }
+        if (valid) otpService.markOtpAsVerified(identifier);
         return valid;
     }
 
     @Override
     @Transactional
     public Map<String, String> signup(String identifier, String username, String avatarUrl, String bio, String email, String phone) {
-        validateSignupDetails(identifier, email, phone);
-
+        validateSignup(email, phone);
         User user = getUserByIdentifier(identifier);
-        updateUserFields(user, username, avatarUrl, bio, email, phone);
+        
+        if (user.getUsername() == null) user.setUsername(username);
+        if (user.getAvatarUrl() == null) user.setAvatarUrl(avatarUrl);
+        if (user.getBio() == null) user.setBio(bio);
+        if (phone != null && user.getPhone() == null) user.setPhone(phone);
+        if (email != null && user.getEmail() == null) user.setEmail(email.trim().toLowerCase(Locale.ROOT));
 
         user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-        user = userRepository.save(user);
-
+        userRepository.save(user);
         otpService.deleteOtp(identifier);
-
+        
         if (cacheManager != null) {
             var cache = cacheManager.getCache("users_v2");
-            if (cache != null) {
-                cache.evict(user.getId());
-            }
+            if (cache != null) cache.evict(user.getId());
         }
 
-        log.info("User signup completed for: {}", user.getId());
-        String accessToken = jwtUtil.generateToken(user);
-        String refreshToken = createRefreshToken(user.getId());
-        return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
+        return Map.of("accessToken", jwtUtil.generateToken(user), "refreshToken", createRefreshToken(user.getId()));
     }
 
     @Override
     @Transactional
-    public Map<String, String> login(AuthDto.LoginRequest loginRequest) {
-        if (loginRequest == null || loginRequest.identifier() == null || loginRequest.identifier().trim().isEmpty()) {
-            throw new IllegalArgumentException("Identifier is required");
-        }
+    public Map<String, String> login(AuthDto.LoginRequest request) {
+        if (request == null || request.identifier() == null || request.identifier().isBlank()) throw new IllegalArgumentException("Identifier required");
 
-        User user = getUserByIdentifier(loginRequest.identifier());
+        User user = getUserByIdentifier(request.identifier());
+        if (user.getUsername() == null || user.getUsername().isBlank()) throw new IllegalStateException("Profile incomplete");
 
-        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
-            throw new IllegalStateException("Profile incomplete. Please complete signup first.");
-        }
-
-        // Handling two login flows: 
-        // 1. One-step: OTP provided directly in login request (common mobile flow).
-        // 2. Two-step: OTP verified separately, then login called (web flow).
-        if (loginRequest.otp() != null && !loginRequest.otp().trim().isEmpty()) {
-            boolean valid = otpService.validateOtp(loginRequest.identifier(), loginRequest.otp());
-            if (!valid) throw new IllegalStateException("Invalid or expired OTP");
-            
-            otpService.deleteOtp(loginRequest.identifier());
+        if (request.otp() != null && !request.otp().isBlank()) {
+            if (!otpService.validateOtp(request.identifier(), request.otp())) throw new IllegalStateException("Invalid OTP");
+            otpService.deleteOtp(request.identifier());
         } else {
-            if (!otpService.isOtpVerified(loginRequest.identifier())) {
-                throw new IllegalStateException("OTP verification required. Please verify OTP first.");
-            }
-            
-            otpService.clearVerification(loginRequest.identifier());
+            if (!otpService.isOtpVerified(request.identifier())) throw new IllegalStateException("OTP verification required");
+            otpService.clearVerification(request.identifier());
         }
 
-        log.info("User login completed for: {}", user.getId());
-
-        String accessToken = jwtUtil.generateToken(user);
-        String refreshToken = createRefreshToken(user.getId());
-        return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
+        return Map.of("accessToken", jwtUtil.generateToken(user), "refreshToken", createRefreshToken(user.getId()));
     }
 
     @Override
     @Transactional
     public Map<String, String> refreshAccessToken(String refreshTokenValue) {
-        if (!jwtUtil.validateToken(refreshTokenValue) || !jwtUtil.isRefreshToken(refreshTokenValue))
+        if (!jwtUtil.validateToken(refreshTokenValue) || !jwtUtil.isRefreshToken(refreshTokenValue) || jwtUtil.isTokenExpired(refreshTokenValue))
             throw new IllegalStateException("Invalid refresh token");
 
-        if (jwtUtil.isTokenExpired(refreshTokenValue)) throw new IllegalStateException("Refresh token expired");
-
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new IllegalStateException("Refresh token not found"));
-
-        if (!refreshToken.isValid()) throw new IllegalStateException("Refresh token is revoked or expired");
+        RefreshToken rt = refreshTokenRepository.findByToken(refreshTokenValue).orElseThrow(() -> new IllegalStateException("Not found"));
+        if (!rt.isValid()) throw new IllegalStateException("Revoked or expired");
 
         String userId = jwtUtil.extractUserId(refreshTokenValue);
         User user = getProfile(userId);
-        String newAccessToken = jwtUtil.generateToken(user);
+        rt.setRevoked(true);
+        refreshTokenRepository.save(rt);
 
-        String newRefreshTokenValue = createRefreshToken(userId);
-
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
-        return Map.of("accessToken", newAccessToken, "refreshToken", newRefreshTokenValue);
+        return Map.of("accessToken", jwtUtil.generateToken(user), "refreshToken", createRefreshToken(userId));
     }
 
     @Override
     @Transactional
-    public void revokeRefreshToken(String refreshTokenValue) {
-        refreshTokenRepository.findByToken(refreshTokenValue).ifPresent(token -> {
-            token.setRevoked(true);
-            refreshTokenRepository.save(token);
+    public void revokeRefreshToken(String token) {
+        refreshTokenRepository.findByToken(token).ifPresent(rt -> {
+            rt.setRevoked(true);
+            refreshTokenRepository.save(rt);
         });
     }
 
     @Override
     public boolean userExists(String identifier) {
         if (identifier == null) return false;
-        if (isValidPhone(identifier)) return userRepository.existsByPhone(identifier);
-        return userRepository.existsByEmail(identifier.trim().toLowerCase(Locale.ROOT));
+        return isValidPhone(identifier) ? userRepository.existsByPhone(identifier) : userRepository.existsByEmail(identifier.trim().toLowerCase(Locale.ROOT));
     }
 
     @Override
     @Cacheable(value = "users_v2", key = "#userId")
     public User getProfile(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        // Weird edge case: sometimes internal class names leak into username if registration goes wrong.
-        // Sanitizing it here just in case.
-        if (user.getUsername() != null && user.getUsername().contains("java.util."))
-            user.setUsername("User");
+        User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getUsername() != null && user.getUsername().contains("java.util.")) user.setUsername("User");
         return user;
     }
 
@@ -195,96 +152,64 @@ public class UserServiceImpl implements UserService {
     @CachePut(value = "users_v2", key = "#userId")
     public User updateProfile(String userId, String username, String avatarUrl, String bio, String email, String phone) {
         User user = getProfile(userId);
-        
-        if (username != null && !username.trim().isEmpty()) {
-            if (username.contains("java.util.") || username.contains("@") && !username.contains(".")) {
-                 log.warn("Attempt to set invalid username: {}", username);
-                 throw new IllegalArgumentException("Invalid username format");
-            }
-            checkUsernameUniqueness(username, userId);
+        if (username != null && !username.isBlank()) {
+            if (username.contains("java.util.")) throw new IllegalArgumentException("Invalid username");
+            checkUsername(username, userId);
             user.setUsername(username.trim());
         }
-        if (avatarUrl != null) user.setAvatarUrl(avatarUrl.trim().isEmpty() ? null : avatarUrl.trim());
-        if (bio != null) user.setBio(bio.trim().isEmpty() ? null : bio.trim());
-        if (email != null && !email.trim().isEmpty()) {
-            checkEmailUniqueness(email, userId);
+        if (avatarUrl != null) user.setAvatarUrl(avatarUrl.isBlank() ? null : avatarUrl.trim());
+        if (bio != null) user.setBio(bio.isBlank() ? null : bio.trim());
+        if (email != null && !email.isBlank()) {
+            checkEmail(email, userId);
             user.setEmail(email.trim().toLowerCase(Locale.ROOT));
         }
-        if (phone != null && !phone.trim().isEmpty()) {
-            checkPhoneUniqueness(phone, userId);
+        if (phone != null && !phone.isBlank()) {
+            checkPhone(phone, userId);
             user.setPhone(phone.trim());
         }
-
         return userRepository.save(user);
     }
 
     @Override
     public List<User> searchUsersByContact(String query, String currentUserId) {
-        String q = Optional.ofNullable(query).map(String::trim).orElse("").toLowerCase(Locale.ROOT);
+        String q = query != null ? query.trim().toLowerCase(Locale.ROOT) : "";
         if (q.isEmpty()) return List.of();
-
-        // Optimized DB search
-        return userRepository.searchUsers(q).stream()
-                .filter(u -> !u.getId().equals(currentUserId))
-                .collect(Collectors.toList());
+        return userRepository.searchUsers(q).stream().filter(u -> !u.getId().equals(currentUserId)).collect(Collectors.toList());
     }
 
     @Override
     public List<String> getOnlineUserIds() {
-        return userRepository.findByOnlineTrue().stream()
-                .map(User::getId)
-                .collect(Collectors.toList());
+        return userRepository.findByOnlineTrue().stream().map(User::getId).collect(Collectors.toList());
     }
 
     @Override
     public boolean isUserOnline(String userId) {
-        return userRepository.findById(userId)
-                .map(User::isOnline)
-                .orElse(false);
+        return userRepository.findById(userId).map(User::isOnline).orElse(false);
     }
 
     @Override
     public String resolveUserIdFromContact(String contact) {
-        if (contact == null || contact.trim().isEmpty()) {
-            return null;
-        }
-
+        if (contact == null || contact.isBlank()) return null;
         String trimmed = contact.trim();
+        if (userRepository.existsById(trimmed)) return trimmed;
+        
+        Optional<User> u = userRepository.findByUsername(trimmed);
+        if (u.isPresent()) return u.get().getId();
 
-        // Heuristic resolution: ID -> Username -> Phone (fuzzy) -> Email.
-        // Critical for 'add by contact' feature where input format is unknown.
+        String cleanPhone = trimmed.replaceAll("[\\s-()]", "");
+        u = userRepository.findByPhone(cleanPhone);
+        if (u.isPresent()) return u.get().getId();
 
-        if (userRepository.existsById(trimmed)) {
-            return trimmed;
+        if (cleanPhone.length() == 10) {
+            u = userRepository.findByPhone("+91" + cleanPhone);
+            if (u.isPresent()) return u.get().getId();
+        } else if (cleanPhone.startsWith("+91") && cleanPhone.length() == 13) {
+            u = userRepository.findByPhone(cleanPhone.substring(3));
+            if (u.isPresent()) return u.get().getId();
         }
 
-        Optional<User> byUsername = userRepository.findByUsername(trimmed);
-        if (byUsername.isPresent()) {
-            return byUsername.get().getId();
-        }
-
-        String phoneCleaned = trimmed.replaceAll("[\\s-()]", "");
-        Optional<User> byPhone = userRepository.findByPhone(phoneCleaned);
-        if (byPhone.isPresent()) return byPhone.get().getId();
-
-        // 3b. Fuzzy phone match: handle missing or extra +91 prefix
-        if (!phoneCleaned.startsWith("+91") && phoneCleaned.length() == 10) {
-            String withCountry = "+91" + phoneCleaned;
-            if (userRepository.existsByPhone(withCountry)) {
-                 return userRepository.findByPhone(withCountry).map(User::getId).orElse(null);
-            }
-        } else if (phoneCleaned.startsWith("+91") && phoneCleaned.length() == 13) {
-            String withoutCountry = phoneCleaned.substring(3);
-            if (userRepository.existsByPhone(withoutCountry)) {
-                return userRepository.findByPhone(withoutCountry).map(User::getId).orElse(null);
-            }
-        }
-
-        String emailLower = trimmed.toLowerCase(Locale.ROOT);
-        return userRepository.findFirstByEmail(emailLower).map(User::getId).orElse(null);
+        return userRepository.findFirstByEmail(trimmed.toLowerCase(Locale.ROOT)).map(User::getId).orElse(null);
     }
-
-    // Helper methods
 
     private String createRefreshToken(String userId) {
         String token = jwtUtil.generateRefreshToken(userId);
@@ -292,77 +217,36 @@ public class UserServiceImpl implements UserService {
         rt.setUserId(userId);
         rt.setToken(token);
         rt.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-        
-        long expirationMs = jwtConfig.getRefreshExpiration();
-        rt.setExpiresAt(LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(System.currentTimeMillis() + expirationMs),
-                ZoneId.of("UTC")
-        ));
-        
+        rt.setExpiresAt(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis() + jwtConfig.getRefreshExpiration()), ZoneId.of("UTC")));
         refreshTokenRepository.save(rt);
         return token;
     }
 
-    private void validateIdentifier(String identifier) {
-        if (!isValidPhone(identifier) && !isValidEmail(identifier))
-            throw new IllegalArgumentException("Invalid phone or email format");
+    private void validateSignup(String email, String phone) {
+        if (email != null && !EMAIL_PATTERN.matcher(email).matches()) throw new IllegalArgumentException("Invalid email");
+        if (phone != null && !PHONE_PATTERN.matcher(phone).matches()) throw new IllegalArgumentException("Invalid phone");
     }
 
-    private void validateSignupDetails(String identifier, String email, String phone) {
-        if (email != null && !EMAIL_PATTERN.matcher(email).matches())
-            throw new IllegalArgumentException("Invalid email format");
-        if (phone != null && !PHONE_PATTERN.matcher(phone).matches())
-            throw new IllegalArgumentException("Invalid Indian phone number");
-    }
-    
-    private void updateUserFields(User user, String username, String avatarUrl, String bio, String email, String phone) {
-        if (user.getUsername() == null) user.setUsername(username);
-        if (user.getAvatarUrl() == null) user.setAvatarUrl(avatarUrl);
-        if (user.getBio() == null) user.setBio(bio);
-        if (phone != null && user.getPhone() == null) user.setPhone(phone);
-        if (email != null && user.getEmail() == null) {
-            user.setEmail(email.trim().toLowerCase(Locale.ROOT));
-        }
+    private boolean isValidPhone(String s) { return PHONE_PATTERN.matcher(s).matches(); }
+    private boolean isValidEmail(String s) { return EMAIL_PATTERN.matcher(s).matches(); }
+
+    private User getUserByIdentifier(String id) {
+        if (isValidPhone(id)) return userRepository.findByPhone(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return userRepository.findFirstByEmail(id.trim().toLowerCase(Locale.ROOT)).orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
-    private boolean isValidPhone(String str) {
-        return PHONE_PATTERN.matcher(str).matches();
+    private void checkUsername(String name, String id) {
+        userRepository.findByUsername(name.trim()).filter(u -> !u.getId().equals(id)).ifPresent(u -> { throw new IllegalArgumentException("Taken"); });
     }
 
-    private boolean isValidEmail(String str) {
-        return EMAIL_PATTERN.matcher(str).matches();
+    private void checkEmail(String email, String id) {
+        String em = email.trim().toLowerCase(Locale.ROOT);
+        if (!isValidEmail(em)) throw new IllegalArgumentException("Invalid");
+        userRepository.findAllByEmail(em).stream().filter(u -> !u.getId().equals(id)).findFirst().ifPresent(u -> { throw new IllegalArgumentException("Taken"); });
     }
 
-    private User getUserByIdentifier(String identifier) {
-        if (isValidPhone(identifier)) {
-            return userRepository.findByPhone(identifier)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        } else {
-            String trimmed = identifier.trim().toLowerCase(Locale.ROOT);
-            return userRepository.findFirstByEmail(trimmed)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        }
-    }
-
-    private void checkUsernameUniqueness(String username, String userId) {
-        userRepository.findByUsername(username.trim())
-                .filter(u -> !u.getId().equals(userId))
-                .ifPresent(u -> { throw new IllegalArgumentException("Username already taken"); });
-    }
-
-    private void checkEmailUniqueness(String email, String userId) {
-        String emailLower = email.trim().toLowerCase(Locale.ROOT);
-        if (!isValidEmail(emailLower)) throw new IllegalArgumentException("Invalid email format");
-        userRepository.findAllByEmail(emailLower).stream()
-                .filter(u -> !u.getId().equals(userId))
-                .findFirst()
-                .ifPresent(u -> { throw new IllegalArgumentException("Email already taken"); });
-    }
-
-    private void checkPhoneUniqueness(String phone, String userId) {
-        if (!isValidPhone(phone.trim())) throw new IllegalArgumentException("Invalid phone format");
-        userRepository.findByPhone(phone.trim())
-                .filter(u -> !u.getId().equals(userId))
-                .ifPresent(u -> { throw new IllegalArgumentException("Phone already taken"); });
+    private void checkPhone(String p, String id) {
+        if (!isValidPhone(p.trim())) throw new IllegalArgumentException("Invalid");
+        userRepository.findByPhone(p.trim()).filter(u -> !u.getId().equals(id)).ifPresent(u -> { throw new IllegalArgumentException("Taken"); });
     }
 }

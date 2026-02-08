@@ -1,15 +1,19 @@
 package com.blink.chatservice.videochat.entity;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
-// MongoDB entity for storing call records - both video and audio calls
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 @Document(collection = "calls")
 public class Call {
 
@@ -28,31 +32,23 @@ public class Call {
     private LocalDateTime startedAt;
     private LocalDateTime answeredAt;
     private LocalDateTime endedAt;
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
 
-    private String conversationId; // linking to chat conversation if any
+    private String conversationId;
 
-    // WebRTC stuff - needed for establishing peer-to-peer connection
-    private String callerOffer; // SDP offer from the person calling
-    private String receiverAnswer; // SDP answer from the person receiving
-    private List<String> callerIceCandidates; // network candidates from caller
-    private List<String> receiverIceCandidates; // network candidates from receiver
+    private String callerOffer;
+    private String receiverAnswer;
+    private List<String> callerIceCandidates;
+    private List<String> receiverIceCandidates;
 
     public enum CallType {
-        VIDEO,
-        AUDIO
+        VIDEO, AUDIO
     }
 
     public enum CallStatus {
-        INITIATED,  // call just created, receiver hasn't been notified yet
-        RINGING,    // receiver's phone is ringing
-        ANSWERED,   // receiver picked up, call is ongoing
-        REJECTED,   // receiver declined the call
-        ENDED,      // call finished normally
-        MISSED      // receiver didn't pick up
+        INITIATED, RINGING, ANSWERED, REJECTED, ENDED, MISSED
     }
 
-    // checking if call is still going on or waiting to be picked up
     public boolean isActive() {
         return status == CallStatus.RINGING || status == CallStatus.ANSWERED;
     }
