@@ -23,4 +23,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> searchUsers(String query);
     
     List<User> findByOnlineTrue();
+
+    @Query(value = "{ '$and': [ { '$or': [ { 'username': { '$exists': false } }, { 'username': null }, { 'username': '' } ] }, { 'createdAt': { '$lt': ?0 } } ] }", delete = true)
+    long deleteIncompleteUsers(LocalDateTime threshold);
 }
