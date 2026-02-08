@@ -65,3 +65,12 @@ ai:
   api-key: ${AI_API_KEY:}
   base-url: ${AI_BASE_URL:https://api.openai.com}
   model: ${AI_MODEL:gpt-4o-mini}
+
+web:
+  search:
+    api-key: ${WEB_SEARCH_API_KEY:}
+    cache:
+      ttl:
+        seconds: ${WEB_SEARCH_CACHE_TTL_SECONDS:300}
+    timeout:
+      seconds: ${WEB_SEARCH_TIMEOUT_SECONDS:10}

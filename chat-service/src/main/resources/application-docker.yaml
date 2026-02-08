@@ -82,6 +82,15 @@ ai:
           env:
             NODE_ENV: production
 
+web:
+  search:
+    api-key: ${WEB_SEARCH_API_KEY:}
+    cache:
+      ttl:
+        seconds: ${WEB_SEARCH_CACHE_TTL_SECONDS:300}
+    timeout:
+      seconds: ${WEB_SEARCH_TIMEOUT_SECONDS:10}
+
 logging:
   file:
     name: ${LOG_FILE_PATH:./logs/chat-service-mcp.log}
