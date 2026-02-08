@@ -95,6 +95,10 @@ export function Login({ onSwitchToSignup }) {
                     </div>
                 ) : (
                     <div className="space-y-4">
+                        <div className="text-center space-y-1">
+                            <label className="block text-sm font-medium">Verification Code</label>
+                            <p className="text-xs text-gray-400">Sent to <span className="text-white">{identifier}</span></p>
+                        </div>
                         <Input
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
