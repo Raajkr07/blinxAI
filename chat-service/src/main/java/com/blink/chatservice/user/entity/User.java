@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.ZoneId;
 
 @Data
 @Document(collection = "users")
@@ -32,5 +33,5 @@ public class User implements Serializable {
     private boolean online = false;
     private LocalDateTime lastSeen;
     private Set<String> devices = new HashSet<>();
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
 }

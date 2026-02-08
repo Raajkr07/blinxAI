@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 @Data
 @Document(collection = "refresh_tokens")
 public class RefreshToken {
@@ -19,11 +20,11 @@ public class RefreshToken {
     @Indexed(unique = true)
     private String token;
     private LocalDateTime expiresAt;
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
     private boolean revoked = false;
     private String deviceInfo;
     public boolean isExpired() {
-        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now(ZoneId.of("UTC")));
     }
     public boolean isValid() {
         return !revoked && !isExpired();

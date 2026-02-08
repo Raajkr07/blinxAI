@@ -8,7 +8,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Pagination is critical here. Fetches latest messages first (descending).
-    Page<Message> findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(
+    // Using ID for sorting is more robust against timezone changes than CreatedAt
+    Page<Message> findByConversationIdAndDeletedFalseOrderByIdDesc(
             String conversationId,
             Pageable pageable
     );

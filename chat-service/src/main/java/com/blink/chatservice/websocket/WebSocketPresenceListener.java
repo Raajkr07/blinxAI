@@ -13,6 +13,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 @RequiredArgsConstructor
@@ -45,7 +46,7 @@ public class WebSocketPresenceListener {
         String userId = principal.getName();
         userRepository.findById(userId).ifPresent(user -> {
             user.setOnline(false);
-            user.setLastSeen(LocalDateTime.now());
+            user.setLastSeen(LocalDateTime.now(ZoneId.of("UTC")));
             userRepository.save(user);
             broadcastPresence(user);
         });

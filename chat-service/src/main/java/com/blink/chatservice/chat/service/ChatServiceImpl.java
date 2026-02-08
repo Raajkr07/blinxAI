@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -75,8 +76,8 @@ public class ChatServiceImpl implements ChatService {
             Conversation conv = new Conversation();
             conv.setType(ConversationType.DIRECT);
             conv.setParticipants(new HashSet<>(pair1));
-            conv.setCreatedAt(LocalDateTime.now());
-            conv.setUpdatedAt(LocalDateTime.now());
+            conv.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+            conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
             Conversation saved = conversationRepository.save(conv);
             
             saved.getParticipants().forEach(userId -> 
@@ -107,8 +108,8 @@ public class ChatServiceImpl implements ChatService {
         }
         conv.getAdmins().add(creatorId);
         
-        conv.setCreatedAt(LocalDateTime.now());
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         
         Conversation saved = conversationRepository.save(conv);
         log.info("Created group conversation {} by {}", saved.getId(), creatorId);
@@ -143,7 +144,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         conv.setParticipants(participants);
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         log.info("Added user {} to group {}", userId, groupId);
         return conversationRepository.save(conv);
     }
@@ -175,7 +176,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         conv.setParticipants(participants);
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         log.info("Removed user {} from group {}", userId, groupId);
         return conversationRepository.save(conv);
     }
@@ -199,7 +200,7 @@ public class ChatServiceImpl implements ChatService {
             conv.setAvatarUrl(avatarUrl.trim().isEmpty() ? null : avatarUrl.trim());
         }
 
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         log.info("Updated group {}", groupId);
         return conversationRepository.save(conv);
     }
@@ -237,7 +238,7 @@ public class ChatServiceImpl implements ChatService {
         msg.setConversationId(conversationId);
         msg.setSenderId(senderId);
         msg.setBody(body.trim());
-        msg.setCreatedAt(LocalDateTime.now());
+        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
 
         if (conv.getType() == ConversationType.DIRECT && conv.getParticipants().size() == 2) {
             String recipientId = conv.getParticipants().stream()
@@ -252,7 +253,7 @@ public class ChatServiceImpl implements ChatService {
         String preview = body.length() > 100 ? body.substring(0, 100) : body;
         conv.setLastMessagePreview(preview);
         conv.setLastMessageAt(saved.getCreatedAt());
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         conversationRepository.save(conv);
 
         broadcastMessage(saved);
@@ -292,7 +293,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Page<Message> getMessages(String conversationId, int page, int size) {
-        return messageRepository.findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(
+        return messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(
                 conversationId, PageRequest.of(page, size));
     }
 
@@ -368,8 +369,8 @@ public class ChatServiceImpl implements ChatService {
         conv.setType(ConversationType.AI_ASSISTANT);
         conv.setTitle("AI Assistant");
         conv.setParticipants(new HashSet<>(Arrays.asList(userId, "ai-assistant")));
-        conv.setCreatedAt(LocalDateTime.now());
-        conv.setUpdatedAt(LocalDateTime.now());
+        conv.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+        conv.setUpdatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         
         return conversationRepository.save(conv);
     }

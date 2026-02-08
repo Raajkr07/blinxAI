@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Document(collection = "messages")
 @Data
@@ -19,7 +20,7 @@ public class Message {
     private String senderId;
     private String recipientId;
     private String body;
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
     private boolean seen = false;
     private boolean deleted = false;
 }

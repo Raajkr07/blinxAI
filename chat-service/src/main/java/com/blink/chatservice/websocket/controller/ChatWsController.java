@@ -48,7 +48,15 @@ public class ChatWsController {
         // 2. Trigger AI Processing asynchronously (optional, but good for performance)
         // For now, we'll keep it simple/synchronous as per your previous HTTP controller logic
         try {
+            // Broadcast AI Typing: TRUE
+            TypingResponse typingStart = new TypingResponse(conversationId, "ai-assistant", true);
+            messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", typingStart);
+
             Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body(), false);
+
+            // Broadcast AI Typing: FALSE (implicit by sending message, but good to be explicit or if error occurs)
+            TypingResponse typingStop = new TypingResponse(conversationId, "ai-assistant", false);
+            messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", typingStop);
 
             // 3. Broadcast AI Response
             // Note: processAiMessage likely saves it DB-side. We need to push it to WS.

@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.ZoneId;
 
 @Data
 @Document(collection = "conversations")
@@ -23,6 +24,6 @@ public class Conversation {
     // Caching snippet of last message to avoid fetching message collection for list view.
     private String lastMessagePreview;
     private LocalDateTime lastMessageAt;
-    private LocalDateTime createdAt = LocalDateTime.now();
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
+    private LocalDateTime updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
 }

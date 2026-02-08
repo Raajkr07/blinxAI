@@ -25,7 +25,7 @@ public class SaveFileTool implements McpTool {
 
     @Override
     public String description() {
-        return "Propose saving content to a text file on the user's Desktop. Always ask user for permission. The actual save happens after user confirmation in the UI.";
+        return "Propose saving content to a text file on the user's device. Always ask user for permission. The actual save happens after user confirmation in the UI.";
     }
 
     @Override
@@ -70,21 +70,13 @@ public class SaveFileTool implements McpTool {
                 filename = filename + ".txt";
             }
             
-            // Check desktop path (handle OneDrive)
-            String userHome = System.getProperty("user.home");
-            Path desktopPath = Paths.get(userHome, "Desktop");
-            Path oneDriveDesktop = Paths.get(userHome, "OneDrive", "Desktop");
-            
-            if (oneDriveDesktop.toFile().exists() && oneDriveDesktop.toFile().isDirectory()) {
-                desktopPath = oneDriveDesktop;
-            }
-
             // Prepare payload for frontend modal
+            // We don't determine the path on the server anymore
             Map<String, Object> fileInfo = Map.of(
                     "fileName", filename,
-                    "targetPath", desktopPath.resolve(filename).toString(),
+                    "targetPath", "User Selected Location", // Placeholder for UI
                     "content", content,
-                    "location", "Desktop"
+                    "location", "Local Device"
             );
 
             // Notify frontend to show modal
@@ -99,15 +91,15 @@ public class SaveFileTool implements McpTool {
                     )
             );
 
-            log.info("Proposing save file for user {}: {} at {}", userId, filename, desktopPath);
+            log.info("Proposing save file for user {}: {}", userId, filename);
 
             return Map.of(
                     "success", true,
                     "fileName", filename,
-                    "targetPath", desktopPath.resolve(filename).toString(),
+                    "targetPath", "User Selected Location",
                     "content", content,
-                    "location", "Desktop",
-                    "message", "I've drafted the file '" + filename + "'. Please review and confirm the save in the popup window.",
+                    "location", "Local Device",
+                    "message", "I've drafted the file '" + filename + "'. Please review and confirm the save action in the popup window.",
                     "pendingApproval", true,
                     "requiresAction", true
             );

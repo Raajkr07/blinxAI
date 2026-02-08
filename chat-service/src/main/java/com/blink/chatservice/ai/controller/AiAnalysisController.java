@@ -27,7 +27,7 @@ public class AiAnalysisController {
             @PathVariable String conversationId
     ) {
         // Fetching last 50 messages to give enough context for a meaningful summary.
-        List<Message> messages = messageRepository.findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(
+        List<Message> messages = messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(
                 conversationId, 
                 PageRequest.of(0, 50, Sort.by(Sort.Direction.DESC, "createdAt"))
         ).getContent();

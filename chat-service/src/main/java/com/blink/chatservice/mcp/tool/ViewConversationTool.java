@@ -64,12 +64,12 @@ public class ViewConversationTool implements McpTool {
             limit = Math.min(limit, 100);
 
             List<Message> messages = messageRepository
-                    .findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(conversationId,
+                    .findByConversationIdAndDeletedFalseOrderByIdDesc(conversationId,
                             org.springframework.data.domain.PageRequest.of(0, limit))
                     .getContent()
                     .stream()
                     .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
-                    .collect(Collectors.toList());
+                    .toList();
 
             log.info("Retrieved {} messages from conversation: {} for user: {}", 
                     messages.size(), conversationId, userId);

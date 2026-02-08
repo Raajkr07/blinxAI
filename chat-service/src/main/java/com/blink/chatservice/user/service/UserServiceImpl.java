@@ -48,7 +48,7 @@ public class UserServiceImpl implements UserService {
                 // Prevents race conditions if two people try to sign up with same number simultaneously.
                 User stub = new User();
                 stub.setPhone(identifier);
-                stub.setCreatedAt(LocalDateTime.now());
+                stub.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
                 log.info("Created stub user for phone: {}", identifier);
                 return userRepository.save(stub);
             });
@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
             userRepository.findFirstByEmail(trimmed).orElseGet(() -> {
                 User stub = new User();
                 stub.setEmail(trimmed);
-                stub.setCreatedAt(LocalDateTime.now());
+                stub.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
                 log.info("Created stub user for email: {}", trimmed);
                 return userRepository.save(stub);
             });
@@ -84,7 +84,7 @@ public class UserServiceImpl implements UserService {
         User user = getUserByIdentifier(identifier);
         updateUserFields(user, username, avatarUrl, bio, email, phone);
 
-        user.setCreatedAt(LocalDateTime.now());
+        user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         user = userRepository.save(user);
 
         otpService.deleteOtp(identifier);
@@ -291,12 +291,12 @@ public class UserServiceImpl implements UserService {
         RefreshToken rt = new RefreshToken();
         rt.setUserId(userId);
         rt.setToken(token);
-        rt.setCreatedAt(LocalDateTime.now());
+        rt.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         
         long expirationMs = jwtConfig.getRefreshExpiration();
         rt.setExpiresAt(LocalDateTime.ofInstant(
                 Instant.ofEpochMilli(System.currentTimeMillis() + expirationMs),
-                ZoneId.systemDefault()
+                ZoneId.of("UTC")
         ));
         
         refreshTokenRepository.save(rt);

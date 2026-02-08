@@ -25,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 /**
  * AI Chat Service - Production-grade implementation with:
@@ -257,12 +258,12 @@ public class AiService {
 
         // Recent conversation history
         List<Message> history = messageRepository
-                .findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(
+                .findByConversationIdAndDeletedFalseOrderByIdDesc(
                         conversationId,
                         org.springframework.data.domain.PageRequest.of(0, AiConstants.MAX_HISTORY_MESSAGES)
                 )
                 .getContent().stream()
-                .sorted(Comparator.comparing(Message::getCreatedAt))
+                .sorted(Comparator.comparing(Message::getId))
                 .collect(Collectors.toList());
 
         for (Message msg : history) {
@@ -304,12 +305,12 @@ public class AiService {
         prompt.append("2. For general questions or conversation, respond directly without tools.\n");
         prompt.append("3. You CAN answer general knowledge questions, provide information, and have natural conversations.\n");
         prompt.append("4. For date/time questions, use the current date/time provided above.\n");
-        prompt.append("5. BEFORE using save_file tool, ALWAYS ask the user: 'Would you like me to save this to your Desktop as [filename]?' Wait for confirmation.\n");
+        prompt.append("5. BEFORE using save_file tool, ALWAYS ask the user: 'Would you like me to generate this file for you to save as [filename]?' Wait for confirmation.\n");
         prompt.append("6. When saving files, organize and format the content nicely for readability.\n");
         prompt.append("7. Be friendly, concise, and helpful.\n");
         prompt.append("8. If a tool fails, explain the error clearly to the user.\n");
         prompt.append("9. Always confirm successful actions (e.g., 'Message sent to John').\n");
-        prompt.append("10. IMPORTANT: When using save_file, the tool returns the 'filePath'. You MUST include this FULL path in your final response to the user so they know where it is.\n");
+        prompt.append("10. IMPORTANT: When using save_file, the tool creates a draft. You MUST tell the user to check the popup to confirm and choose the save location.\n");
         prompt.append("11. Use plain text formatting - avoid markdown symbols like ** (bold) or * (italics).\n");
         prompt.append("12. For send_email: ask for recipient, subject, and content if missing. When you call the tool, it will open a preview modal for the user. Tell the user 'I've drafted the email for you to review.'\n");
 
@@ -357,7 +358,7 @@ public class AiService {
         msg.setConversationId(conversationId);
         msg.setSenderId(userId);
         msg.setBody(content.trim());
-        msg.setCreatedAt(LocalDateTime.now());
+        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         msg.setSeen(false);
         msg.setDeleted(false);
         messageRepository.save(msg);
@@ -368,7 +369,7 @@ public class AiService {
         msg.setConversationId(conversationId);
         msg.setSenderId(AiConstants.AI_USER_ID);
         msg.setBody(content);
-        msg.setCreatedAt(LocalDateTime.now());
+        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         msg.setSeen(false);
         msg.setDeleted(false);
         Message saved = messageRepository.save(msg);

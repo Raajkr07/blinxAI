@@ -55,7 +55,7 @@ public class SummarizeConversationTool implements McpTool {
             }
 
             List<Message> messages = messageRepository
-                    .findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(conversationId,
+                    .findByConversationIdAndDeletedFalseOrderByIdDesc(conversationId,
                             org.springframework.data.domain.PageRequest.of(0, 50))
                     .getContent()
                     .stream()
