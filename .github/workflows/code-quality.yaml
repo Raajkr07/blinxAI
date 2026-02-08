@@ -11,56 +11,85 @@ env:
   JAVA_VERSION: 17
 
 jobs:
-  code-quality:
-    name: Code Quality & Linting
+  filter:
+    name: Detect Changes
     runs-on: ubuntu-latest
-
+    outputs:
+      frontend-v1: ${{ steps.filter.outputs.frontend-v1 }}
+      frontend-v2: ${{ steps.filter.outputs.frontend-v2 }}
+      backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          fetch-depth: 0
+          filters: |
+            frontend-v1:
+              - 'frontend-v1/**'
+            frontend-v2:
+              - 'frontend-v2/**'
+            backend:
+              - 'chat-service/**'
 
-      # ---------- Frontend ----------
+  lint-frontend-v1:
+    name: Lint Frontend V1
+    needs: filter
+    if: needs.filter.outputs.frontend-v1 == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-
-      - name: Install frontend-v1 dependencies
+      - name: Install dependencies
         working-directory: frontend-v1
         run: npm ci
-
-      - name: Install frontend-v2 dependencies
-        working-directory: frontend-v2
-        run: npm ci
-
-      - name: Run ESLint on frontend-v1
+      - name: Run ESLint
         working-directory: frontend-v1
         run: npm run lint
 
-      - name: Run ESLint on frontend-v2
+  lint-frontend-v2:
+    name: Lint Frontend V2
+    needs: filter
+    if: needs.filter.outputs.frontend-v2 == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        working-directory: frontend-v2
+        run: npm ci
+      - name: Run ESLint
         working-directory: frontend-v2
         run: npm run lint
 
-      # ---------- Backend ----------
+  quality-backend:
+    name: Quality Backend (Java)
+    needs: filter
+    if: needs.filter.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
           cache: maven
-
       - name: Run Maven Checkstyle
         working-directory: chat-service
         run: ../mvnw checkstyle:check
-
       - name: Run Maven Spotless
         working-directory: chat-service
         run: ../mvnw spotless:check
-
-      # ---------- SonarCloud ----------
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
@@ -70,20 +99,17 @@ jobs:
 
   dependency-check:
     name: Dependency Vulnerability Check
+    needs: filter
+    if: github.ref == 'refs/heads/main' && needs.filter.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
           cache: maven
-
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -91,7 +117,6 @@ jobs:
           path: ./chat-service
           format: ALL
           out: dependency-check-report
-
       - name: Upload dependency check report
         uses: actions/upload-artifact@v4
         with:
@@ -101,11 +126,8 @@ jobs:
   license-check:
     name: License Compliance Check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Check license headers
         uses: apache/skywalking-eyes@v0.4.0
         with:
@@ -115,7 +137,6 @@ jobs:
     name: PR Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-
     steps:
       - name: Validate PR title
         uses: amannn/action-semantic-pull-request@v5
