@@ -4,7 +4,7 @@ import com.blink.chatservice.chat.dto.*;
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.service.ChatService;
-import com.blink.chatservice.notification.serviceImpl.EmailServiceImpl;
+import com.blink.chatservice.notification.service.EmailService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
-    private final EmailServiceImpl emailService;
+    private final EmailService emailService;
 
     @PostMapping("/direct")
     public ResponseEntity<Conversation> createDirect(Authentication auth, @RequestBody DirectChatRequest request) {

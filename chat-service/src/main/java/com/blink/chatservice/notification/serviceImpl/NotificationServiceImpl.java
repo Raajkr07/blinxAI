@@ -1,5 +1,6 @@
 package com.blink.chatservice.notification.serviceImpl;
 
+import com.blink.chatservice.notification.service.EmailService;
 import com.blink.chatservice.notification.service.NotificationService;
 import com.blink.chatservice.notification.service.PhoneService;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +13,10 @@ import java.util.regex.Pattern;
 @Service
 public class NotificationServiceImpl implements NotificationService {
 
-    private final EmailServiceImpl emailService;
+    private final EmailService emailService;
     private final PhoneService phoneService;
     
-    public NotificationServiceImpl(@Autowired(required = false) EmailServiceImpl emailService,
+    public NotificationServiceImpl(@Autowired(required = false) EmailService emailService,
                                    @Autowired(required = false) PhoneService phoneService) {
         this.emailService = emailService;
         this.phoneService = phoneService;
@@ -67,7 +68,6 @@ public class NotificationServiceImpl implements NotificationService {
     public boolean sendOtpToEmail(String email, String otp, String appName, String verifyUrl) {
         if (emailService == null) {
             log.warn("Email service is not available or not configured. OTP for email {} not sent.", maskEmail(email));
-            log.warn("To enable email OTP, configure JavaMailSender and SpringTemplateEngine in your application properties.");
             return false;
         }
         
@@ -85,7 +85,6 @@ public class NotificationServiceImpl implements NotificationService {
             }
             
             emailService.sendOtpEmail(email.trim().toLowerCase(), otp, appName, verifyUrl);
-            log.info("OTP email queued for sending to: {}", maskEmail(email));
             return true;
         } catch (Exception e) {
             log.error("Error queuing OTP email to {}: {}", maskEmail(email), e.getMessage(), e);
