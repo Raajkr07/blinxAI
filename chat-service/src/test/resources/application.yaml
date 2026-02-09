@@ -7,16 +7,12 @@ spring:
   
   # Mail configuration
   mail:
-    host: localhost
-    port: 3025
-    username: test
-    password: test
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false
+    brevo:
+      api-key: test-api-key
+      api-url: http://localhost:8080/v3/smtp/email
+    sender:
+      email: test@blink.com
+      name: Blink
   
   # MongoDB configuration
   data:
