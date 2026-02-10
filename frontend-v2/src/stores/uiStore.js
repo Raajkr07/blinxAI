@@ -19,7 +19,7 @@ export const useUIStore = create((set) => ({
 
     showAISuggestions: storage.get(STORAGE_KEYS.AI_SUGGESTIONS) !== null
         ? storage.get(STORAGE_KEYS.AI_SUGGESTIONS)
-        : true,
+        : false,
 
     setShowAISuggestions: (show) => {
         storage.set(STORAGE_KEYS.AI_SUGGESTIONS, show);

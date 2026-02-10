@@ -127,12 +127,23 @@ export function SettingsModal({ open, onOpenChange }) {
                     <div className="pt-4 border-t border-[var(--color-border)]">
                         <div className="flex items-center justify-between py-2">
                             <div>
-                                <h4 className="text-sm font-medium text-[var(--color-foreground)]">AI Fast-Reply</h4>
+                                <h4 className="text-sm font-medium text-[var(--color-foreground)]">AI Reply Suggestions</h4>
                                 <p className="text-xs text-[var(--color-gray-500)]">Show AI-generated smart replies for quick responses</p>
                             </div>
                             <button
                                 type="button"
-                                onClick={toggleAISuggestions}
+                                onClick={() => {
+                                    toggleAISuggestions();
+                                    if (!showAISuggestions) {
+                                        toast.success(<b>Reply suggestions enabled! ⚡</b>, {
+                                            position: 'top-center'
+                                        });
+                                    } else {
+                                        toast.success(<b>Reply suggestions minimized 💤</b>, {
+                                            position: 'top-center'
+                                        });
+                                    }
+                                }}
                                 className={cn(
                                     "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
                                     showAISuggestions ? "bg-blue-600" : "bg-gray-700"
