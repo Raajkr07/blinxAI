@@ -156,22 +156,24 @@ const ChatPage = () => {
                             <CallLogs />
                         </>
                     ) : (
-                        <>
-                            {tabs.length > 0 && <ChatTabs />}
-                            {displayConversationId && (
-                                <>
-                                    <ChatWindowHeader>
-                                        <ChatHeader />
-                                    </ChatWindowHeader>
-                                    <ChatWindowContent>
-                                        <MessageList key={displayConversationId} conversationId={displayConversationId} />
-                                    </ChatWindowContent>
-                                    <ChatWindowFooter>
-                                        <MessageInput conversationId={displayConversationId} />
-                                    </ChatWindowFooter>
-                                </>
-                            )}
-                        </>
+                        tabs.length > 0 ? (
+                            <>
+                                <ChatTabs />
+                                {displayConversationId && (
+                                    <>
+                                        <ChatWindowHeader>
+                                            <ChatHeader />
+                                        </ChatWindowHeader>
+                                        <ChatWindowContent>
+                                            <MessageList key={displayConversationId} conversationId={displayConversationId} />
+                                        </ChatWindowContent>
+                                        <ChatWindowFooter>
+                                            <MessageInput conversationId={displayConversationId} />
+                                        </ChatWindowFooter>
+                                    </>
+                                )}
+                            </>
+                        ) : null
                     )}
                 </ChatWindow>
             </AppShell>

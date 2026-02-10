@@ -3,6 +3,7 @@ const STORAGE_KEYS = {
     REFRESH_TOKEN: 'blink_refresh_token',
     USER: 'blink_user',
     THEME: 'blink_theme',
+    AI_SUGGESTIONS: 'blink_ai_suggestions',
 };
 
 class Storage {

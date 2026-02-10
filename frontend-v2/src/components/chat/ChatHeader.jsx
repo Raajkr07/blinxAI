@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 
 export function ChatHeader() {
     const queryClient = useQueryClient();
-    const { activeConversationId, clearActiveConversation } = useChatStore();
+    const { activeConversationId, clearActiveConversation, typingUsers } = useChatStore();
     const { user: currentUser } = useAuthStore();
     const { isMobile } = useUIStore();
     const { initiateCall } = useCallStore();
@@ -127,7 +127,9 @@ export function ChatHeader() {
     let displayTitle = conversation.title;
     let displayAvatar = conversation.avatarUrl;
 
-    if (!isGroup && !isAI) {
+    if (isAI) {
+        displayAvatar = 'https://img.freepik.com/free-vector/chatbot-chat-message-vectorart_78370-4104.jpg';
+    } else if (!isGroup) {
         if (otherUser) {
             displayTitle = displayTitle || otherUser.username || otherUser.name;
             displayAvatar = displayAvatar || otherUser.avatarUrl;
@@ -152,19 +154,36 @@ export function ChatHeader() {
                     showOffline={!otherUser?.online && !isGroup && !isAI}
                 />
 
-                <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-[var(--color-foreground)] truncate">
+                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h2 className="text-base font-semibold text-[var(--color-foreground)] truncate leading-tight">
                         {displayTitle}
                     </h2>
-                    <p className="text-sm text-[var(--color-gray-400)]">
-                        {isAI ? (
-                            'AI Assistant'
-                        ) : isGroup ? (
-                            `${conversation.participants?.length || 0} members`
-                        ) : (
-                            otherUser?.online ? 'Online' : 'Offline'
-                        )}
-                    </p>
+                    <div className="h-4 flex items-center overflow-hidden">
+                        <div className="text-xs text-[var(--color-gray-400)] truncate italic flex items-baseline">
+                            {(() => {
+                                const conversationTypingUsers = typingUsers[displayConversationId] || [];
+                                const isAiTyping = conversationTypingUsers.includes('ai-assistant');
+                                const isHumanTyping = conversationTypingUsers.some(uid => uid !== currentUser?.id && uid !== 'ai-assistant');
+
+                                if (isAiTyping || isHumanTyping) {
+                                    return (
+                                        <>
+                                            <span>{isAiTyping ? 'responding' : 'typing'}</span>
+                                            <span className="flex ml-1">
+                                                <span className="animate-typing-dot" style={{ animationDelay: '0s' }}>.</span>
+                                                <span className="animate-typing-dot" style={{ animationDelay: '0.2s' }}>.</span>
+                                                <span className="animate-typing-dot" style={{ animationDelay: '0.4s' }}>.</span>
+                                            </span>
+                                        </>
+                                    );
+                                }
+
+                                if (isAI) return '';
+                                if (isGroup) return `${conversation.participants?.length || 0} members`;
+                                return '';
+                            })()}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">

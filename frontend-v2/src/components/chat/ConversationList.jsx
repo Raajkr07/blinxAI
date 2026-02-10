@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useTabsStore, useAuthStore } from '../../stores';
-import { Avatar, SkeletonConversation, EmptyState, NoConversationsIcon, SimpleDropdown, SimpleDropdownItem, ConfirmDialog } from '../ui';
+import { Avatar, SkeletonConversation, EmptyState, NoConversationsIcon, ConfirmDialog } from '../ui';
 import { cn, formatRelativeTime, truncate } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
@@ -12,7 +12,6 @@ export function ConversationList() {
     const { activeConversationId, setActiveConversation, clearActiveConversation } = useChatStore();
     const { openTab, getTabByConversationId, closeTab, activeTabId, tabs } = useTabsStore();
     const { user: currentUser } = useAuthStore();
-    const [conversationToDelete, setConversationToDelete] = useState(null);
 
     const { data: conversations, isLoading, error } = useQuery({
         queryKey: queryKeys.conversations,
@@ -33,21 +32,6 @@ export function ConversationList() {
         .filter(c =>
             c.type?.toUpperCase() !== 'AI_ASSISTANT'
         );
-
-    const deleteMutation = useMutation({
-        mutationFn: (id) => chatService.deleteConversation(id),
-        onSuccess: (_, deletedId) => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
-            const tab = getTabByConversationId(deletedId);
-            if (tab) closeTab(tab.id);
-            if (activeConversationId === deletedId) clearActiveConversation();
-            toast.success('Conversation deleted');
-            setConversationToDelete(null);
-        },
-        onError: () => {
-            toast.error('Failed to delete conversation');
-        },
-    });
 
     const handleConversationClick = (conversation, event) => {
         // Prevent click if clicking on the dropdown or its items
@@ -102,28 +86,15 @@ export function ConversationList() {
                             isActive={highlightId === conversation.id}
                             hasTab={!!hasTab}
                             onClick={(e) => handleConversationClick(conversation, e)}
-                            onDelete={() => setConversationToDelete(conversation)}
                         />
                     );
                 })}
             </div>
-
-            <ConfirmDialog
-                open={!!conversationToDelete}
-                onOpenChange={(open) => !open && setConversationToDelete(null)}
-                title="Delete Conversation"
-                description={`Are you sure you want to delete the conversation with "${conversationToDelete?.title || 'this user'}"? This action cannot be undone.`}
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="danger"
-                loading={deleteMutation.isPending}
-                onConfirm={() => deleteMutation.mutate(conversationToDelete.id)}
-            />
         </>
     );
 }
 
-function ConversationItem({ conversation, currentUser, isActive, hasTab, onClick, onDelete }) {
+function ConversationItem({ conversation, currentUser, isActive, hasTab, onClick }) {
     const isGroup = conversation.type === 'GROUP' || conversation.type === 'COMMUNITY';
     const isAI = conversation.type === 'AI_ASSISTANT';
 
@@ -208,45 +179,6 @@ function ConversationItem({ conversation, currentUser, isActive, hasTab, onClick
                     <p className="text-sm text-[var(--color-gray-400)] truncate pr-6">
                         {truncate(conversation.lastMessagePreview, 60)}
                     </p>
-                )}
-            </div>
-
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <SimpleDropdown
-                    align="end"
-                    trigger={
-                        <button
-                            className="p-1.5 rounded-md hover:bg-[var(--color-background)] text-[var(--color-gray-400)] hover:text-[var(--color-foreground)]"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M3.625 7.5C3.625 8.12132 3.12132 8.625 2.5 8.625C1.87868 8.625 1.375 8.12132 1.375 7.5C1.375 6.87868 1.87868 6.375 2.5 6.375C3.12132 6.375 3.625 6.87868 3.625 7.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM12.5 8.625C13.1213 8.625 13.625 8.12132 13.625 7.5C13.625 6.87868 13.1213 6.375 12.5 6.375C11.8787 6.375 11.375 6.87868 11.375 7.5C11.375 8.12132 11.8787 8.625 12.5 8.625Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                            </svg>
-                        </button>
-                    }
-                >
-                    <SimpleDropdownItem
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete();
-                        }}
-                        destructive
-                    >
-                        Delete
-                    </SimpleDropdownItem>
-                </SimpleDropdown>
-            </div>
-
-            <div className="flex flex-col items-end gap-1 group-hover:opacity-0 transition-opacity">
-                {isGroup && (
-                    <span className="text-xs text-[var(--color-gray-500)]">
-                        {conversation.participants?.length || 0} members
-                    </span>
-                )}
-                {isAI && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-border)] text-[var(--color-foreground)]">
-                        AI
-                    </span>
                 )}
             </div>
         </div>

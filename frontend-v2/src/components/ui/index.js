@@ -24,3 +24,4 @@ export {
 } from './Dropdown';
 export { SimpleDropdown, SimpleDropdownItem } from './SimpleDropdown';
 export { ConfirmDialog } from './ConfirmDialog';
+export { AILogo } from './AILogo';

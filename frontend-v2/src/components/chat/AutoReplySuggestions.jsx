@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { aiService } from '../../services';
 import { cn } from '../../lib/utils';
-import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useUIStore } from '../../stores';
 
 export function AutoReplySuggestions({ conversationId, messageId, messageContent, senderId, onSend }) {
-    const [isOpen, setIsOpen] = useState(true);
+    const { showAISuggestions, toggleAISuggestions } = useUIStore();
+
     const { data: suggestions, isLoading } = useQuery({
         queryKey: ['autoReplies', conversationId, messageId],
         queryFn: () => aiService.generateAutoReplies({
@@ -13,51 +14,50 @@ export function AutoReplySuggestions({ conversationId, messageId, messageContent
             content: messageContent,
             senderId,
         }),
-        enabled: !!messageId && !!messageContent && !!conversationId,
+        enabled: !!messageId && !!messageContent && !!conversationId && showAISuggestions,
         staleTime: 5 * 60 * 1000,
     });
 
     if (!messageId || !messageContent || !conversationId) return null;
 
-    const toggleOpen = () => {
-        const newState = !isOpen;
-        setIsOpen(newState);
+    const handleToggle = () => {
+        toggleAISuggestions();
 
-        if (newState) {
+        if (!showAISuggestions) {
             toast.success(<b>AI assistance engaged! ⚡</b>, {
-                position: 'top-center',
-                style: { background: 'var(--color-background)', color: 'var(--color-foreground)', border: '1px solid var(--color-primary)' }
+                position: 'top-center'
             });
         } else {
             toast.success(<b>Suggestions minimized 💤</b>, {
-                position: 'top-center',
+                position: 'top-center'
             });
         }
     };
 
     const replies = suggestions?.suggested_replies || [];
 
-    // Filter out empty or very short replies (less than 2 words)
     const filteredReplies = replies.filter(reply => {
         const words = reply.trim().split(/\s+/);
         return words.length >= 2;
     });
 
-    if (filteredReplies.length === 0 && !isLoading) return null;
+    if (filteredReplies.length === 0 && !isLoading && showAISuggestions) return null;
 
     return (
-        <div className="relative group">
+        <div className={cn("absolute bottom-full left-0 right-0 z-50 mb-[6px] p-1 rounded-xl transition-all duration-300 group",
+            showAISuggestions ? "bg-[var(--color-background)]/80 backdrop-blur-md border border-[var(--color-border)] shadow-xl" : "pointer-events-none")}>
+
             <button
-                onClick={toggleOpen}
+                onClick={handleToggle}
                 className={cn(
-                    "absolute -top-3 left-0 z-10 p-1.5 rounded-full shadow-sm transition-all duration-200 border",
+                    "absolute -top-3 left-0 z-10 p-1.5 rounded-full shadow-sm transition-all duration-200 border pointer-events-auto",
                     "bg-[var(--color-background)] text-[var(--color-foreground)] border-[var(--color-border)]",
                     "hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
-                    isOpen ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+                    showAISuggestions ? "opacity-0 group-hover:opacity-100" : "opacity-100"
                 )}
-                title={isOpen ? "Hide Suggestions" : "Show AI Suggestions"}
+                title={showAISuggestions ? "Hide Suggestions" : "Show AI Suggestions"}
             >
-                {isOpen ? (
+                {showAISuggestions ? (
                     <svg width="12" height="12" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
                     </svg>
@@ -68,7 +68,7 @@ export function AutoReplySuggestions({ conversationId, messageId, messageContent
                 )}
             </button>
 
-            {isOpen && (
+            {showAISuggestions && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     {isLoading ? (
                         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">

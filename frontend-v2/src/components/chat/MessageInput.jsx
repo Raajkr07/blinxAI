@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
     const user = useAuthStore((state) => state.user);
-    const { addOptimisticMessage, removeOptimisticMessage } = useChatStore();
+    const { addOptimisticMessage, removeOptimisticMessage, liveMessages } = useChatStore();
 
     // Typing indicator refs
     const typingTimeoutRef = useRef(null);
@@ -40,16 +40,24 @@ export function MessageInput({ conversationId }) {
     });
 
     const lastReceivedMessage = useMemo(() => {
-        if (!messagesPage || !user) return null;
+        if (!user) return null;
 
-        const messages = Array.isArray(messagesPage)
+        const history = Array.isArray(messagesPage)
             ? messagesPage
-            : messagesPage.content || [];
+            : messagesPage?.content || [];
 
-        return messages
-            .filter(msg => msg.senderId !== user.id && msg.senderId !== 'me')
+        const live = liveMessages[conversationId] || [];
+
+        // Combine and find latest non-own message
+        const allMessages = [...history, ...live];
+
+        return allMessages
+            .filter(msg =>
+                msg.senderId?.toString() !== user.id?.toString() &&
+                msg.senderId !== 'me'
+            )
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-    }, [messagesPage, user]);
+    }, [messagesPage, liveMessages, conversationId, user]);
 
     // Check if this is an AI conversation
     const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
@@ -95,18 +103,42 @@ export function MessageInput({ conversationId }) {
         },
     });
 
+    // Focus management
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+        // Auto-focus the input whenever the conversation changes
+        if (inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [conversationId]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
         const trimmedMessage = message.trim();
         if (!trimmedMessage) return;
 
-        sendMessageMutation.mutate(trimmedMessage);
+        // Clear input immediately for better responsiveness
         setMessage('');
+        sendMessageMutation.mutate(trimmedMessage);
+
+        // Ensure focus returns to input after sending
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, 0);
     };
 
     const handleSuggestionSelect = (suggestion) => {
         sendMessageMutation.mutate(suggestion);
+        // Regain focus after selecting a suggestion
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, 0);
     };
 
     const handleInputChange = (e) => {
@@ -132,7 +164,7 @@ export function MessageInput({ conversationId }) {
     };
 
     return (
-        <div className="space-y-2">
+        <div className="relative w-full">
             {/* Only show suggestions for non-AI conversations */}
             {!isAiChat && lastReceivedMessage && (
                 <AutoReplySuggestions
@@ -148,6 +180,7 @@ export function MessageInput({ conversationId }) {
             <form onSubmit={handleSubmit} className="flex gap-3">
                 <div className="flex-1">
                     <Textarea
+                        ref={inputRef}
                         value={message}
                         onChange={handleInputChange}
                         onKeyDown={(e) => {
@@ -157,15 +190,13 @@ export function MessageInput({ conversationId }) {
                             }
                         }}
                         placeholder="Type a message..."
-                        disabled={sendMessageMutation.isPending}
                         className="h-12 min-h-[48px]"
                     />
                 </div>
                 <Button
                     type="submit"
                     variant="default"
-                    disabled={!message.trim() || sendMessageMutation.isPending}
-                    loading={sendMessageMutation.isPending}
+                    disabled={!message.trim()}
                     className="h-12"
                 >
                     <svg

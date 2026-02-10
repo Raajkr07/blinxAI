@@ -117,3 +117,17 @@ html,
 .mirror {
     transform: scaleX(-1);
 }
+
+/* Typing Animation */
+@keyframes typingDot {
+    0%, 20% { opacity: 0.2; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-1.5px); }
+    80%, 100% { opacity: 0.2; transform: translateY(0); }
+}
+
+.animate-typing-dot {
+    animation: typingDot 1.4s infinite;
+    display: inline-block;
+    width: 3px;
+    text-align: center;
+}

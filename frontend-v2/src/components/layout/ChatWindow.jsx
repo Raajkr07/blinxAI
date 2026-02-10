@@ -1,12 +1,9 @@
 import { cn } from '../../lib/utils';
-import { useChatStore } from '../../stores';
 
 export function ChatWindow({ children, className }) {
-    const { activeConversationId } = useChatStore();
-
     return (
         <div className={cn('h-full flex flex-col overflow-hidden bg-[var(--color-background)]', className)}>
-            {activeConversationId || children ? (
+            {children ? (
                 children
             ) : (
                 <ChatWindowEmpty />
@@ -17,7 +14,7 @@ export function ChatWindow({ children, className }) {
 
 export function ChatWindowHeader({ children }) {
     return (
-        <div className="h-12 px-6 flex items-center justify-between border-b border-gray-800 flex-shrink-0">
+        <div className="h-13 px-6 flex items-center justify-between border-b border-[var(--color-border)] flex-shrink-0">
             {children}
         </div>
     );
@@ -25,7 +22,7 @@ export function ChatWindowHeader({ children }) {
 
 export function ChatWindowContent({ children, className }) {
     return (
-        <div className={cn('flex-1 overflow-y-auto min-h-0 px-6', className)}>
+        <div className={cn('flex-1 overflow-y-auto min-h-0 px-2', className)}>
             {children}
         </div>
     );
@@ -33,7 +30,7 @@ export function ChatWindowContent({ children, className }) {
 
 export function ChatWindowFooter({ children }) {
     return (
-        <div className="chat-window-footer px-6 pt-[4px] pb-[2px] border-t border-gray-800 flex-shrink-0 bg-[var(--color-background)] z-10">
+        <div className="chat-window-footer h-16 px-6 flex items-center border-t border-[var(--color-border)] flex-shrink-0 bg-[var(--color-background)] z-10">
             {children}
         </div>
     );

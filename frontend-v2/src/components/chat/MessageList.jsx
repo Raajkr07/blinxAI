@@ -1,21 +1,75 @@
-import { useInfiniteQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState, useLayoutEffect } from 'react';
-import { chatService, socketService } from '../../services';
+import { chatService, socketService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
-import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon } from '../ui';
+import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon, AILogo } from '../ui';
 import { cn, formatTime, stripMarkdown } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 export function MessageList({ conversationId }) {
     const { user } = useAuthStore();
-    const { optimisticMessages, removeOptimisticMessage } = useChatStore();
-    const [liveMessages, setLiveMessages] = useState([]);
-    const [typingUsers, setTypingUsers] = useState(new Set());
+    const { optimisticMessages, removeOptimisticMessage, addTypingUser, removeTypingUser, liveMessages, addLiveMessage } = useChatStore();
     const messagesEndRef = useRef(null);
     const topSentinelRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const prevScrollHeightRef = useRef(0);
+
+    // Fetch conversations list
+    const { data: conversationsData } = useQuery({
+        queryKey: queryKeys.conversations,
+        queryFn: chatService.listConversations,
+    });
+
+    // Fetch specific conversation details
+    const { data: conversation } = useQuery({
+        queryKey: queryKeys.conversation(conversationId),
+        queryFn: () => chatService.getConversation(conversationId),
+        enabled: !!conversationId,
+    });
+
+    const conversationsList = Array.isArray(conversationsData)
+        ? conversationsData
+        : (conversationsData?.conversations || conversationsData?.content || []);
+
+    const currentConv = conversation || conversationsList.find(c => c && c.id?.toString() === conversationId?.toString());
+
+    // Derive the partner's profile for 1-on-1 chats
+    const isGroup = currentConv?.type === 'GROUP' || currentConv?.type === 'COMMUNITY';
+    const isAI = currentConv?.type === 'AI_ASSISTANT';
+
+    // Identity the other participant
+    const otherParticipant = !isGroup && !isAI && user && currentConv?.participants
+        ? currentConv.participants.find(p => {
+            const pid = typeof p === 'string' ? p : (p.id || p._id);
+            return pid?.toString() !== user.id?.toString();
+        })
+        : null;
+
+    const otherUserId = (otherParticipant && typeof otherParticipant === 'object')
+        ? (otherParticipant.id || otherParticipant._id)
+        : otherParticipant;
+
+    // Get the full profile if participants are just IDs
+    const { data: partnerProfile } = useQuery({
+        queryKey: ['user', otherUserId],
+        queryFn: () => userService.getUserById(otherUserId),
+        enabled: !!otherUserId,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    let partnerInfo = {
+        avatar: currentConv?.avatarUrl,
+        name: currentConv?.title
+    };
+
+    if (partnerProfile) {
+        partnerInfo.avatar = partnerInfo.avatar || partnerProfile.avatarUrl;
+        partnerInfo.name = partnerInfo.name || partnerProfile.username || partnerProfile.name;
+    } else if (otherParticipant && typeof otherParticipant === 'object') {
+        partnerInfo.avatar = partnerInfo.avatar || otherParticipant.avatarUrl;
+        partnerInfo.name = partnerInfo.name || otherParticipant.username || otherParticipant.name;
+    }
 
     const {
         data,
@@ -70,15 +124,7 @@ export function MessageList({ conversationId }) {
                             : rawMessage.createdAt
                     };
 
-                    setLiveMessages((prev) => {
-                        const existingIndex = prev.findIndex((m) => m.id === message.id);
-                        if (existingIndex !== -1) {
-                            const updated = [...prev];
-                            updated[existingIndex] = message;
-                            return updated;
-                        }
-                        return [...prev, message];
-                    });
+                    addLiveMessage(conversationId, message);
 
                     const currentOptimisticMessages = optimisticMessagesRef.current;
                     const optimisticEntries = Object.entries(currentOptimisticMessages);
@@ -131,15 +177,11 @@ export function MessageList({ conversationId }) {
                         if (!isMounted) return;
 
                         if (payload && payload.userId !== user.id) {
-                            setTypingUsers(prev => {
-                                const next = new Set(prev);
-                                if (payload.typing === true) {
-                                    next.add(payload.userId);
-                                } else {
-                                    next.delete(payload.userId);
-                                }
-                                return next;
-                            });
+                            if (payload.typing === true) {
+                                addTypingUser(conversationId, payload.userId);
+                            } else {
+                                removeTypingUser(conversationId, payload.userId);
+                            }
                         }
                     });
                 }
@@ -208,8 +250,9 @@ export function MessageList({ conversationId }) {
         allMessagesMap.set(msg.id, msg);
     });
 
-    // Add live messages (will overwrite if same ID, which is fine - live is more recent)
-    liveMessages.forEach(msg => {
+    // Add live messages
+    const currentLive = liveMessages[conversationId] || [];
+    currentLive.forEach(msg => {
         allMessagesMap.set(msg.id, msg);
     });
 
@@ -376,7 +419,7 @@ export function MessageList({ conversationId }) {
 
     return (
         <div
-            className="space-y-4 px-4 py-2 pb-6"
+            className="space-y-4 px-1 py-1"
         >
             <div ref={topSentinelRef} className="h-4 w-full" />
 
@@ -387,41 +430,52 @@ export function MessageList({ conversationId }) {
             )}
 
             {sortedMessages.map((message) => {
-                const isOwn = message.senderId === user?.id || message.senderId === 'me';
-                const showAvatar = !isOwn;
+                const isOwn = (message.senderId?.toString() === user?.id?.toString()) || message.senderId === 'me';
                 const isOptimistic = !!optimisticMessages[message.id] || (message.id.toString().startsWith('temp-'));
+
+                const isAIAssistant = message.senderId === 'ai-assistant';
+
+                // Try to find the specific sender in the participant list for this message
+                const sender = currentConv?.participants?.find(p => {
+                    const pid = typeof p === 'string' ? p : (p.id || p._id);
+                    return pid?.toString() === message.senderId?.toString();
+                });
+
+                let fallbackAvatar = null;
+                let fallbackName = null;
+
+                if (isAIAssistant) {
+                    fallbackAvatar = null;
+                    fallbackName = 'AI Assistant';
+                } else if (!isOwn) {
+                    if (sender && typeof sender === 'object') {
+                        fallbackAvatar = sender.avatarUrl;
+                        fallbackName = sender.username || sender.name;
+                    }
+
+                    // For Direct messages ONLY, fall back to conversation metadata if sender lookup failed
+                    if (!isGroup && !isAI && !fallbackAvatar) {
+                        fallbackAvatar = partnerInfo.avatar;
+                        fallbackName = fallbackName || partnerInfo.name;
+                    }
+                }
 
                 return (
                     <MessageBubble
                         key={message.id}
                         message={message}
                         isOwn={isOwn}
-                        showAvatar={showAvatar}
+                        showAvatar={true}
                         isOptimistic={isOptimistic}
+                        currentUser={user}
+                        fallbackAvatar={fallbackAvatar}
+                        fallbackName={fallbackName}
+                        isGroup={isGroup}
+                        isAI={isAI}
                     />
                 );
             })}
-
-            {/* Typing Indicator */}
-            {typingUsers.size > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 text-xs text-[var(--color-gray-500)] animate-pulse">
-                    <div className="flex gap-0.5">
-                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                        <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></span>
-                    </div>
-                    <span>
-                        {Array.from(typingUsers).map(uid => {
-                            if (uid === 'ai-assistant') return 'Assistant is responding...';
-                            const userMsg = sortedMessages.find(m => m.senderId === uid);
-                            const name = userMsg?.senderName || 'Someone';
-                            return `${name} is typing...`;
-                        }).join(', ')}
-                    </span>
-                </div>
-            )}
-
-            <div ref={messagesEndRef} className="h-1 w-full" />
+            <div ref={messagesEndRef} className="h-2 w-full" />
         </div>
     );
 }
@@ -476,10 +530,36 @@ function renderMessageWithLinks(text, isOwn) {
     return parts.length > 0 ? parts : text;
 }
 
-function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
+function MessageBubble({
+    message,
+    isOwn,
+    showAvatar,
+    isOptimistic,
+    currentUser,
+    fallbackAvatar,
+    fallbackName,
+    isGroup,
+    isAI
+}) {
     const [isHovered, setIsHovered] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const queryClient = useQueryClient();
+
+    // Dynamically fetch sender profile if missing (crucial for Groups)
+    const { data: senderProfile } = useQuery({
+        queryKey: ['user', message.senderId],
+        queryFn: () => userService.getUserById(message.senderId),
+        enabled: !isOwn && !message.senderAvatar && !fallbackAvatar && !!message.senderId && message.senderId !== 'ai-assistant',
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const displayAvatar = isOwn
+        ? currentUser?.avatarUrl
+        : (message.senderAvatar || fallbackAvatar || senderProfile?.avatarUrl);
+
+    const displayName = isOwn
+        ? (currentUser?.username || currentUser?.name)
+        : (message.senderName || fallbackName || senderProfile?.username || senderProfile?.name || 'User');
 
     const deleteMessageMutation = useMutation({
         mutationFn: () => chatService.deleteMessage(message.id),
@@ -502,30 +582,35 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
     return (
         <div
             className={cn(
-                'flex gap-3 animate-slide-in-up group relative',
-                isOwn && 'flex-row-reverse',
+                'flex gap-2 animate-slide-in-up group relative',
+                isOwn ? 'flex-row-reverse' : 'flex-row',
                 isOptimistic && 'opacity-60'
             )}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
             {showAvatar && (
-                <Avatar
-                    src={message.senderAvatar}
-                    name={message.senderName || 'User'}
-                    size="sm"
-                />
+                <div className="flex-shrink-0 mt-auto mb-1">
+                    <Avatar
+                        src={message.senderId === 'ai-assistant' ? null : displayAvatar}
+                        name={displayName}
+                        size="xs"
+                    >
+                        {message.senderId === 'ai-assistant' && <AILogo className="w-4 h-4" />}
+                    </Avatar>
+                </div>
             )}
 
             <div
                 className={cn(
-                    'max-w-xs lg:max-w-md xl:max-w-lg',
-                    'flex flex-col gap-1 relative'
+                    'max-w-[80%] lg:max-w-md xl:max-w-lg',
+                    'flex flex-col gap-1 relative',
+                    isOwn ? 'items-end' : 'items-start'
                 )}
             >
-                {!isOwn && message.senderName && (
+                {!isOwn && displayName && (isGroup || isAI) && (
                     <span className="text-xs text-[var(--color-gray-500)] px-4">
-                        {message.senderName}
+                        {displayName}
                     </span>
                 )}
 
@@ -581,8 +666,8 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
 
                     {!isOptimistic && showDeleteConfirm && (
                         <div className={cn(
-                            "absolute z-10 bg-white dark:bg-zinc-800 shadow-lg capitalize rounded-lg p-2 flex items-center gap-2",
-                            isOwn ? "right-0 -bottom-12" : "-left-4 -bottom-12"
+                            "absolute z-10 bg-[var(--color-background)] border border-[var(--color-border)] shadow-xl capitalize rounded-lg p-2 flex items-center gap-2 mb-2",
+                            isOwn ? "right-0 bottom-full" : "left-0 bottom-full"
                         )}>
                             <span className="text-xs font-medium whitespace-nowrap px-1">Delete?</span>
                             <button
@@ -595,7 +680,7 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
                             </button>
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="p-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors"
+                                className="p-1 rounded bg-[var(--color-border)] hover:bg-[var(--color-gray-500)] text-[var(--color-foreground)] transition-colors"
                             >
                                 <svg width="14" height="14" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
@@ -608,28 +693,15 @@ function MessageBubble({ message, isOwn, showAvatar, isOptimistic }) {
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
                             className={cn(
-                                'absolute -left-8 top-1/2 -translate-y-1/2',
-                                'w-6 h-6 rounded-full',
-                                'bg-red-500/10 hover:bg-red-500/20',
-                                'text-red-500',
-                                'flex items-center justify-center',
-                                'transition-all opacity-0 group-hover:opacity-100'
+                                'absolute top-1/2 -translate-y-1/2 transition-all opacity-0 group-hover:opacity-100',
+                                'w-6 h-6 rounded-full flex items-center justify-center',
+                                'bg-red-500/10 hover:bg-red-500/20 text-red-500',
+                                isOwn ? '-left-8' : '-right-8'
                             )}
                             title="Delete message"
                         >
-                            <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 15 15"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4H3.5C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z"
-                                    fill="currentColor"
-                                    fillRule="evenodd"
-                                    clipRule="evenodd"
-                                />
+                            <svg width="12" height="12" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5.5 1C5.22386 1 5 1.22386 5 1.5C5 1.77614 5.22386 2 5.5 2H9.5C9.77614 2 10 1.77614 10 1.5C10 1.22386 9.77614 1 9.5 1H5.5ZM3 3.5C3 3.22386 3.22386 3 3.5 3H5H10H11.5C11.7761 3 12 3.22386 12 3.5C12 3.77614 11.7761 4 11.5 4H11V12C11 12.5523 10.5523 13 10 13H5C4.44772 13 4 12.5523 4 12V4H3.5C3.22386 4 3 3.77614 3 3.5ZM5 4H10V12H5V4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd" />
                             </svg>
                         </button>
                     )}

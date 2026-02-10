@@ -1,7 +1,7 @@
 import { cn, getInitials } from '../../lib/utils';
 
 const avatarSizes = {
-    xs: 'h-6 w-6 text-xs',
+    xs: 'h-5 w-5 text-[10px]',
     sm: 'h-8 w-8 text-sm',
     md: 'h-10 w-10 text-base',
     lg: 'h-12 w-12 text-lg',
@@ -17,11 +17,12 @@ export function Avatar({
     online = false,
     showOffline = false,
     className,
+    children,
 }) {
     const initials = getInitials(name || alt);
 
     return (
-        <div className={cn('relative inline-block', className)}>
+        <div className={cn('relative inline-block flex-shrink-0', className)}>
             <div
                 className={cn(
                     'rounded-full overflow-hidden',
@@ -43,14 +44,20 @@ export function Avatar({
                         }}
                     />
                 ) : null}
-                <div
-                    className={cn(
-                        'h-full w-full flex items-center justify-center',
-                        src && 'hidden'
-                    )}
-                >
-                    {initials}
-                </div>
+                {children ? (
+                    <div className="h-full w-full flex items-center justify-center">
+                        {children}
+                    </div>
+                ) : (
+                    <div
+                        className={cn(
+                            'h-full w-full flex items-center justify-center',
+                            src && 'hidden'
+                        )}
+                    >
+                        {initials}
+                    </div>
+                )}
             </div>
             {(online || showOffline) && (
                 <span

@@ -117,7 +117,7 @@ export function SidebarFooter({ children }) {
     const { theme, toggleTheme } = useUIStore();
 
     return (
-        <div className="flex items-center justify-between border-t border-[var(--color-border)] flex-shrink-0 transition-all h-15 px-4">
+        <div className="flex items-center justify-between border-t border-[var(--color-border)] flex-shrink-0 transition-all h-16 px-4">
             <div className="flex items-center gap-2 flex-1">
                 {children}
             </div>

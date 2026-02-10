@@ -53,4 +53,35 @@ export const useChatStore = create((set) => ({
     setSearchResults: (results) => set({ searchResults: results }),
 
     clearSearch: () => set({ searchQuery: '', searchResults: [] }),
+
+    liveMessages: {},
+
+    addLiveMessage: (conversationId, message) =>
+        set((state) => {
+            const current = state.liveMessages[conversationId] || [];
+
+            // Normalize timestamp
+            const normalizedMsg = {
+                ...message,
+                createdAt: message.createdAt && !message.createdAt.endsWith('Z')
+                    ? `${message.createdAt}Z`
+                    : message.createdAt
+            };
+
+            // Deduplicate
+            if (current.some(m => m.id === normalizedMsg.id)) return state;
+
+            return {
+                liveMessages: {
+                    ...state.liveMessages,
+                    [conversationId]: [...current, normalizedMsg],
+                },
+            };
+        }),
+
+    clearLiveMessages: (conversationId) =>
+        set((state) => {
+            const { [conversationId]: _, ...rest } = state.liveMessages;
+            return { liveMessages: rest };
+        }),
 }));

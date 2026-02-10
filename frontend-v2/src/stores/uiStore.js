@@ -17,6 +17,21 @@ export const useUIStore = create((set) => ({
     activeView: 'chat',
     setActiveView: (view) => set({ activeView: view }),
 
+    showAISuggestions: storage.get(STORAGE_KEYS.AI_SUGGESTIONS) !== null
+        ? storage.get(STORAGE_KEYS.AI_SUGGESTIONS)
+        : true,
+
+    setShowAISuggestions: (show) => {
+        storage.set(STORAGE_KEYS.AI_SUGGESTIONS, show);
+        set({ showAISuggestions: show });
+    },
+
+    toggleAISuggestions: () => set((state) => {
+        const newValue = !state.showAISuggestions;
+        storage.set(STORAGE_KEYS.AI_SUGGESTIONS, newValue);
+        return { showAISuggestions: newValue };
+    }),
+
     toggleSidebar: () => set((state) => {
         if (state.isMobile) {
             return { isSidebarOpen: !state.isSidebarOpen };

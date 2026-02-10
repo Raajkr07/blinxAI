@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores';
-import { Modal, Avatar, Button } from '../ui';
+import { Modal, Avatar, Button, AILogo } from '../ui';
 
 export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' }) {
     const { user: currentUser } = useAuthStore();
@@ -73,7 +73,7 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                 <div className="space-y-6">
                     <div className="flex-col items-center gap-4 flex">
                         <Avatar
-                            src={displayData?.avatarUrl}
+                            src={isAI ? 'https://img.freepik.com/free-vector/chatbot-chat-message-vectorart_78370-4104.jpg' : displayData?.avatarUrl}
                             name={displayData?.title || displayData?.username || displayData?.name}
                             size="xl"
                             className="w-24 h-24"
@@ -155,19 +155,7 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                     {isAI && (
                         <div className="space-y-3 p-4 rounded-lg bg-[var(--color-border)]">
                             <div className="flex items-center gap-2">
-                                <svg
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 15 15"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="text-[var(--color-foreground)]"
-                                >
-                                    <path
-                                        d="M7.5 0.875C5.49797 0.875 3.875 2.49797 3.875 4.5C3.875 6.50203 5.49797 8.125 7.5 8.125C9.50203 8.125 11.125 6.50203 11.125 4.5C11.125 2.49797 9.50203 0.875 7.5 0.875ZM1.5 13.5C1.5 11.433 3.183 9.75 5.25 9.75H9.75C11.817 9.75 13.5 11.433 13.5 13.5C13.5 13.7761 13.2761 14 13 14H2C1.72386 14 1.5 13.7761 1.5 13.5Z"
-                                        fill="currentColor"
-                                    />
-                                </svg>
+                                <AILogo className="w-5 h-5 text-[var(--color-foreground)]" />
                                 <h3 className="text-sm font-medium text-[var(--color-foreground)]">
                                     AI & MCP based Assistant
                                 </h3>
