@@ -1,16 +1,13 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useTabsStore, useAuthStore } from '../../stores';
-import { Avatar, SkeletonConversation, EmptyState, NoConversationsIcon, ConfirmDialog } from '../ui';
+import { Avatar, SkeletonConversation, EmptyState, NoConversationsIcon } from '../ui';
 import { cn, formatRelativeTime, truncate } from '../../lib/utils';
-import toast from 'react-hot-toast';
 
 export function ConversationList() {
-    const queryClient = useQueryClient();
-    const { activeConversationId, setActiveConversation, clearActiveConversation } = useChatStore();
-    const { openTab, getTabByConversationId, closeTab, activeTabId, tabs } = useTabsStore();
+    const { activeConversationId, setActiveConversation } = useChatStore();
+    const { openTab, getTabByConversationId, activeTabId, tabs } = useTabsStore();
     const { user: currentUser } = useAuthStore();
 
     const { data: conversations, isLoading, error } = useQuery({

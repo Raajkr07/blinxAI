@@ -206,7 +206,7 @@ export function MessageList({ conversationId }) {
                 typingSubscription.unsubscribe();
             }
         };
-    }, [conversationId, removeOptimisticMessage, user?.id]);
+    }, [conversationId, removeOptimisticMessage, user?.id, addLiveMessage, addTypingUser, removeTypingUser]);
 
     const parseMessages = (page) => {
         if (!page) return [];
