@@ -5,7 +5,6 @@ import { motion as Motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
-
 export function ActiveCallInterface() {
     const { user } = useAuthStore();
     const {
@@ -25,34 +24,48 @@ export function ActiveCallInterface() {
     } = useCallStore();
 
     const [callDuration, setCallDuration] = useState(0);
+    const [isSwapped, setIsSwapped] = useState(false); // State to toggle video swap
 
     // Video element refs
-    const localVideoRef = useRef(null);
-    const remoteVideoRef = useRef(null);
-    const remoteAudioRef = useRef(null);
+    const mainVideoRef = useRef(null);
+    const pipVideoRef = useRef(null);
+    const hiddenAudioRef = useRef(null);
 
-    // Attach local stream to video element
-    useEffect(() => {
-        if (localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream;
-        }
-    }, [localStream, isVideoEnabled]);
+    const isVideo = activeCall?.type === 'VIDEO' || activeCall?.type === 'video';
+    const isCalling = callStatus === 'calling';
 
-    // Attach remote stream to video AND audio elements
+    // Determine which stream goes where
+    // Default: Main = Remote, PiP = Local
+    // Swapped: Main = Local, PiP = Remote
+    const mainStream = isSwapped ? localStream : remoteStream;
+    const pipStream = isSwapped ? remoteStream : localStream;
+
+    // Attach streams to video elements
     useEffect(() => {
-        if (remoteStream) {
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStream;
-                // Force play in case autoplay is blocked
-                remoteVideoRef.current.play().catch(() => { });
-            }
-            if (remoteAudioRef.current) {
-                remoteAudioRef.current.srcObject = remoteStream;
-                remoteAudioRef.current.play().catch(() => { });
-            }
-            console.log('[ActiveCallInterface] Remote stream attached, tracks:', remoteStream.getTracks().map(t => `${t.kind}:${t.readyState}`));
+        if (mainVideoRef.current) {
+            mainVideoRef.current.srcObject = mainStream;
+            if (mainStream) mainVideoRef.current.play().catch(() => { });
         }
-    }, [remoteStream]);
+    }, [mainStream, isSwapped]);
+
+    useEffect(() => {
+        if (pipVideoRef.current) {
+            pipVideoRef.current.srcObject = pipStream;
+            if (pipStream) pipVideoRef.current.play().catch(() => { });
+        }
+    }, [pipStream, isSwapped]);
+
+    // Handle Audio Echo - Only use hidden audio element if we are in an AUDIO call (no video elements)
+    // or if for some reason the video element logic fails.
+    // actually, simpler logic:
+    // If it's a VIDEO call, the `<video>` elements play the audio.
+    // If it's an AUDIO call, we need the hidden `<audio>` element.
+    useEffect(() => {
+        if (!isVideo && remoteStream && hiddenAudioRef.current) {
+            hiddenAudioRef.current.srcObject = remoteStream;
+            hiddenAudioRef.current.play().catch(() => { });
+        }
+    }, [isVideo, remoteStream]);
 
     // Track call duration
     useEffect(() => {
@@ -60,7 +73,6 @@ export function ActiveCallInterface() {
             const interval = setInterval(() => {
                 setCallDuration((prev) => prev + 1);
             }, 1000);
-
             return () => {
                 clearInterval(interval);
                 setCallDuration(0);
@@ -80,10 +92,6 @@ export function ActiveCallInterface() {
     };
 
     if (!activeCall && callStatus !== 'ended') return null;
-
-    const isVideo = activeCall?.type === 'VIDEO' || activeCall?.type === 'video';
-    const isCalling = callStatus === 'calling';
-    const isConnecting = connectionState === 'connecting' || connectionState === 'waiting';
 
     const getOtherUserName = () => {
         if (!activeCall || !user) return 'Unknown';
@@ -106,9 +114,12 @@ export function ActiveCallInterface() {
         if (isCalling) {
             return isRemoteRinging ? 'Ringing...' : 'Calling...';
         }
-        if (isConnecting) return 'Connecting...';
+        if (connectionState === 'connecting') return 'Connecting...';
         return formatDuration(callDuration);
     };
+
+    // Helper to check if a stream is "Local" (for mirroring)
+    const isLocalStream = (stream) => stream === localStream;
 
     return (
         <Motion.div
@@ -118,23 +129,32 @@ export function ActiveCallInterface() {
             className="fixed inset-0 z-[var(--z-modal)] bg-[var(--color-background)] flex flex-col font-sans"
         >
             {/* Main View Area */}
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
                 {isVideo ? (
-                    <div className="w-full h-full bg-[var(--color-background)] relative">
-                        {/* Remote video (full screen) */}
-                        <video
-                            ref={remoteVideoRef}
-                            autoPlay
-                            playsInline
-                            className={cn(
-                                "w-full h-full object-cover transition-opacity duration-700",
-                                remoteStream ? "opacity-100" : "opacity-0"
-                            )}
-                        />
+                    <div className="w-full h-full relative">
+                        <div
+                            className="w-full h-full cursor-pointer"
+                            onClick={() => setIsSwapped(!isSwapped)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsSwapped(!isSwapped); }}
+                            role="button"
+                            tabIndex={0}
+                        >
+                            <video
+                                ref={mainVideoRef}
+                                autoPlay
+                                playsInline
+                                // Mute if it's the local stream to prevent echo/feedback
+                                muted={isLocalStream(mainStream)}
+                                className={cn(
+                                    "w-full h-full object-cover transition-opacity duration-700",
+                                    mainStream ? "opacity-100" : "opacity-0",
+                                    isLocalStream(mainStream) && "mirror"
+                                )}
+                            />
+                        </div>
 
-                        {/* Placeholder when no remote stream or calling */}
-                        {(!remoteStream || isCalling) && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-background)]">
+                        {(!mainStream || (isCalling && !isSwapped)) && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <Motion.div
                                     initial={{ scale: 0.9, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
@@ -155,7 +175,7 @@ export function ActiveCallInterface() {
                                             />
                                         )}
                                     </div>
-                                    <h2 className="text-2xl font-bold text-[var(--color-foreground)] mb-2">{otherUserName}</h2>
+                                    <h2 className="text-2xl font-bold text-white mb-2">{otherUserName}</h2>
                                     <p className="text-blue-500 font-medium tracking-wide">
                                         {getStatusText()}
                                     </p>
@@ -163,30 +183,39 @@ export function ActiveCallInterface() {
                             </div>
                         )}
 
-                        {/* Local video preview */}
-                        {localStream && isVideoEnabled && (
+                        {pipStream && isVideoEnabled && (
                             <Motion.div
                                 layout
                                 initial={{ scale: 0.8, opacity: 0, x: 20, y: 20 }}
                                 animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
-                                className="absolute top-6 right-6 w-40 sm:w-56 aspect-video rounded-2xl overflow-hidden border border-[var(--color-border)] shadow-2xl z-20 bg-[var(--color-background)]"
+                                drag
+                                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                                className="absolute top-6 right-6 w-32 sm:w-48 aspect-[3/4] sm:aspect-video rounded-2xl overflow-hidden border-2 border-[var(--color-border)] shadow-2xl z-20 bg-[var(--color-background)] cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+                                onClick={() => setIsSwapped(!isSwapped)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsSwapped(!isSwapped); }}
+                                role="button"
+                                tabIndex={0}
                             >
                                 <video
-                                    ref={localVideoRef}
+                                    ref={pipVideoRef}
                                     autoPlay
                                     playsInline
-                                    muted
-                                    className="w-full h-full object-cover mirror"
+                                    // Mute if it's local stream
+                                    muted={isLocalStream(pipStream)}
+                                    className={cn(
+                                        "w-full h-full object-cover",
+                                        isLocalStream(pipStream) && "mirror"
+                                    )}
                                 />
-                                <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] text-[var(--color-gray-400)] bg-[var(--color-background)]/80 backdrop-blur-sm">
-                                    You
+                                <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[10px] text-white bg-black/50 backdrop-blur-sm">
+                                    {isLocalStream(pipStream) ? 'You' : otherUserName}
                                 </div>
                             </Motion.div>
                         )}
                     </div>
                 ) : (
                     /* Audio Call UI */
-                    <div className="w-full h-full bg-[var(--color-background)] flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center bg-[var(--color-background)]">
                         <div className="text-center">
                             <Motion.div
                                 animate={isCalling ? {
@@ -220,7 +249,7 @@ export function ActiveCallInterface() {
                 )}
 
                 {/* Top Status Bar */}
-                <div className="absolute top-6 left-6 z-30">
+                <div className="absolute top-6 left-6 z-30 pointer-events-none">
                     <div className="px-4 py-2 rounded-2xl flex items-center gap-3 border border-[var(--color-border)] bg-[var(--color-background)]/80 backdrop-blur-md">
                         <div className={cn(
                             'h-2 w-2 rounded-full',
@@ -238,21 +267,21 @@ export function ActiveCallInterface() {
                 </div>
             </div>
 
-            {/* Controls Bar */}
-            <div className="px-6 py-10 bg-gradient-to-t from-[var(--color-background)] via-[var(--color-background)]/90 to-transparent z-40">
-                <div className="max-w-xl mx-auto flex items-center justify-center gap-4 sm:gap-8">
+            {/* Controls Bar - Fixed at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-40">
+                <div className="max-w-xl mx-auto flex items-center justify-center gap-6 sm:gap-10">
 
                     {/* Audio Toggle */}
                     <div className="flex flex-col items-center gap-2">
                         <Button
-                            variant={isAudioEnabled ? 'ghost' : 'danger'}
+                            variant="ghost"
                             size="icon"
                             onClick={toggleAudio}
                             className={cn(
-                                "h-14 w-14 rounded-full transition-all duration-300 hover:scale-110 border border-[var(--color-border)]",
+                                "h-14 w-14 rounded-full transition-all duration-300 transform hover:scale-110 border shadow-lg",
                                 isAudioEnabled
-                                    ? "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-border)]"
-                                    : "bg-red-500/90 border-red-500/50 text-white"
+                                    ? "bg-white/20 hover:bg-white/30 text-white border-white/10 backdrop-blur-md"
+                                    : "bg-red-500 hover:bg-red-600 text-white border-transparent"
                             )}
                         >
                             {isAudioEnabled ? (
@@ -261,21 +290,36 @@ export function ActiveCallInterface() {
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="2" y2="22" /><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-1" /><path d="M5 10v1a7 7 0 0 0 12 5" /><path d="M15 9.34V5a3 3 0 0 0-5.94-.6" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
                             )}
                         </Button>
-                        <span className="text-[10px] font-bold text-[var(--color-gray-500)] uppercase tracking-tighter">Mic</span>
+                        <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">
+                            {isAudioEnabled ? 'Mute' : 'Unmute'}
+                        </span>
+                    </div>
+
+                    {/* End Call Button */}
+                    <div className="flex flex-col items-center gap-2">
+                        <Button
+                            variant="danger"
+                            size="icon"
+                            onClick={handleEndCall}
+                            className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-red-500/50"
+                        >
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="rotate-[135deg]"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" /></svg>
+                        </Button>
+                        <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">End</span>
                     </div>
 
                     {/* Video Toggle */}
                     {isVideo && (
                         <div className="flex flex-col items-center gap-2">
                             <Button
-                                variant={isVideoEnabled ? 'ghost' : 'danger'}
+                                variant="ghost"
                                 size="icon"
                                 onClick={toggleVideo}
                                 className={cn(
-                                    "h-14 w-14 rounded-full transition-all duration-300 hover:scale-110 border border-[var(--color-border)]",
+                                    "h-14 w-14 rounded-full transition-all duration-300 transform hover:scale-110 border shadow-lg",
                                     isVideoEnabled
-                                        ? "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-border)]"
-                                        : "bg-red-500/90 border-red-500/50 text-white"
+                                        ? "bg-white/20 hover:bg-white/30 text-white border-white/10 backdrop-blur-md"
+                                        : "bg-red-500 hover:bg-red-600 text-white border-transparent"
                                 )}
                             >
                                 {isVideoEnabled ? (
@@ -284,22 +328,11 @@ export function ActiveCallInterface() {
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="2" y2="22" /><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
                                 )}
                             </Button>
-                            <span className="text-[10px] font-bold text-[var(--color-gray-500)] uppercase tracking-tighter">Camera</span>
+                            <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">
+                                {isVideoEnabled ? 'Cam On' : 'Cam Off'}
+                            </span>
                         </div>
                     )}
-
-                    {/* End Call Button */}
-                    <div className="flex flex-col items-center gap-2">
-                        <Button
-                            variant="danger"
-                            size="icon"
-                            onClick={handleEndCall}
-                            className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] transition-all duration-300 hover:scale-110 active:scale-95"
-                        >
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="rotate-[135deg]"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" /></svg>
-                        </Button>
-                        <span className="text-[10px] font-bold text-[var(--color-gray-500)] uppercase tracking-tighter">End</span>
-                    </div>
 
                     {/* Screen Share */}
                     {isVideo && (
@@ -309,27 +342,30 @@ export function ActiveCallInterface() {
                                 size="icon"
                                 onClick={toggleScreenShare}
                                 className={cn(
-                                    "h-14 w-14 rounded-full transition-all duration-300 hover:scale-110 border border-[var(--color-border)]",
+                                    "h-14 w-14 rounded-full transition-all duration-300 transform hover:scale-110 border shadow-lg",
                                     isScreenSharing
-                                        ? "bg-blue-600 border-blue-400/50 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]"
-                                        : "bg-[var(--color-background)] text-[var(--color-foreground)] hover:bg-[var(--color-border)]"
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-400"
+                                        : "bg-white/20 hover:bg-white/30 text-white border-white/10 backdrop-blur-md"
                                 )}
                             >
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" x2="12" y1="2" y2="15" /></svg>
                             </Button>
-                            <span className="text-[10px] font-bold text-[var(--color-gray-500)] uppercase tracking-tighter">Share</span>
+                            <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">Share</span>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Hidden audio element for remote audio playback */}
-            <audio
-                ref={remoteAudioRef}
-                autoPlay
-                playsInline
-                className="hidden"
-            />
+            {/* Hidden audio element for audio-only calls */}
+            {/* Conditional rendering ensures this is ONLY present when we are NOT in video mode, preventing double audio */}
+            {!isVideo && (
+                <audio
+                    ref={hiddenAudioRef}
+                    autoPlay
+                    playsInline
+                    className="hidden"
+                />
+            )}
         </Motion.div>
     );
 }
