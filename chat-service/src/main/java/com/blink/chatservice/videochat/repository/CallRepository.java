@@ -18,10 +18,8 @@ public interface CallRepository extends MongoRepository<Call, String> {
     
     List<Call> findByCallerIdOrReceiverId(String callerId, String receiverId);
     
+    @Query("{ $and: [ { $or: [ { 'callerId': ?0 }, { 'receiverId': ?1 } ] }, { 'status': ?2 } ] }")
     List<Call> findByCallerIdOrReceiverIdAndStatus(String callerId, String receiverId, CallStatus status);
-    
-    Optional<Call> findFirstByCallerIdOrReceiverIdAndStatusOrderByCreatedAtDesc(
-            String callerId, String receiverId, CallStatus status);
     
     @Query("{ $or: [ { 'callerId': ?0 }, { 'receiverId': ?0 } ] }")
     Page<Call> findCallHistoryByUserId(String userId, Pageable pageable);

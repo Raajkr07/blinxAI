@@ -6,6 +6,7 @@ import com.blink.chatservice.videochat.dto.*;
 import com.blink.chatservice.videochat.entity.Call;
 import com.blink.chatservice.videochat.repository.CallRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -129,9 +130,19 @@ public class CallServiceImpl implements CallService {
     @Override
     public CallHistoryResponse getCallHistory(String userId, int page, int size, Call.CallStatus status, Call.CallType type, LocalDateTime start, LocalDateTime end) {
         var pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
-        var callPage = (start != null && end != null) 
-            ? callRepository.findCallHistoryByUserIdAndDateRange(userId, start, end, pageable)
-            : callRepository.findCallHistoryByUserId(userId, pageable);
+        
+        Page<Call> callPage;
+        if (start != null && end != null) {
+            callPage = callRepository.findCallHistoryByUserIdAndDateRange(userId, start, end, pageable);
+        } else if (status != null && type != null) {
+            callPage = callRepository.findCallHistoryByUserIdAndStatusAndType(userId, status, type, pageable);
+        } else if (status != null) {
+            callPage = callRepository.findCallHistoryByUserIdAndStatus(userId, status, pageable);
+        } else if (type != null) {
+            callPage = callRepository.findCallHistoryByUserIdAndType(userId, type, pageable);
+        } else {
+            callPage = callRepository.findCallHistoryByUserId(userId, pageable);
+        }
 
         var responses = callPage.getContent().stream().map(this::createCallResponse).toList();
         return CallHistoryResponse.of(responses, callPage.getNumber(), callPage.getTotalPages(), callPage.getTotalElements(), callPage.getSize(), callPage.hasNext(), callPage.hasPrevious());
