@@ -18,8 +18,11 @@ export class WebRTCService {
 
     // Initialize peer connection
     async createPeerConnection(onIceCandidate, onTrack, onConnectionStateChange) {
+        // Close ONLY the old peer connection — do NOT stop media tracks.
+        // The caller may have already attached a local stream that must stay alive.
         if (this.peerConnection) {
-            this.closePeerConnection();
+            this.peerConnection.close();
+            this.peerConnection = null;
         }
 
         this.peerConnection = new RTCPeerConnection({ iceServers: this.iceServers });
@@ -33,6 +36,7 @@ export class WebRTCService {
 
         // Handle remote stream
         this.peerConnection.ontrack = (event) => {
+            console.log('[WebRTC] ontrack fired, streams:', event.streams?.length);
             if (event.streams && event.streams[0]) {
                 this.remoteStream = event.streams[0];
                 if (onTrack) {
@@ -43,9 +47,16 @@ export class WebRTCService {
 
         // Handle connection state changes
         this.peerConnection.onconnectionstatechange = () => {
-            if (onConnectionStateChange) {
-                onConnectionStateChange(this.peerConnection.connectionState);
+            const state = this.peerConnection?.connectionState;
+            console.log('[WebRTC] Connection state:', state);
+            if (onConnectionStateChange && state) {
+                onConnectionStateChange(state);
             }
+        };
+
+        // Log ICE connection state for debugging
+        this.peerConnection.oniceconnectionstatechange = () => {
+            console.log('[WebRTC] ICE state:', this.peerConnection?.iceConnectionState);
         };
 
     }

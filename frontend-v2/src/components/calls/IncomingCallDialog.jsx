@@ -22,7 +22,6 @@ export function IncomingCallDialog() {
         }
     }, [incomingCallId, acceptCall]);
 
-    // Handle both uppercase and lowercase call types
     const isVideo = useMemo(() => {
         const type = incomingCall?.type || incomingCall?.callType;
         return type === 'VIDEO' || type === 'video';
@@ -38,6 +37,8 @@ export function IncomingCallDialog() {
         }
     }, [incomingCall, handleReject]);
 
+    if (!incomingCall) return null;
+
     return (
         <AnimatePresence>
             <Motion.div
@@ -46,24 +47,27 @@ export function IncomingCallDialog() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 sm:p-6"
             >
+                {/* Backdrop */}
                 <Motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+                    className="absolute inset-0 bg-[var(--color-background)]/60 backdrop-blur-md"
                     onClick={handleReject}
                 />
 
+                {/* Dialog */}
                 <Motion.div
                     initial={{ scale: 0.9, y: 20, opacity: 0 }}
                     animate={{ scale: 1, y: 0, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
-                    className="glass-strong rounded-[2.5rem] p-8 sm:p-12 max-w-sm w-full relative z-10 border border-white/10 shadow-2xl overflow-hidden"
+                    className="rounded-[2.5rem] p-8 sm:p-12 max-w-sm w-full relative z-10 border border-[var(--color-border)] shadow-2xl overflow-hidden bg-[var(--color-background)]/80 backdrop-blur-xl"
                 >
-                    {/* Background Glow */}
+                    {/* Top accent line */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-blue-500/50 blur-xl" />
 
                     <div className="text-center relative">
+                        {/* Avatar with pulse */}
                         <div className="mb-8 relative inline-block">
                             <Motion.div
                                 animate={{
@@ -77,15 +81,16 @@ export function IncomingCallDialog() {
                                     src={incomingCall.callerAvatar}
                                     name={incomingCall.callerName}
                                     size="2xl"
-                                    className="mx-auto ring-4 ring-white/10 shadow-2xl"
+                                    className="mx-auto ring-4 ring-[var(--color-border)] shadow-2xl"
                                 />
                             </Motion.div>
 
-                            <div className="absolute -bottom-2 -right-2 glass-strong p-2.5 rounded-2xl border border-white/20 shadow-xl">
+                            {/* Call type icon badge */}
+                            <div className="absolute -bottom-2 -right-2 p-2.5 rounded-2xl border border-[var(--color-border)] shadow-xl bg-[var(--color-background)]/90 backdrop-blur-sm">
                                 {isVideo ? (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
                                 ) : (
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" /></svg>
                                 )}
                             </div>
                         </div>
@@ -95,15 +100,16 @@ export function IncomingCallDialog() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
                         >
-                            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">
+                            <h2 className="text-3xl font-bold text-[var(--color-foreground)] mb-2 tracking-tight">
                                 {incomingCall.callerName}
                             </h2>
-                            <p className="text-blue-400/80 font-semibold text-sm uppercase tracking-widest mb-10">
+                            <p className="text-blue-500/80 font-semibold text-sm uppercase tracking-widest mb-10">
                                 Incoming {isVideo ? 'Video' : 'Audio'} Call
                             </p>
                         </Motion.div>
                     </div>
 
+                    {/* Action buttons */}
                     <div className="flex gap-5">
                         <Button
                             variant="danger"

@@ -30,7 +30,6 @@ export const useCallStore = create((set, get) => ({
         const subs = [];
 
         // Listen for WebRTC signals from backend
-        // Switch to explicit topic subscription to avoid User Destination issues
         subs.push(socketService.subscribe(`/topic/video/${userId}/signal`, (signal) => {
             get().handleWebRTCSignal(signal);
         }));
@@ -64,12 +63,15 @@ export const useCallStore = create((set, get) => ({
             return;
         }
 
+        // Backend CallNotification uses "type" (not "callType")
+        const callType = notification.type || notification.callType;
+
         set({
             incomingCall: {
                 id: notification.callId,
                 callerId: notification.callerId,
                 receiverId: notification.receiverId,
-                type: notification.callType,
+                type: callType,
                 conversationId: notification.conversationId,
                 callerName: notification.callerName,
                 callerAvatar: notification.callerAvatar,
@@ -125,21 +127,25 @@ export const useCallStore = create((set, get) => ({
 
                     // Skip if we already processed an offer
                     if (webrtc.peerConnection?.remoteDescription) {
-                        console.log('[CallStore] Ignoring duplicate OFFER - peer connection already has remote description');
+                        console.log('[CallStore] Ignoring duplicate OFFER');
                         break;
                     }
 
                     console.log('[CallStore] Processing OFFER - creating peer connection');
-                    // Receiver gets offer from caller
+
+                    // Create peer connection WITHOUT calling closePeerConnection
+                    // (which would kill local stream tracks)
                     await webrtc.createPeerConnection(
                         (candidate) => get().sendIceCandidate(candidate),
                         (stream) => set({ remoteStream: stream }),
                         (state) => set({ connectionState: state })
                     );
 
-                    if (get().localStream) {
+                    // Add local stream tracks to the peer connection
+                    const currentLocalStream = get().localStream;
+                    if (currentLocalStream) {
                         console.log('[CallStore] Adding local stream to peer connection');
-                        webrtc.addLocalStream(get().localStream);
+                        webrtc.addLocalStream(currentLocalStream);
                     } else {
                         console.warn('[CallStore] No local stream available when processing OFFER');
                     }
@@ -147,10 +153,7 @@ export const useCallStore = create((set, get) => ({
                     console.log('[CallStore] Creating ANSWER');
                     const answer = await webrtc.createAnswer(JSON.parse(signal.data));
 
-                    console.log('[CallStore] Processing answer results');
-
                     console.log('[CallStore] Sending ANSWER to caller:', currentCall.callerId);
-                    // Send answer back to caller
                     await socketService.send('/app/video/signal', {
                         callId: currentCall.id,
                         type: 'ANSWER',
@@ -162,7 +165,6 @@ export const useCallStore = create((set, get) => ({
                 }
 
                 case 'ANSWER':
-                    // Caller receives answer from receiver
                     console.log('[CallStore] Received ANSWER, call is now active');
                     await webrtc.setRemoteDescription(JSON.parse(signal.data));
                     set({ callStatus: 'active' });
@@ -170,12 +172,10 @@ export const useCallStore = create((set, get) => ({
                     break;
 
                 case 'RINGING':
-                    // Caller gets notification that receiver is ringing
                     set({ isRemoteRinging: true });
                     break;
 
                 case 'ICE_CANDIDATE':
-                    // Handle ICE candidates for WebRTC connection
                     if (signal.data) {
                         try {
                             await webrtc.addIceCandidate(JSON.parse(signal.data));
@@ -186,19 +186,15 @@ export const useCallStore = create((set, get) => ({
                     break;
 
                 case 'CALL_MISSED':
-                    // Call timed out without answer
                     toast.error('Call missed');
                     get().endCall('missed');
                     break;
 
                 case 'CALL_ENDED':
-                    // Other party ended the call
                     console.log('[CallStore] Received CALL_ENDED signal, current callStatus:', callStatus);
                     if (callStatus === 'calling') {
-                        // Call was rejected before being answered
                         toast.error('Call was declined');
                     } else if (callStatus === 'active') {
-                        // Call was ended during active conversation
                         toast('Call ended');
                     }
                     get().endCall('ended');
@@ -242,32 +238,34 @@ export const useCallStore = create((set, get) => ({
 
         try {
             const isVideo = callType.toUpperCase() === 'VIDEO';
-            const webrtc = getWebRTCService();
 
-            // Clean up any existing streams first
+            // Clean up any existing call state
+            resetWebRTCService();
             const { localStream: existingStream } = get();
             if (existingStream) {
                 existingStream.getTracks().forEach(track => track.stop());
                 set({ localStream: null });
             }
 
-            // 1. Kick off media access (don't await yet)
-            console.log('[CallStore] Requesting local media stream in background...');
+            const webrtc = getWebRTCService();
+
+            // 1. Start media access in background
+            console.log('[CallStore] Requesting local media stream...');
             const mediaPromise = webrtc.startLocalStream(isVideo, true).catch(err => {
                 console.error('[CallStore] Media request failed:', err);
                 return null;
             });
 
-            // 2. Await ONLY server verification (Server side busy check, persistence etc)
+            // 2. Request server verification (busy check, persistence)
             console.log('[CallStore] Requesting server verification...');
             const response = await callService.initiateCall({
                 receiverId,
                 type: callType.toUpperCase(),
             });
 
-            console.log(`[CallStore] Server verified after ${Date.now() - startTime}ms. Showing UI.`);
+            console.log(`[CallStore] Server verified after ${Date.now() - startTime}ms`);
 
-            // 3. IMMEDIATELY show the calling UI as soon as server says OK
+            // 3. Show calling UI immediately
             set({
                 activeCall: {
                     ...response,
@@ -278,7 +276,7 @@ export const useCallStore = create((set, get) => ({
                 lastCallOutcome: null,
             });
 
-            // 4. Continue with media and WebRTC in the background
+            // 4. Wait for media
             const stream = await mediaPromise;
             if (!stream) {
                 toast.error('Could not access camera/microphone');
@@ -288,7 +286,7 @@ export const useCallStore = create((set, get) => ({
 
             set({ localStream: stream });
 
-            // Set up WebRTC peer connection
+            // 5. Set up WebRTC peer connection
             await webrtc.createPeerConnection(
                 (candidate) => get().sendIceCandidate(candidate),
                 (stream) => set({ remoteStream: stream }),
@@ -297,7 +295,7 @@ export const useCallStore = create((set, get) => ({
 
             webrtc.addLocalStream(stream);
 
-            // Create and send offer
+            // 6. Create and send offer
             const offer = await webrtc.createOffer();
             await socketService.send('/app/video/signal', {
                 callId: response.id,
@@ -312,19 +310,18 @@ export const useCallStore = create((set, get) => ({
             console.error('[CallStore] Failed to initiate call:', error);
             set({ callStatus: 'idle' });
 
-            // Clean up any media that was acquired
             const { localStream } = get();
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 set({ localStream: null });
             }
 
-            toast.error(error.message || 'Failed to start call');
+            const errMsg = error.response?.data?.message || error.message || 'Failed to start call';
+            toast.error(errMsg);
             resetWebRTCService();
             throw error;
         }
     },
-
 
     // Accept incoming call
     acceptCall: async () => {
@@ -334,26 +331,25 @@ export const useCallStore = create((set, get) => ({
         console.log('[CallStore] Accepting call:', incomingCall.id);
 
         try {
-            // Clean up any existing streams and reset WebRTC service
+            // Clean up any existing streams
             const { localStream: existingStream } = get();
             if (existingStream) {
                 existingStream.getTracks().forEach(track => track.stop());
                 set({ localStream: null });
             }
 
-            // Reset WebRTC service to ensure clean state
-            resetWebRTCService();
-
             // 1. Accept call on backend
             await callService.acceptCall(incomingCall.id);
 
-            // 2. Get local media stream (WebRTC service is fresh now)
-            const isVideo = incomingCall.type === 'VIDEO';
+            // 2. Get a fresh WebRTC service and obtain local media
+            //    DO NOT call resetWebRTCService() here — it would destroy
+            //    the ICE queue. Instead, just get the service instance.
             const webrtc = getWebRTCService();
+            const isVideo = incomingCall.type === 'VIDEO';
             const stream = await webrtc.startLocalStream(isVideo, true);
 
-            // 3. Store the stream and update to active state FIRST
-            // (so OFFER handler doesn't re-queue it)
+            // 3. Store the stream and transition to active state FIRST
+            //    so OFFER handler won't re-queue the signal
             console.log('[CallStore] Setting state to active before processing OFFER');
             set({
                 activeCall: incomingCall,
@@ -363,21 +359,20 @@ export const useCallStore = create((set, get) => ({
                 isRemoteRinging: false,
             });
 
-            // 4. NOW process pending offer (won't be re-queued since status is 'active')
+            // 4. Process pending offer (won't be re-queued since status is 'active')
             const { pendingOffer, orphanedSignals } = get();
             console.log('[CallStore] Checking for pendingOffer:', !!pendingOffer);
 
             if (pendingOffer) {
-                console.log('[CallStore] Processing pending OFFER, current callStatus:', get().callStatus);
+                console.log('[CallStore] Processing pending OFFER');
                 try {
                     await get().handleWebRTCSignal(pendingOffer);
-                    console.log('[CallStore] Finished processing OFFER');
                     set({ pendingOffer: null });
                 } catch (e) {
                     console.error('[CallStore] Error processing pending offer:', e);
                 }
             } else {
-                console.warn('[CallStore] No pendingOffer found! ANSWER will not be sent.');
+                console.warn('[CallStore] No pendingOffer found! Waiting for OFFER from caller.');
             }
 
             // 5. Process orphaned signals for this call
@@ -401,7 +396,6 @@ export const useCallStore = create((set, get) => ({
         } catch (error) {
             console.error('[CallStore] Failed to accept call:', error);
 
-            // Clean up on error
             const { localStream } = get();
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
@@ -436,6 +430,8 @@ export const useCallStore = create((set, get) => ({
         set({
             incomingCall: null,
             callStatus: 'idle',
+            pendingOffer: null,
+            orphanedSignals: {},
         });
     },
 
@@ -446,24 +442,20 @@ export const useCallStore = create((set, get) => ({
 
         if (activeCall?.id) {
             try {
-                // Only call endCall API if it wasn't already ended/missed by server
                 if (outcome === 'ended') {
                     console.log('[CallStore] Calling endCall API');
                     await callService.endCall(activeCall.id);
-                    console.log('[CallStore] endCall API completed');
                 }
             } catch (error) {
                 console.error('[CallStore] Failed to end call:', error);
             }
         }
 
-        // Stop local media tracks
         if (localStream) {
             console.log('[CallStore] Stopping local media tracks');
             localStream.getTracks().forEach(track => track.stop());
         }
 
-        // Clean up WebRTC
         console.log('[CallStore] Resetting WebRTC service');
         resetWebRTCService();
 
@@ -479,6 +471,8 @@ export const useCallStore = create((set, get) => ({
             connectionState: 'new',
             isRemoteRinging: false,
             lastCallOutcome: outcome,
+            pendingOffer: null,
+            orphanedSignals: {},
         });
     },
 
