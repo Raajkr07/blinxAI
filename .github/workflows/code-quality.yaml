@@ -104,6 +104,7 @@ jobs:
   # ── PR title validation (conventional commits) ────────────
   pr-validation:
     name: PR Title Check
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
