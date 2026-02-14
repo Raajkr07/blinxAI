@@ -1,0 +1,11 @@
+FROM nginx:alpine
+
+COPY frontend-v2/dist /usr/share/nginx/html
+COPY nginxv2.conf /etc/nginx/nginxv2.conf
+
+EXPOSE 9091
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:9091/health || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -2,32 +2,30 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-COPY chat-service/pom.xml .
-RUN mvn dependency:go-offline -B
+COPY . /tmp/src
+RUN if [ -f /tmp/src/chat-service/pom.xml ]; then \
+        cp -r /tmp/src/chat-service/* . && \
+        mvn dependency:go-offline -B && \
+        mvn clean package -DskipTests -B && \
+        cp target/*.jar /tmp/app.jar ; \
+    elif [ -f /tmp/src/app.jar ]; then \
+        cp /tmp/src/app.jar /tmp/app.jar ; \
+    fi
 
-COPY chat-service/src ./src
-
-RUN mvn clean package -DskipTests
-
-# ---------------------------------------------------------#
-
-
+# ── Stage 2: Runtime ────────────────────────────────────────
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
-# curl for healthcheck
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /tmp/app.jar app.jar
 
-# Change ownership to non-root user
 RUN chown appuser:appuser app.jar
 
 USER appuser

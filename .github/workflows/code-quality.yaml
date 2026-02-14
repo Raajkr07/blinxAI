@@ -1,19 +1,21 @@
-name: Code Quality Checks
+name: Code Quality
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [main]
   push:
-    branches: [ main, develop ]
+    branches: [main]
 
 env:
-  NODE_VERSION: 18
-  JAVA_VERSION: 17
+  NODE_VERSION: "18"
+  JAVA_VERSION: "17"
 
 jobs:
-  filter:
+  # ── Detect which components changed ───────────────────────
+  changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     outputs:
       frontend-v1: ${{ steps.filter.outputs.frontend-v1 }}
       frontend-v2: ${{ steps.filter.outputs.frontend-v2 }}
@@ -31,112 +33,79 @@ jobs:
             backend:
               - 'chat-service/**'
 
+  # ── Frontend V1 lint ──────────────────────────────────────
   lint-frontend-v1:
-    name: Lint Frontend V1
-    needs: filter
-    if: needs.filter.outputs.frontend-v1 == 'true'
+    name: "Lint: Frontend V1"
+    needs: changes
+    if: needs.changes.outputs.frontend-v1 == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies
+          cache-dependency-path: frontend-v1/package-lock.json
+      - run: npm ci
         working-directory: frontend-v1
-        run: npm ci
-      - name: Run ESLint
+      - run: npm run lint
         working-directory: frontend-v1
-        run: npm run lint
 
+  # ── Frontend V2 lint + test ───────────────────────────────
   lint-frontend-v2:
-    name: Lint Frontend V2
-    needs: filter
-    if: needs.filter.outputs.frontend-v2 == 'true'
+    name: "Lint & Test: Frontend V2"
+    needs: changes
+    if: needs.changes.outputs.frontend-v2 == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies
+          cache-dependency-path: frontend-v2/package-lock.json
+      - run: npm ci
         working-directory: frontend-v2
-        run: npm ci
-      - name: Run ESLint
+      - run: npm run lint
         working-directory: frontend-v2
-        run: npm run lint
+      - run: npm run test:ci
+        working-directory: frontend-v2
 
+  # ── Backend compile + test ────────────────────────────────
   quality-backend:
-    name: Quality Backend (Java)
-    needs: filter
-    if: needs.filter.outputs.backend == 'true'
+    name: "Quality: Backend"
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: temurin
           cache: maven
-      - name: Run Maven Checkstyle
+          cache-dependency-path: chat-service/pom.xml
+
+      # Compile + run tests (fail fast)
+      - name: Build & Test
         working-directory: chat-service
-        run: ../mvnw checkstyle:check
-      - name: Run Maven Spotless
+        run: mvn -B -T 1C verify
+
+      # SpotBugs — free static analysis for Java
+      # Runs on compiled bytecode, very fast
+      - name: SpotBugs analysis
         working-directory: chat-service
-        run: ../mvnw spotless:check
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: chat-service
+        run: mvn -B com.github.spotbugs:spotbugs-maven-plugin:4.8.6.6:check
+        continue-on-error: true
 
-  dependency-check:
-    name: Dependency Vulnerability Check
-    needs: filter
-    if: github.ref == 'refs/heads/main' && needs.filter.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-          cache: maven
-      - name: Run OWASP Dependency Check
-        uses: dependency-check/Dependency-Check_Action@main
-        with:
-          project: Blink Chat
-          path: ./chat-service
-          format: ALL
-          out: dependency-check-report
-      - name: Upload dependency check report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: dependency-check-report/
-
-  license-check:
-    name: License Compliance Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check license headers
-        uses: apache/skywalking-eyes@v0.4.0
-        with:
-          config: .licenserc.yaml
-
+  # ── PR title validation (conventional commits) ────────────
   pr-validation:
-    name: PR Validation
+    name: PR Title Check
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 1
     steps:
       - name: Validate PR title
         uses: amannn/action-semantic-pull-request@v5

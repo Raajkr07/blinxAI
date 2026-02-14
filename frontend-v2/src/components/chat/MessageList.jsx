@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect, useCallback } from 'react';
 import { chatService, socketService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
@@ -7,6 +7,54 @@ import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon, AILogo } from '../
 import { cn, formatTime, stripMarkdown } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
+// ─── Date separator helper ───────────────────────────────────────────
+function getDateLabel(dateString) {
+    if (!dateString) return '';
+    const raw = typeof dateString === 'string' && !dateString.endsWith('Z') && !dateString.includes('+')
+        ? `${dateString}Z`
+        : dateString;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '';
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    const diffDays = Math.round((today - msgDay) / 86400000);
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays === -1) return 'Tomorrow';
+
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function getDateKey(dateString) {
+    if (!dateString) return '';
+    const raw = typeof dateString === 'string' && !dateString.endsWith('Z') && !dateString.includes('+')
+        ? `${dateString}Z`
+        : dateString;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// ─── Date separator component ────────────────────────────────────────
+function DateSeparator({ label }) {
+    return (
+        <div className="flex items-center justify-center my-4 select-none pointer-events-none">
+            <div className="flex items-center gap-3 w-full max-w-xs">
+                <div className="flex-1 h-px bg-[var(--color-border)]" />
+                <span className="text-[11px] font-medium tracking-wide uppercase text-[var(--color-gray-500)] bg-[var(--color-background)] px-3 py-1 rounded-full border border-[var(--color-border)] whitespace-nowrap">
+                    {label}
+                </span>
+                <div className="flex-1 h-px bg-[var(--color-border)]" />
+            </div>
+        </div>
+    );
+}
+
+// ─── Main component ──────────────────────────────────────────────────
 export function MessageList({ conversationId }) {
     const { user } = useAuthStore();
     const { optimisticMessages, removeOptimisticMessage, addTypingUser, removeTypingUser, liveMessages, addLiveMessage } = useChatStore();
@@ -96,12 +144,7 @@ export function MessageList({ conversationId }) {
         optimisticMessagesRef.current = optimisticMessages;
     }, [optimisticMessages]);
 
-    // Clear live messages when conversation changes - handled by key prop remounting
-    // useEffect(() => {
-    //     // Reset live messages for new conversation
-    //     setLiveMessages([]);
-    // }, [conversationId]);
-
+    // WebSocket subscription
     useEffect(() => {
         let subscription = null;
         let typingSubscription = null;
@@ -116,7 +159,6 @@ export function MessageList({ conversationId }) {
                 subscription = socketService.subscribe(topic, (rawMessage) => {
                     if (!isMounted) return;
 
-                    // Normalize message timestamp to UTC if needed
                     const message = {
                         ...rawMessage,
                         createdAt: rawMessage.createdAt && !rawMessage.createdAt.endsWith('Z')
@@ -129,43 +171,27 @@ export function MessageList({ conversationId }) {
                     const currentOptimisticMessages = optimisticMessagesRef.current;
                     const optimisticEntries = Object.entries(currentOptimisticMessages);
 
-                    // Find matching optimistic message to remove
                     const candidates = optimisticEntries.filter(([, optMsg]) => {
-                        // Content check
                         const contentMatch = optMsg.body?.trim() === message.body?.trim();
-
-                        // Sender check
                         const senderMatch = optMsg.senderId === message.senderId ||
                             (optMsg.senderId === 'me' && message.senderId === user?.id) ||
                             (message.senderId === 'me' && optMsg.senderId === user?.id);
-
-                        return optMsg.conversationId === conversationId &&
-                            contentMatch &&
-                            senderMatch;
+                        return optMsg.conversationId === conversationId && contentMatch && senderMatch;
                     });
 
                     if (candidates.length > 0) {
                         const msgTime = new Date(message.createdAt).getTime();
-
-                        // Find best match by time proximity
                         const bestMatch = candidates.reduce((best, current) => {
                             const [, currentMsg] = current;
                             const [, bestMsg] = best;
-
-                            const currentTime = new Date(currentMsg.createdAt).getTime();
-                            const bestTime = new Date(bestMsg.createdAt).getTime();
-
-                            const currentDiff = Math.abs(currentTime - msgTime);
-                            const bestDiff = Math.abs(bestTime - msgTime);
-
+                            const currentDiff = Math.abs(new Date(currentMsg.createdAt).getTime() - msgTime);
+                            const bestDiff = Math.abs(new Date(bestMsg.createdAt).getTime() - msgTime);
                             return currentDiff < bestDiff ? current : best;
                         });
 
-                        // Remove if within reasonable time window (5 minutes to handle clock skew)
                         const bestMsg = bestMatch[1];
                         const timeDiff = Math.abs(new Date(bestMsg.createdAt).getTime() - msgTime);
-
-                        if (timeDiff < 300000) { // Increased to 5 minutes
+                        if (timeDiff < 300000) {
                             removeOptimisticMessage(bestMatch[0]);
                         }
                     }
@@ -175,7 +201,6 @@ export function MessageList({ conversationId }) {
                     const typingTopic = `/topic/conversations/${conversationId}/typing`;
                     typingSubscription = socketService.subscribe(typingTopic, (payload) => {
                         if (!isMounted) return;
-
                         if (payload && payload.userId !== user.id) {
                             if (payload.typing === true) {
                                 addTypingUser(conversationId, payload.userId);
@@ -199,12 +224,8 @@ export function MessageList({ conversationId }) {
 
         return () => {
             isMounted = false;
-            if (subscription) {
-                subscription.unsubscribe();
-            }
-            if (typingSubscription) {
-                typingSubscription.unsubscribe();
-            }
+            if (subscription) subscription.unsubscribe();
+            if (typingSubscription) typingSubscription.unsubscribe();
         };
     }, [conversationId, removeOptimisticMessage, user?.id, addLiveMessage, addTypingUser, removeTypingUser]);
 
@@ -222,11 +243,10 @@ export function MessageList({ conversationId }) {
         return [];
     };
 
-    // Deduplicate history messages by ID (in case API returns overlapping pages)
+    // Deduplicate history messages by ID
     const allHistoryMessages = data?.pages.flatMap(parseMessages) || [];
     const historyMessagesMap = new Map();
     allHistoryMessages.forEach(rxMsg => {
-        // Normalize timestamp to UTC if needed
         const msg = {
             ...rxMsg,
             createdAt: rxMsg.createdAt && !rxMsg.createdAt.endsWith('Z')
@@ -241,153 +261,172 @@ export function MessageList({ conversationId }) {
         (msg) => msg.conversationId === conversationId
     );
 
-    // COMPREHENSIVE DEDUPLICATION LOGIC
-    // Step 1: Deduplicate by ID (handles history + live message overlap)
+    // COMPREHENSIVE DEDUPLICATION
     const allMessagesMap = new Map();
+    historyMessages.forEach(msg => { allMessagesMap.set(msg.id, msg); });
 
-    // Add history messages first
-    historyMessages.forEach(msg => {
-        allMessagesMap.set(msg.id, msg);
-    });
-
-    // Add live messages
     const currentLive = liveMessages[conversationId] || [];
-    currentLive.forEach(msg => {
-        allMessagesMap.set(msg.id, msg);
-    });
+    currentLive.forEach(msg => { allMessagesMap.set(msg.id, msg); });
 
-    // Step 2: Add optimistic messages ONLY if no real message exists with same content
     optimisticArray.forEach(optMsg => {
-        // Check if this optimistic message already exists as a real message
         const isDuplicate = Array.from(allMessagesMap.values()).some(realMsg => {
-            // Content check (normalized)
             const contentMatch = realMsg.body?.trim() === optMsg.body?.trim();
-
-            // Sender check (handle 'me' vs actual ID)
             const senderMatch = realMsg.senderId === optMsg.senderId ||
                 (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
                 (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
-
-            // Time check (allow 5m drift to be safe - handles clock skew)
             const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
             const timeMatch = timeDiff < 300000;
-
             return contentMatch && senderMatch && timeMatch;
         });
-
-        // Only add optimistic message if it's not a duplicate
         if (!isDuplicate) {
             allMessagesMap.set(optMsg.id, optMsg);
         }
     });
 
     const sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => {
-        // Use MongoDB ID for sorting real messages to ensure chronological order
-        // despite potential timestamp skews (e.g. UTC vs Local)
         const isRealA = a.id && /^[0-9a-fA-F]{24}$/.test(a.id);
         const isRealB = b.id && /^[0-9a-fA-F]{24}$/.test(b.id);
-
         if (isRealA && isRealB) {
             return a.id.localeCompare(b.id);
         }
-
         return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
     });
 
-    // Track if this is the initial load
+    // ─── Scroll helpers ──────────────────────────────────────────────
     const isInitialLoadRef = useRef(true);
     const prevMessagesLengthRef = useRef(0);
+    const isPaginatingRef = useRef(false);
+    const wasNearBottomRef = useRef(true);
+    const savedScrollTopRef = useRef(0);
 
+    const scrollToBottom = useCallback((behavior = 'auto') => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+        }
+    }, []);
+
+    // Continuously track whether user is near the bottom via scroll events.
+    // This captures the value BEFORE React commits new DOM, so it's accurate
+    // even when an incoming message inflates scrollHeight.
+    const hasMessages = sortedMessages.length > 0;
     useEffect(() => {
-        // Only scroll to bottom on initial load, not when loading previous messages
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            wasNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 250;
+        };
+
+        // Set initial value
+        handleScroll();
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [hasMessages]);
+
+    // Initial scroll to bottom after first load
+    useEffect(() => {
         if (!isFetchingNextPage && sortedMessages.length > 0 && !prevScrollHeightRef.current) {
             if (isInitialLoadRef.current && !isLoading) {
-                messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                requestAnimationFrame(() => scrollToBottom('auto'));
                 isInitialLoadRef.current = false;
             }
         }
-    }, [conversationId, isLoading, isFetchingNextPage, sortedMessages.length]);
+    }, [conversationId, isLoading, isFetchingNextPage, sortedMessages.length, scrollToBottom]);
 
+    // Auto-scroll on new messages (NOT on pagination)
     useEffect(() => {
-        // Only scroll to bottom when NEW messages arrive (not when loading history)
         const prevLength = prevMessagesLengthRef.current;
         const currentLength = sortedMessages.length;
 
-        if (currentLength > prevLength && !isFetchingNextPage && !isLoading) {
-            if (scrollContainerRef.current) {
-                const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-                const isNearBottom = scrollHeight - scrollTop - clientHeight < 250;
-
-                if (isNearBottom || (currentLength - prevLength === 1 && sortedMessages[currentLength - 1].senderId === 'me')) {
-                    // Use 'auto' behavior for instant feedback on your own messages or when near bottom
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
-                }
-            }
+        // Skip auto-scroll while paginating — useLayoutEffect handles restoration.
+        if (isPaginatingRef.current) {
+            prevMessagesLengthRef.current = currentLength;
+            return;
         }
 
-        prevMessagesLengthRef.current = currentLength;
-    }, [sortedMessages, isFetchingNextPage, isLoading]);
+        if (currentLength > prevLength && !isFetchingNextPage && !isLoading) {
+            const lastMsg = sortedMessages[currentLength - 1];
+            const isOwnMessage = lastMsg?.senderId === user?.id || lastMsg?.senderId === 'me';
 
+            // Use the pre-render near-bottom value, not a post-render measurement.
+            // This correctly handles AI responses / incoming messages that inflate
+            // scrollHeight before this effect runs.
+            if (wasNearBottomRef.current || isOwnMessage) {
+                requestAnimationFrame(() => scrollToBottom('auto'));
+            }
+        }
+        prevMessagesLengthRef.current = currentLength;
+    }, [sortedMessages, isFetchingNextPage, isLoading, scrollToBottom, user?.id]);
+
+    // Anchor scroll when footer resizes (e.g. textarea grows)
     useEffect(() => {
         const footer = document.querySelector('.chat-window-footer');
         if (!footer) return;
-
         const observer = new ResizeObserver(() => {
-            if (scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            if (container) {
                 requestAnimationFrame(() => {
-                    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-                    // Proactive anchoring: If user is within 300px of bottom, stay glued during resize
+                    const { scrollTop, scrollHeight, clientHeight } = container;
                     if (scrollHeight - scrollTop - clientHeight < 300) {
-                        messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+                        scrollToBottom('auto');
                     }
                 });
             }
         });
-
         observer.observe(footer);
         return () => observer.disconnect();
-    }, [conversationId]);
+    }, [conversationId, scrollToBottom]);
 
+    // Infinite scroll — load older messages when scrolled to top
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                    isPaginatingRef.current = true;
                     if (scrollContainerRef.current) {
                         prevScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+                        savedScrollTopRef.current = scrollContainerRef.current.scrollTop;
                     }
                     fetchNextPage();
                 }
             },
             { threshold: 0.5 }
         );
-
         if (topSentinelRef.current) {
             observer.observe(topSentinelRef.current);
         }
-
         return () => observer.disconnect();
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    // Preserve scroll position when older pages load
     useLayoutEffect(() => {
         if (prevScrollHeightRef.current && scrollContainerRef.current) {
             const newScrollHeight = scrollContainerRef.current.scrollHeight;
-            const diff = newScrollHeight - prevScrollHeightRef.current;
-            if (diff > 0) {
-                scrollContainerRef.current.scrollTop += diff;
+            const addedHeight = newScrollHeight - prevScrollHeightRef.current;
+            // Restore exact position: place scrollTop where it was + the height
+            // of newly-inserted content above. Using absolute assignment avoids
+            // issues with browser scroll-anchoring double-adjusting.
+            if (addedHeight > 0) {
+                scrollContainerRef.current.scrollTop = savedScrollTopRef.current + addedHeight;
             }
             prevScrollHeightRef.current = 0;
+            savedScrollTopRef.current = 0;
+        }
+        // Clear pagination flag after scroll position is restored.
+        // Use rAF to ensure it clears after the auto-scroll useEffect has run.
+        if (isPaginatingRef.current) {
+            requestAnimationFrame(() => {
+                isPaginatingRef.current = false;
+            });
         }
     }, [data]);
 
-    useEffect(() => {
-        if (messagesEndRef.current) {
-            scrollContainerRef.current = messagesEndRef.current.closest('.overflow-y-auto, .scroll-area');
-        }
-    }, []);
-
+    // ─── Render states ───────────────────────────────────────────────
     if (isLoading) {
         return (
-            <div className="space-y-4 p-4">
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-4 p-4">
                 {Array.from({ length: 5 }).map((_, i) => (
                     <SkeletonMessage key={i} isOwn={i % 2 === 0} />
                 ))}
@@ -397,17 +436,19 @@ export function MessageList({ conversationId }) {
 
     if (error) {
         return (
-            <EmptyState
-                icon={<NoMessagesIcon />}
-                title="Failed to load messages"
-                description="Please try again later"
-            />
+            <div className="flex-1 flex items-center justify-center">
+                <EmptyState
+                    icon={<NoMessagesIcon />}
+                    title="Failed to load messages"
+                    description="Please try again later"
+                />
+            </div>
         );
     }
 
     if (sortedMessages.length === 0) {
         return (
-            <div className="h-full flex flex-col items-center justify-center p-4">
+            <div className="flex-1 flex flex-col items-center justify-center p-4">
                 <EmptyState
                     icon={<NoMessagesIcon />}
                     title="No messages yet"
@@ -417,89 +458,103 @@ export function MessageList({ conversationId }) {
         );
     }
 
+    // ─── Build messages with date separators ─────────────────────────
+    let lastDateKey = null;
+    const renderItems = [];
+
+    sortedMessages.forEach((message) => {
+        const dateKey = getDateKey(message.createdAt || message.timestamp);
+        if (dateKey && dateKey !== lastDateKey) {
+            const label = getDateLabel(message.createdAt || message.timestamp);
+            renderItems.push({ type: 'date', key: `date-${dateKey}`, label });
+            lastDateKey = dateKey;
+        }
+        renderItems.push({ type: 'message', key: message.id, message });
+    });
+
     return (
         <div
-            className="space-y-4 px-1 py-1"
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto min-h-0 px-2"
+            style={{ overflowAnchor: 'none' }}
         >
-            <div ref={topSentinelRef} className="h-4 w-full" />
+            <div className="space-y-4 px-1 py-1">
+                <div ref={topSentinelRef} className="h-4 w-full" />
 
-            {isFetchingNextPage && (
-                <div className="flex justify-center p-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-primary)]"></div>
-                </div>
-            )}
+                {isFetchingNextPage && (
+                    <div className="flex justify-center p-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                )}
 
-            {sortedMessages.map((message) => {
-                const isOwn = (message.senderId?.toString() === user?.id?.toString()) || message.senderId === 'me';
-                const isOptimistic = !!optimisticMessages[message.id] || (message.id.toString().startsWith('temp-'));
-
-                const isAIAssistant = message.senderId === 'ai-assistant';
-
-                // Try to find the specific sender in the participant list for this message
-                const sender = currentConv?.participants?.find(p => {
-                    const pid = typeof p === 'string' ? p : (p.id || p._id);
-                    return pid?.toString() === message.senderId?.toString();
-                });
-
-                let fallbackAvatar = null;
-                let fallbackName = null;
-
-                if (isAIAssistant) {
-                    fallbackAvatar = null;
-                    fallbackName = 'AI Assistant';
-                } else if (!isOwn) {
-                    if (sender && typeof sender === 'object') {
-                        fallbackAvatar = sender.avatarUrl;
-                        fallbackName = sender.username || sender.name;
+                {renderItems.map((item) => {
+                    if (item.type === 'date') {
+                        return <DateSeparator key={item.key} label={item.label} />;
                     }
 
-                    // For Direct messages ONLY, fall back to conversation metadata if sender lookup failed
-                    if (!isGroup && !isAI && !fallbackAvatar) {
-                        fallbackAvatar = partnerInfo.avatar;
-                        fallbackName = fallbackName || partnerInfo.name;
-                    }
-                }
+                    const message = item.message;
+                    const isOwn = (message.senderId?.toString() === user?.id?.toString()) || message.senderId === 'me';
+                    const isOptimistic = !!optimisticMessages[message.id] || (message.id.toString().startsWith('temp-'));
+                    const isAIAssistant = message.senderId === 'ai-assistant';
 
-                return (
-                    <MessageBubble
-                        key={message.id}
-                        message={message}
-                        isOwn={isOwn}
-                        showAvatar={true}
-                        isOptimistic={isOptimistic}
-                        currentUser={user}
-                        fallbackAvatar={fallbackAvatar}
-                        fallbackName={fallbackName}
-                        isGroup={isGroup}
-                        isAI={isAI}
-                    />
-                );
-            })}
-            <div ref={messagesEndRef} className="h-2 w-full" />
+                    const sender = currentConv?.participants?.find(p => {
+                        const pid = typeof p === 'string' ? p : (p.id || p._id);
+                        return pid?.toString() === message.senderId?.toString();
+                    });
+
+                    let fallbackAvatar = null;
+                    let fallbackName = null;
+
+                    if (isAIAssistant) {
+                        fallbackAvatar = null;
+                        fallbackName = 'AI Assistant';
+                    } else if (!isOwn) {
+                        if (sender && typeof sender === 'object') {
+                            fallbackAvatar = sender.avatarUrl;
+                            fallbackName = sender.username || sender.name;
+                        }
+                        if (!isGroup && !isAI && !fallbackAvatar) {
+                            fallbackAvatar = partnerInfo.avatar;
+                            fallbackName = fallbackName || partnerInfo.name;
+                        }
+                    }
+
+                    return (
+                        <MessageBubble
+                            key={message.id}
+                            message={message}
+                            isOwn={isOwn}
+                            showAvatar={true}
+                            isOptimistic={isOptimistic}
+                            currentUser={user}
+                            fallbackAvatar={fallbackAvatar}
+                            fallbackName={fallbackName}
+                            isGroup={isGroup}
+                            isAI={isAI}
+                        />
+                    );
+                })}
+
+                <div ref={messagesEndRef} className="h-2 w-full" />
+            </div>
         </div>
     );
 }
 
-// Helper function to render message text with clickable links
+// ─── Link renderer ───────────────────────────────────────────────────
 function renderMessageWithLinks(text, isOwn) {
     if (!text) return null;
-
-    // Regex to match markdown-style links: [text](url)
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
     const parts = [];
     let lastIndex = 0;
     let match;
 
     while ((match = linkRegex.exec(text)) !== null) {
-        // Add text before the link
         if (match.index > lastIndex) {
             parts.push(text.substring(lastIndex, match.index));
         }
-
-        // Add the clickable link
         const linkText = match[1];
         const url = match[2];
-
         parts.push(
             <a
                 key={match.index}
@@ -517,19 +572,17 @@ function renderMessageWithLinks(text, isOwn) {
                 {linkText}
             </a>
         );
-
         lastIndex = match.index + match[0].length;
     }
 
-    // Add remaining text after the last link
     if (lastIndex < text.length) {
         parts.push(text.substring(lastIndex));
     }
 
-    // If no links found, return the original text
     return parts.length > 0 ? parts : text;
 }
 
+// ─── Message bubble ──────────────────────────────────────────────────
 function MessageBubble({
     message,
     isOwn,
@@ -545,7 +598,6 @@ function MessageBubble({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const queryClient = useQueryClient();
 
-    // Dynamically fetch sender profile if missing (crucial for Groups)
     const { data: senderProfile } = useQuery({
         queryKey: ['user', message.senderId],
         queryFn: () => userService.getUserById(message.senderId),

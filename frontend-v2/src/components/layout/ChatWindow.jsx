@@ -22,7 +22,7 @@ export function ChatWindowHeader({ children }) {
 
 export function ChatWindowContent({ children, className }) {
     return (
-        <div className={cn('flex-1 overflow-y-auto min-h-0 px-2', className)}>
+        <div className={cn('flex-1 flex flex-col min-h-0 overflow-hidden', className)}>
             {children}
         </div>
     );
