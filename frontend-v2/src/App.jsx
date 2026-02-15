@@ -5,10 +5,19 @@ import { AuthPage, ChatPage, PrivacyPolicy, TermsOfService, DataDeletion } from 
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
 
 const App = () => {
+  // 1. Initialize all state hooks
   const { isAuthenticated, user, checkSession, isLoading } = useAuthStore();
   const { setIsMobile, theme } = useUIStore();
   const { hasActiveCall, hasIncomingCall } = useCallStore();
 
+  // 2. Routing Logic
+  const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();
+  const isPrivacy = rawPath === '/privacy-policy';
+  const isTerms = rawPath === '/terms';
+  const isDeletion = rawPath === '/data-deletion';
+  const isPublicRoute = isPrivacy || isTerms || isDeletion;
+
+  // 3. Side Effects
   useEffect(() => {
     checkSession();
   }, [checkSession]);
@@ -26,29 +35,16 @@ const App = () => {
       : document.documentElement.classList.remove('light');
   }, [theme]);
 
-  // Handle public verification routes
-  const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();
-
-  if (rawPath === '/privacy-policy') {
-    document.title = 'Privacy Policy | Blink';
-    return <PrivacyPolicy />;
-  }
-  if (rawPath === '/terms') {
-    document.title = 'Terms of Service | Blink';
-    return <TermsOfService />;
-  }
-  if (rawPath === '/data-deletion') {
-    document.title = 'Data Deletion | Blink';
-    return <DataDeletion />;
-  }
-
-  // Restore default title for app pages
-  if (typeof document !== 'undefined' && document.title !== 'Blink | Chat') {
-    document.title = 'Blink | Chat';
-  }
+  // Update document title for verification pages
+  useEffect(() => {
+    if (isPrivacy) document.title = 'Privacy Policy | Blink';
+    else if (isTerms) document.title = 'Terms of Service | Blink';
+    else if (isDeletion) document.title = 'Data Deletion | Blink';
+    else document.title = 'Blink | Chat';
+  }, [isPrivacy, isTerms, isDeletion]);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
+    if (isPublicRoute || !isAuthenticated || !user?.id) return;
 
     let isCancelled = false;
     let cleanup;
@@ -66,7 +62,14 @@ const App = () => {
         cleanup();
       }
     };
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, isPublicRoute]);
+
+  // 4. Render Hierarchy
+
+  // Public verification pages take precedence
+  if (isPrivacy) return <PrivacyPolicy />;
+  if (isTerms) return <TermsOfService />;
+  if (isDeletion) return <DataDeletion />;
 
   if (isLoading) {
     return (

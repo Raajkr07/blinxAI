@@ -73,7 +73,9 @@ apiClient.interceptors.response.use(
                 storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
                 storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
                 storage.remove(STORAGE_KEYS.USER);
-                if (window.location.pathname !== '/' && !window.location.pathname.includes('/auth')) {
+                const publicRoutes = ['/privacy-policy', '/terms', '/data-deletion'];
+                const currentPath = window.location.pathname.replace(/\/$/, '');
+                if (currentPath !== '' && !currentPath.includes('/auth') && !publicRoutes.includes(currentPath)) {
                     window.location.href = '/';
                 }
                 return Promise.reject(err);
