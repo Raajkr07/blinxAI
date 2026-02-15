@@ -56,7 +56,7 @@ const AuthPage = () => {
                                 <span className="text-white font-medium"> Login or Signup with Google</span>.
                             </p>
                             <p className="text-xs text-slate-500 m-2 italic">
-                                Note: For better visibility change window size to 90%
+                                Note: For better visibility change window size to 90%. "CTRL" + "-"
                             </p>
                             <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
                                 <div className="flex -space-x-2">
@@ -103,6 +103,12 @@ const AuthPage = () => {
                         </Motion.div>
                     )}
                 </AnimatePresence>
+            </div>
+
+            <div className="fixed bottom-8 left-0 right-0 flex justify-center gap-8 text-[10px] uppercase tracking-widest text-slate-500 font-bold z-50">
+                <a href="/privacy-policy" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Privacy</a>
+                <a href="/terms" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Terms</a>
+                <a href="/data-deletion" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Data Deletion</a>
             </div>
         </div>
     );

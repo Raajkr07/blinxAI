@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore, useUIStore, useCallStore } from './stores';
 import { socketService } from './services';
-import { AuthPage, ChatPage } from './pages';
+import { AuthPage, ChatPage, PrivacyPolicy, TermsOfService, DataDeletion } from './pages';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
 
 const App = () => {
@@ -25,6 +25,21 @@ const App = () => {
       ? document.documentElement.classList.add('light')
       : document.documentElement.classList.remove('light');
   }, [theme]);
+
+  // Handle public verification routes
+  const path = window.location.pathname;
+  if (path === '/privacy-policy') {
+    document.title = 'Privacy Policy | Blink';
+    return <PrivacyPolicy />;
+  }
+  if (path === '/terms') {
+    document.title = 'Terms of Service | Blink';
+    return <TermsOfService />;
+  }
+  if (path === '/data-deletion') {
+    document.title = 'Data Deletion | Blink';
+    return <DataDeletion />;
+  }
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
