@@ -37,10 +37,10 @@ const App = () => {
 
   // Update document title for verification pages
   useEffect(() => {
-    if (isPrivacy) document.title = 'Privacy Policy | Blink';
-    else if (isTerms) document.title = 'Terms of Service | Blink';
-    else if (isDeletion) document.title = 'Data Deletion | Blink';
-    else document.title = 'Blink | Chat';
+    if (isPrivacy) document.title = 'Privacy Policy | Blink AI Productivity';
+    else if (isTerms) document.title = 'Terms of Service | Blink AI Productivity';
+    else if (isDeletion) document.title = 'Data Deletion | Blink AI Productivity';
+    else document.title = 'Blink AI Productivity | Chat';
   }, [isPrivacy, isTerms, isDeletion]);
 
   useEffect(() => {
