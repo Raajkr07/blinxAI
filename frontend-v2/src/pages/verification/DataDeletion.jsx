@@ -21,12 +21,12 @@ const DataDeletion = () => {
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Data Deletion</h1>
                     <div className="h-1 w-24 bg-rose-500/50 rounded-full mt-6 mb-4" />
                     <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Privacy & Security Control</p>
-                    <p className="text-xs text-slate-600">Blink (blinx-app.netlify.app)</p>
+                    <p className="text-xs text-slate-600">Blink Assistant (blinx-app.netlify.app)</p>
                 </div>
 
                 <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
                     <p className="text-xl mb-12 text-center opacity-90 mx-auto max-w-2xl font-light italic">
-                        "Your privacy is a priority. We offer clear, actionable ways to revoke access and permanently remove your data."
+                        "At <span className="text-white font-bold">Blink Assistant</span>, your privacy is a priority. We offer clear, actionable ways to revoke access and permanently remove your data."
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -36,7 +36,7 @@ const DataDeletion = () => {
                                     <span className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm">01</span>
                                     Google Access
                                 </h2>
-                                <p className="text-sm text-slate-400 mb-6">You can disconnect Blink from your Google account at any time using Google's official security dashboard.</p>
+                                <p className="text-sm text-slate-400 mb-6">You can disconnect Blink Assistant from your Google account at any time using Google's official security dashboard.</p>
                             </div>
                             <a
                                 href="https://myaccount.google.com/permissions"
@@ -54,7 +54,7 @@ const DataDeletion = () => {
                                 <span className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 text-sm">02</span>
                                 Request Deletion
                             </h2>
-                            <p className="text-sm text-slate-400 mb-6">To permanently delete your Blink account and all associated temporary metadata, contact us.</p>
+                            <p className="text-sm text-slate-400 mb-6">To permanently delete your Blink Assistant account and all associated temporary metadata, contact us.</p>
                             <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 transition-colors">
                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Direct Support Email</p>
                                 <p className="text-sm font-mono text-white select-all">rk8210032@gmail.com</p>
@@ -66,7 +66,7 @@ const DataDeletion = () => {
                         <section className="glass p-8 rounded-[2rem] border border-white/10">
                             <h2 className="text-xl font-bold text-white mb-2">Policy on Data Persistence</h2>
                             <p className="text-slate-400 text-sm leading-relaxed">
-                                Because Blink is an educational project, we follow a strict <strong>Minimal Storage Policy</strong>.
+                                Because Blink Assistant is an educational project, we follow a strict <strong>Minimal Storage Policy</strong>.
                                 Most Google user data is never stored on our database. When you disconnect your Google Account,
                                 the application automatically loses the ability to fetch new data, and any cached session tokens are invalidated instantly.
                             </p>
@@ -79,7 +79,7 @@ const DataDeletion = () => {
                     </div>
 
                     <div className="pt-10 border-t border-white/5 flex justify-center mt-10">
-                        <a href="/" className="px-10 py-3 rounded-full glass hover:bg-white/10 transition-all font-bold text-white text-sm tracking-widest uppercase">Return to Blink</a>
+                        <a href="/" className="px-10 py-3 rounded-full glass hover:bg-white/10 transition-all font-bold text-white text-sm tracking-widest uppercase">Return to App</a>
                     </div>
                 </div>
             </Motion.div>

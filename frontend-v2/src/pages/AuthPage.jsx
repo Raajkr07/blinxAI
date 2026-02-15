@@ -50,7 +50,7 @@ const AuthPage = () => {
                                 <span>Unlock Features</span>
                             </h3>
                             <p className="text-xs text-slate-500 mb-2 italic">
-                                Blink is a next-gen, AI-powered chat application.</p>
+                                Blink Assistant is a next-gen, AI-powered chat application.</p>
                             <p className="text-sm text-slate-400 leading-relaxed">
                                 To use our <span className="text-blue-400 font-semibold">AI Tools</span> for sending emails and managing your calendar, please
                                 <span className="text-white font-medium"> Login or Signup with Google</span>.
@@ -79,7 +79,7 @@ const AuthPage = () => {
                     <div className="flex justify-center mb-4">
                         <BlinkingFace className="w-20 h-20" />
                     </div>
-                    <h1 className="text-5xl font-bold tracking-tight mb-2 text-white">Blink</h1>
+                    <h1 className="text-5xl font-bold tracking-tight mb-2 text-white text-nowrap">Blink Assistant</h1>
                 </Motion.div>
 
                 <AnimatePresence mode="wait">

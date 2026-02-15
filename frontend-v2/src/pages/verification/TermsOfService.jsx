@@ -20,7 +20,7 @@ const TermsOfService = () => {
                     <BlinkingFace className="w-20 h-20 mb-6" />
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Terms of Service</h1>
                     <div className="h-1 w-24 bg-purple-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blink Academic Use</p>
+                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blink Assistant - Educational Project</p>
                     <p className="text-xs text-slate-600">Site: <span className="text-purple-500/70">blinx-app.netlify.app</span></p>
                 </div>
 
@@ -31,7 +31,7 @@ const TermsOfService = () => {
                             <h2 className="text-2xl font-bold text-white">Project Nature</h2>
                         </div>
                         <p className="text-lg opacity-90">
-                            <strong>Blink</strong> is an experimental, non-commercial application created solely for educational and academic evaluation. It is not a commercial product.
+                            <strong>Blink Assistant</strong> is an experimental, non-commercial application created solely for educational and academic evaluation. It is not a commercial product.
                         </p>
                     </section>
 
@@ -41,10 +41,10 @@ const TermsOfService = () => {
                             <h2 className="text-2xl font-bold text-white">Google Integration</h2>
                         </div>
                         <p className="opacity-90 mb-4">
-                            By connecting your Google account, you grant Blink access to your Gmail and Calendar data. This access is limited to the functionality of the AI MCP tools within the app.
+                            By connecting your Google account, you grant Blink Assistant access to your Gmail and Calendar data. This access is limited to the functionality of the AI MCP tools within the app.
                         </p>
                         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm italic text-slate-400">
-                            "Blink complies with the Google API Services User Data Policy, ensuring your restricted data is used according to the Limited Use requirements."
+                            "Blink Assistant complies with the Google API Services User Data Policy, ensuring your restricted data is used according to the Limited Use requirements."
                         </div>
                     </section>
 
@@ -88,7 +88,7 @@ const TermsOfService = () => {
                 </div>
 
                 <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    Educational Project • rk8210032@gmail.com
+                    Blink Assistant - Educational Project • rk8210032@gmail.com
                 </p>
             </Motion.div>
         </div>

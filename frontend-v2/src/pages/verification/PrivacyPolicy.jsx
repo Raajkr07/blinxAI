@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
                     <BlinkingFace className="w-20 h-20 mb-6" />
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Privacy Policy</h1>
                     <div className="h-1 w-24 bg-blue-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blink Educational Project</p>
+                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blink Assistant - Educational Project</p>
                     <p className="text-xs text-slate-600">Hosted at: <span className="text-blue-500/70">blinx-app.netlify.app</span></p>
                 </div>
 
@@ -32,7 +32,7 @@ const PrivacyPolicy = () => {
                             <span className="text-xl">⚖️</span> Google API Disclosure
                         </h2>
                         <p className="text-sm text-slate-400 leading-relaxed">
-                            Blink's use and transfer of information received from Google APIs to any other app will adhere to
+                            Blink Assistant's use and transfer of information received from Google APIs to any other app will adhere to
                             <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline mx-1">
                                 Google API Services User Data Policy
                             </a>,
@@ -46,7 +46,7 @@ const PrivacyPolicy = () => {
                             <h2 className="text-2xl font-bold text-white">Introduction</h2>
                         </div>
                         <p className="text-lg opacity-90">
-                            <strong>Blink</strong> is an AI-powered productivity tool developed as an educational project.
+                            <strong>Blink Assistant</strong> is an AI-powered productivity tool developed as an educational project.
                             We are committed to protecting your privacy and being transparent about our data practices. This policy details how we handle information accessed through Google OAuth 2.0.
                         </p>
                     </section>
@@ -131,7 +131,7 @@ const PrivacyPolicy = () => {
                 </div>
 
                 <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    Blink is a student-led educational initiative • rk8210032@gmail.com
+                    Blink Assistant is a student-led educational initiative • rk8210032@gmail.com
                 </p>
             </Motion.div>
         </div>
