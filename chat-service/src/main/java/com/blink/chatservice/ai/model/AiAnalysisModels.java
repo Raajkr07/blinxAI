@@ -5,9 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+
 public class AiAnalysisModels {
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
     public record ConversationAnalysis(
             String summary,
             @JsonProperty("key_points") List<String> keyPoints,
@@ -16,12 +18,12 @@ public class AiAnalysisModels {
             @JsonProperty("follow_up_required") boolean followUpRequired
     ) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
     public record AutoReplySuggestions(
             @JsonProperty("suggested_replies") List<String> suggestedReplies
     ) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
     public record SearchCriteria(
             List<String> keywords,
             @JsonProperty("user_names") List<String> userNames,
@@ -30,18 +32,24 @@ public class AiAnalysisModels {
             @JsonProperty("conversation_type") String conversationType
     ) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
     public record DateRange(String from, String to) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
+    public record TaskListExtraction(
+            @JsonProperty("tasks") List<TaskExtraction> tasks
+    ) {}
+
+    @JsonInclude(NON_NULL)
     public record TaskExtraction(
             @JsonProperty("task_title") String taskTitle,
             String description,
-            @JsonProperty("due_date") String dueDate,
-            String priority
+            @JsonProperty("date") String date,
+            String priority,
+            @JsonProperty("status") String status // "pending" | "done"
     ) {}
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonInclude(NON_NULL)
     public record TypingSimulation(
             @JsonProperty("response_complexity") String responseComplexity,
             @JsonProperty("typing_duration_ms") int typingDurationMs

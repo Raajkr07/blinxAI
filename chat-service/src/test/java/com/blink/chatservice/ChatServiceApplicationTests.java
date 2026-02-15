@@ -3,6 +3,7 @@ package com.blink.chatservice;
 import com.blink.chatservice.chat.repository.ConversationRepository;
 import com.blink.chatservice.chat.repository.MessageRepository;
 import com.blink.chatservice.notification.service.EmailService;
+import com.blink.chatservice.user.repository.OAuth2CredentialRepository;
 import com.blink.chatservice.user.repository.RefreshTokenRepository;
 import com.blink.chatservice.user.repository.UserRepository;
 import com.blink.chatservice.videochat.repository.CallRepository;
@@ -16,10 +17,10 @@ import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.client.RestTemplate;
 
-// Mock Test for this project
 @SpringBootTest
 @EnableAutoConfiguration(exclude = {
 		MongoAutoConfiguration.class,
@@ -37,7 +38,7 @@ class ChatServiceApplicationTests {
 	private SimpMessagingTemplate simpMessagingTemplate;
 
 	@MockBean
-	private RedisTemplate<String, String> redisTemplate;
+	private StringRedisTemplate redisTemplate;
 
 	@MockBean
 	private RedisConnectionFactory redisConnectionFactory;
@@ -52,10 +53,16 @@ class ChatServiceApplicationTests {
 	private UserRepository userRepository;
 
 	@MockBean
+	private OAuth2CredentialRepository oAuth2CredentialRepository;
+
+	@MockBean
 	private RefreshTokenRepository refreshTokenRepository;
 
 	@MockBean
 	private CallRepository callRepository;
+
+	@MockBean(name = "aiRestTemplate")
+	private RestTemplate aiRestTemplate;
 
 	@Test
 	void contextLoads() {

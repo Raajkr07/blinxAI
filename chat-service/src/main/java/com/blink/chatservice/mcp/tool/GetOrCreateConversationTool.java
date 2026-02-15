@@ -3,6 +3,7 @@ package com.blink.chatservice.mcp.tool;
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.service.ChatService;
 import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
+import com.blink.chatservice.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -44,7 +45,7 @@ public class GetOrCreateConversationTool implements McpTool {
             return Map.of("error", true, "message", "recipient is required");
         }
 
-        var recipientUser = userLookupHelper.findUserByIdentifier(recipient);
+        User recipientUser = userLookupHelper.findUserByIdentifier(recipient);
         if (recipientUser == null) {
             return Map.of("error", true, "message", "Recipient not found");
         }

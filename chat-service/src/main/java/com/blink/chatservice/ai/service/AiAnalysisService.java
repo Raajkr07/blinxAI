@@ -8,7 +8,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpEntity;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,22 +97,37 @@ public class AiAnalysisService {
                 """);
     }
 
-    public TaskExtraction extractTask(String messageText) {
-        return callAi("Extract task details if present.", messageText, TaskExtraction.class,
+    public TaskListExtraction extractTasks(String messageText) {
+        String currentDate = LocalDate.now().toString();
+        return callAi("Extract all tasks or reminders.", messageText, TaskListExtraction.class,
                 """
-                You are a task extractor. Analyze the message to see if it contains a task or reminder.
-                If a task exists, return a JSON object with:
-                - task_title: string
-                - description: string
-                - due_date: ISO 8601 string or null
-                - priority: "low" | "medium" | "high"
+                You are a task extractor. Analyze the conversation history for actionable tasks.
+                Current Date: %s
                 
-                If NO task is detected, return null.
-                """);
+                Identify ALL tasks mentioned.
+                Categorize each task as "pending" (upcoming/future) or "done" (completed/past).
+                
+                Return a JSON object with:
+                - tasks: array of task objects
+                  - task_title: string
+                  - description: string
+                  - due_date: ISO 8601 string or null (calculated based on Current Date)
+                  - priority: "low" | "medium" | "high"
+                  - status: "pending" | "done"
+                
+                If NO tasks are detected, return { "tasks": [] }.
+                """.formatted(currentDate));
+    }
+
+    public TaskExtraction extractTask(String messageText) {
+        TaskListExtraction list = extractTasks(messageText);
+        if (list != null && list.tasks() != null && !list.tasks().isEmpty()) {
+            return list.tasks().get(0);
+        }
+        return null;
     }
 
     public TypingSimulation simulateTyping(String messageText) {
-         // This is a bit different as it's a simulation, but we can ask AI to estimate complexity based on the intended response content/topic.
          return callAi("Estimate typing behavior.", messageText, TypingSimulation.class,
                  """
                  You are a UI behavior simulator. Estimate the complexity and typing duration for responding to or typing the provided text.
@@ -118,6 +137,7 @@ public class AiAnalysisService {
                  """);
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T callAi(String userPrompt, String userContext, Class<T> responseType, String systemInstructions) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("AI API key is not configured");
@@ -127,8 +147,8 @@ public class AiAnalysisService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
         requestBody.put("max_tokens", 512);
-        requestBody.put("temperature", 0.3); // Lower temperature for deterministic output
-        requestBody.put("response_format", Map.of("type", "json_object")); // Enforce JSON
+        requestBody.put("temperature", 0.3);
+        requestBody.put("response_format", Map.of("type", "json_object"));
 
         List<Map<String, String>> messages = List.of(
                 Map.of("role", "system", "content", systemInstructions + "\nIMPORTANT: Return ONLY valid JSON."),
@@ -136,15 +156,14 @@ public class AiAnalysisService {
         );
         requestBody.put("messages", messages);
 
-        var headers = new org.springframework.http.HttpHeaders();
+        HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(apiKey);
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.APPLICATION_JSON);
 
-        var entity = new org.springframework.http.HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            // We use a raw Map response first to inspect content
-            Map response = restTemplate.postForObject(url, entity, Map.class);
+            Map<String, Object> response = restTemplate.postForObject(url, entity, Map.class);
             
             if (response == null || !response.containsKey("choices")) {
                 throw new RuntimeException("Empty AI response");
@@ -158,14 +177,10 @@ public class AiAnalysisService {
 
             if (content == null || content.trim().isEmpty()) return null;
 
-            // Special case for TaskExtraction returning null logic
-            // If the prompt says "return null", OpenAI might return a JSON with null fields or literal string "null" or empty JSON.
-            // We'll parse whatever it returns.
-            
             return objectMapper.readValue(content, responseType);
 
         } catch (Exception e) {
-            log.error("Error during AI analysis call", e);
+            log.error("Error during AI analysis call: {}", e.getMessage());
             throw new RuntimeException("AI Analysis failed: " + e.getMessage(), e);
         }
     }

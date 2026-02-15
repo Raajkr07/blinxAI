@@ -2,27 +2,23 @@ package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
-import com.blink.chatservice.chat.model.ConversationType;
-import com.blink.chatservice.chat.repository.ConversationRepository;
-import com.blink.chatservice.chat.repository.MessageRepository;
+import com.blink.chatservice.chat.service.ChatService;
 import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
-import com.blink.chatservice.websocket.dto.RealtimeMessageResponse;
+import com.blink.chatservice.user.entity.User;
+import com.blink.chatservice.user.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class SendMessageTool implements McpTool {
 
-    private final MessageRepository messageRepository;
-    private final ConversationRepository conversationRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ChatService chatService;
     private final UserLookupHelper userLookupHelper;
+    private final UserService userService;
 
     @Override
     public String name() {
@@ -50,56 +46,42 @@ public class SendMessageTool implements McpTool {
     @Override
     public Object execute(String userId, Map<Object, Object> args) {
         String content = (String) args.get("content");
-        if (content == null || content.isBlank()) return Map.of("error", true, "message", "Content required");
+        if (content == null || content.isBlank()) {
+            return Map.of("error", true, "message", "Content required");
+        }
 
         String convId = (String) args.get("conversationId");
         String recipient = (String) args.get("recipient");
 
         if (convId == null && recipient != null) {
-            var user = userLookupHelper.findUserByIdentifier(recipient);
-            if (user == null) return Map.of("error", true, "message", "User not found");
-            convId = getConvId(userId, user.getId());
+            User user = resolveUser(recipient, userId);
+            if (user != null) {
+                Conversation conv = chatService.createDirectConversation(userId, user.getId());
+                convId = conv.getId();
+            } else {
+                return Map.of("error", true, "message", "User not found: " + recipient);
+            }
         }
 
-        if (convId == null) return Map.of("error", true, "message", "Recipient or conversationId required");
+        if (convId == null) {
+            return Map.of("error", true, "message", "Recipient or conversationId required");
+        }
 
-        return send(userId, convId, content.trim());
+        try {
+            Message msg = chatService.sendMessage(convId, userId, content.trim());
+            return Map.of("success", true, "messageId", msg.getId(), "conversationId", convId);
+        } catch (Exception e) {
+            return Map.of("error", true, "message", "Failed to send message: " + e.getMessage());
+        }
     }
 
-    private String getConvId(String userId, String otherId) {
-        return conversationRepository.findByParticipantsContaining(userId).stream()
-            .filter(c -> c.getParticipants().size() == 2 && c.getParticipants().contains(otherId))
-            .map(Conversation::getId)
-            .findFirst()
-            .orElseGet(() -> {
-                Conversation c = new Conversation();
-                c.setParticipants(new HashSet<>(List.of(userId, otherId)));
-                c.setType(ConversationType.DIRECT);
-                return conversationRepository.save(c).getId();
-            });
-    }
-
-    private Map<String, Object> send(String userId, String convId, String content) {
-        Conversation conv = conversationRepository.findById(convId).orElseThrow(() -> new IllegalArgumentException("Not found"));
-        if (!conv.getParticipants().contains(userId)) throw new IllegalStateException("Not authorized");
-
-        String recipientId = conv.getParticipants().stream().filter(p -> !p.equals(userId)).findFirst().orElse(null);
-
-        Message msg = new Message();
-        msg.setConversationId(convId);
-        msg.setSenderId(userId);
-        msg.setRecipientId(recipientId);
-        msg.setBody(content);
-        msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-        messageRepository.save(msg);
-
-        conv.setLastMessageAt(LocalDateTime.now(ZoneId.of("UTC")));
-        conv.setLastMessagePreview(content.length() > 50 ? content.substring(0, 50) + "..." : content);
-        conversationRepository.save(conv);
-
-        var wsResp = new RealtimeMessageResponse(msg.getId(), convId, userId, recipientId, content, msg.getCreatedAt());
-        messagingTemplate.convertAndSend("/topic/conversations/" + convId, wsResp);
+    private User resolveUser(String identifier, String currentUserId) {
+        User u = userLookupHelper.findUserByIdentifier(identifier);
+        if (u != null) return u;
         
-        return Map.of("success", true, "messageId", msg.getId());
+        List<User> users = userService.searchUsersByContact(identifier, currentUserId);
+        if (!users.isEmpty()) return users.get(0);
+        
+        return null;
     }
 }

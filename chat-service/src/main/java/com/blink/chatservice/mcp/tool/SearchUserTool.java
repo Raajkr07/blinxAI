@@ -1,6 +1,7 @@
 package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
+import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -43,8 +44,8 @@ public class SearchUserTool implements McpTool {
             return Map.of("error", true, "message", "Provide a search term", "users", List.of());
         }
 
-        var users = userRepository.searchUsers(query.trim().toLowerCase());
-        var list = users.stream().limit(10).map(userLookupHelper::getUserInfoMap).toList();
+        List<User> users = userRepository.searchUsers(query.trim().toLowerCase());
+        List<Map<String, Object>> list = users.stream().limit(10).map(userLookupHelper::getUserInfoMap).toList();
 
         return Map.of("users", list, "count", list.size());
     }

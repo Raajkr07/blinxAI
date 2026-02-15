@@ -3,6 +3,7 @@ package com.blink.chatservice.mcp.tool;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class WebSearchTool implements McpTool {
 
     private static final int MAX_QUERY_LENGTH = 500;
@@ -81,6 +83,7 @@ public class WebSearchTool implements McpTool {
             Integer maxResults = validateMaxResults(args.get("maxResults"));
             
             if (isCircuitOpen()) {
+                log.warn("Web search circuit breaker open. Returning fallback for: {}", query);
                 return createFallbackResponse(query);
             }
             
@@ -97,6 +100,7 @@ public class WebSearchTool implements McpTool {
             return createSuccessResponse(query, results);
             
         } catch (Exception e) {
+            log.error("Web search failed: {}", e.getMessage());
             int failures = consecutiveFailures.incrementAndGet();
             if (failures >= CIRCUIT_BREAKER_THRESHOLD) {
                 circuitOpenedAt.set(System.currentTimeMillis());
@@ -137,6 +141,7 @@ public class WebSearchTool implements McpTool {
         return createSimulatedResults(query, maxResults);
     }
 
+    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> searchWithSerper(String query, int maxResults) throws Exception {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("q", query);
@@ -164,6 +169,7 @@ public class WebSearchTool implements McpTool {
         throw new RuntimeException("Serper API failed: " + response.getStatusCode());
     }
 
+    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseSerperResponse(String responseBody, int maxResults) 
             throws JsonProcessingException {
         
