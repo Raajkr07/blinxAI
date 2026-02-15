@@ -47,6 +47,20 @@ app:
       auth-token: ${TWILIO_AUTH_TOKEN}
       from-number: ${TWILIO_FROM_NUMBER}
 
+  oauth2:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID}
+      client-secret: ${GOOGLE_CLIENT_SECRET}
+      redirect-uri: ${GOOGLE_REDIRECT_URI}
+      scopes:
+        - email
+        - profile
+        - https://www.googleapis.com/auth/calendar
+        - https://www.googleapis.com/auth/gmail.modify
+        - https://www.googleapis.com/auth/gmail.send
+      allowed-frontend-origins:
+        - https://blinx-app.netlify.app
+
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://blinx-app.netlify.app,http://localhost:8080,http://localhost:5173,http://localhost:5174,http://localhost:4173}
 
