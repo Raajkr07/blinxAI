@@ -75,7 +75,7 @@ export function Signup({ onSwitchToLogin }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Create Account</h2>
-                <p className="text-gray-400">Join Blink today</p>
+                <p className="text-gray-400">Join Blinx AI Assistant today</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

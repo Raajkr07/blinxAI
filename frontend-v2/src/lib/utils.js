@@ -104,7 +104,7 @@ export function downloadICS({ title, description, startTime, endTime, location }
     const content = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Blink Chat//EN',
+        'PRODID:-//Blinx AI Assistant//EN',
         'BEGIN:VEVENT',
         `DTSTART:${start}`,
         `DTEND:${end}`,

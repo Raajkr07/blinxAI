@@ -72,7 +72,7 @@ export function Login({ onSwitchToSignup }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Welcome Back</h2>
-                <p className="text-gray-400">Sign in to continue to Blink</p>
+                <p className="text-gray-400">Sign in to continue to Blinx AI Assistant</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
