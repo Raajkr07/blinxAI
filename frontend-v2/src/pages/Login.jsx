@@ -4,7 +4,7 @@ import { motion as Motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
-import { Button, Input } from '../components/ui';
+import { Button, Input, GoogleButton } from '../components/ui';
 
 export function Login({ onSwitchToSignup }) {
     const [step, setStep] = useState('phone');
@@ -126,6 +126,23 @@ export function Login({ onSwitchToSignup }) {
                 )}
             </form>
 
+            {
+                step === 'phone' && (
+                    <>
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-white/10" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-[#1a1a1a] px-2 text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <GoogleButton />
+                    </>
+                )
+            }
+
             <div className="text-center pt-4 border-t border-white/5">
                 <p className="text-sm text-gray-400">
                     Don't have an account?{' '}
@@ -134,6 +151,6 @@ export function Login({ onSwitchToSignup }) {
                     </button>
                 </p>
             </div>
-        </Motion.div>
+        </Motion.div >
     );
 }

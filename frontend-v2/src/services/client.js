@@ -8,6 +8,7 @@ const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
     timeout: 30000,
+    withCredentials: true,
 });
 
 const cleanResponseData = (data) => {
@@ -22,10 +23,11 @@ const cleanResponseData = (data) => {
     }
 
     const { '@class': _, ...rest } = data;
-    return Object.keys(rest).reduce((acc, key) => {
-        acc[key] = cleanResponseData(rest[key]);
-        return acc;
-    }, {});
+    const cleaned = {};
+    for (const key in rest) {
+        cleaned[key] = cleanResponseData(rest[key]);
+    }
+    return cleaned;
 };
 
 apiClient.interceptors.request.use(
@@ -50,20 +52,30 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
             try {
                 const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-                if (!refreshToken) throw new Error('No refresh token');
+                const payload = refreshToken ? { refreshToken } : {};
 
-                const { data } = await axios.post(`${env.API_BASE_URL}/api/v1/auth/refresh`, { refreshToken });
+                const { data } = await axios.post(
+                    `${env.API_BASE_URL}/api/v1/auth/refresh`,
+                    payload,
+                    { withCredentials: true }
+                );
 
-                storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
-                if (data.refreshToken) storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
+                if (data.accessToken) {
+                    storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
+                    originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+                }
+                if (data.refreshToken) {
+                    storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
+                }
 
-                originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
                 return apiClient(originalRequest);
             } catch (err) {
                 storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
                 storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
                 storage.remove(STORAGE_KEYS.USER);
-                window.location.href = '/auth';
+                if (window.location.pathname !== '/' && !window.location.pathname.includes('/auth')) {
+                    window.location.href = '/';
+                }
                 return Promise.reject(err);
             }
         }

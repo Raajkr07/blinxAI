@@ -34,5 +34,22 @@ export const authService = {
     ping: async () => {
         const { data } = await apiClient.get('/api/v1/auth/ping');
         return data;
+    },
+
+    initGoogleAuth: async (redirectTo) => {
+        const { data } = await apiClient.post('/api/v1/auth/google/init', null, {
+            params: { redirect_to: redirectTo || window.location.href }
+        });
+        return data;
+    },
+
+    getGoogleSession: async () => {
+        const { data } = await apiClient.get('/api/v1/auth/google/session');
+        return data;
+    },
+
+    logoutGoogle: async () => {
+        const { data } = await apiClient.post('/api/v1/auth/google/logout');
+        return data;
     }
 };

@@ -25,3 +25,4 @@ export {
 export { SimpleDropdown, SimpleDropdownItem } from './SimpleDropdown';
 export { ConfirmDialog } from './ConfirmDialog';
 export { AILogo } from './AILogo';
+export { GoogleButton } from './GoogleButton';

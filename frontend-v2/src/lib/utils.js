@@ -1,17 +1,14 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-
 export function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
-
 
 export function formatRelativeTime(date) {
     if (!date) return '';
 
     const now = new Date();
-    // Ensure date is treated as UTC if it doesn't have timezone info
     const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? `${date}Z` : date;
     const then = new Date(dateStr);
 
@@ -30,19 +27,20 @@ export function formatRelativeTime(date) {
     return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-
 export function formatTime(date) {
     if (!date) return '';
-    // Ensure date is treated as UTC if it doesn't have timezone info
     const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? `${date}Z` : date;
-    // undefined locale uses the browser's default locale (user's system settings)
-    return new Date(dateStr).toLocaleTimeString(undefined, {
+    const d = new Date(dateStr);
+
+    return d.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true,
+        hour12: true
     });
 }
-
 
 export function truncate(text, maxLength = 50) {
     if (!text) return '';
@@ -50,14 +48,12 @@ export function truncate(text, maxLength = 50) {
     return text.slice(0, maxLength) + '...';
 }
 
-
 export function getInitials(name) {
     if (!name) return '?';
     const parts = name.trim().split(' ');
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
-
 
 export function debounce(func, wait) {
     let timeout;
@@ -70,7 +66,6 @@ export function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
-
 
 export function generateId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -96,3 +91,35 @@ export function stripMarkdown(text) {
         .trim();
 }
 
+export function downloadICS({ title, description, startTime, endTime, location }) {
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const start = formatDate(startTime);
+    const end = formatDate(endTime) || formatDate(new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString());
+
+    const content = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Blink Chat//EN',
+        'BEGIN:VEVENT',
+        `DTSTART:${start}`,
+        `DTEND:${end}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description || ''}`,
+        `LOCATION:${location || ''}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}

@@ -21,11 +21,12 @@ import {
     MessageInput,
     ChatHeader,
     ChatTabs,
+    FilePermissionModal,
+    EmailPreviewModal,
+    CalendarPreviewModal,
+    AIAssistantButton,
 } from '../components/chat';
 import { CallLogs } from '../components/calls';
-import { FilePermissionModal } from '../components/chat/FilePermissionModal';
-import { EmailPreviewModal } from '../components/chat/EmailPreviewModal';
-import { AIAssistantButton } from '../components/chat/AIAssistantButton';
 
 const NewChatModal = lazy(() => import('../components/chat/NewChatModal').then(m => ({ default: m.NewChatModal })));
 const NewGroupModal = lazy(() => import('../components/chat/NewGroupModal').then(m => ({ default: m.NewGroupModal })));
@@ -42,31 +43,59 @@ const ChatPage = () => {
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [filePermissionRequest, setFilePermissionRequest] = useState(null);
     const [emailPreviewRequest, setEmailPreviewRequest] = useState(null);
+    const [calendarPreviewRequest, setCalendarPreviewRequest] = useState(null);
 
     useEffect(() => {
-        let sub;
+        let isCancelled = false;
+        let sub = null;
+
         if (!user?.id) return;
 
         const initSocket = async () => {
             try {
+                // We initiate connection but don't toast on first failure 
+                // because socketService has internal auto-reconnect logic.
                 await socketService.connect();
+                if (isCancelled) return;
+
                 sub = socketService.subscribe(`/topic/user/${user.id}/actions`, (message) => {
                     const payload = message.payload || message;
                     if (message.type === 'SAVE_FILE_REQUEST' || (message.fileName && message.content)) {
-                        toast.success('File request received');
                         setFilePermissionRequest(payload);
                     } else if (message.type === 'SEND_EMAIL_REQUEST') {
-                        toast.success('Email draft received');
+                        if (payload.error) {
+                            toast.error(`Email failed: ${payload.error}`);
+                        } else {
+                            toast.success('Email sent successfully! 📧');
+                        }
                         setEmailPreviewRequest(payload);
+                    } else if (message.type === 'ADD_TO_CALENDAR_REQUEST') {
+                        if (payload.error) {
+                            toast.error(`Calendar sync failed: ${payload.error}`);
+                        } else {
+                            toast.success('Event added to calendar! 📅');
+                        }
+                        setCalendarPreviewRequest(payload);
+                    } else if (message.type === 'OPEN_URL') {
+                        if (payload && payload.url) {
+                            window.open(payload.url, '_blank', 'noopener,noreferrer');
+                        }
                     }
                 });
             } catch {
-                toast.error('Real-time connection failed');
+                if (!isCancelled) {
+                    toast.error('Please wait we are connecting to server');
+                }
             }
         };
 
         initSocket();
-        return () => sub?.unsubscribe();
+        return () => {
+            isCancelled = true;
+            if (sub) {
+                sub.unsubscribe();
+            }
+        };
     }, [user?.id]);
 
     const activeTab = getActiveTab();
@@ -135,8 +164,8 @@ const ChatPage = () => {
                                 variant="ghost"
                                 size={isSidebarCollapsed ? "icon" : "sm"}
                                 className={cn("justify-start", isSidebarCollapsed && "w-10 h-10")}
-                                onClick={() => {
-                                    logout();
+                                onClick={async () => {
+                                    await logout();
                                     toast.success("Signed out");
                                 }}
                             >
@@ -195,8 +224,13 @@ const ChatPage = () => {
             <EmailPreviewModal
                 isOpen={!!emailPreviewRequest}
                 emailInfo={emailPreviewRequest}
-                onApprove={() => setEmailPreviewRequest(null)}
-                onDeny={() => setEmailPreviewRequest(null)}
+                onClose={() => setEmailPreviewRequest(null)}
+            />
+
+            <CalendarPreviewModal
+                isOpen={!!calendarPreviewRequest}
+                eventInfo={calendarPreviewRequest}
+                onClose={() => setCalendarPreviewRequest(null)}
             />
         </>
     );

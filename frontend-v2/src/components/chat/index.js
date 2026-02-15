@@ -12,3 +12,4 @@ export { FilePermissionModal } from './FilePermissionModal';
 export { EmailPreviewModal } from './EmailPreviewModal';
 export { SettingsModal } from './SettingsModal';
 export { ProfileModal } from './ProfileModal';
+export { CalendarPreviewModal } from './CalendarPreviewModal';

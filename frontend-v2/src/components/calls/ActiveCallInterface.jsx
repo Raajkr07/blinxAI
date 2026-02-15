@@ -24,9 +24,8 @@ export function ActiveCallInterface() {
     } = useCallStore();
 
     const [callDuration, setCallDuration] = useState(0);
-    const [isSwapped, setIsSwapped] = useState(false); // State to toggle video swap
+    const [isSwapped, setIsSwapped] = useState(false);
 
-    // Video element refs
     const mainVideoRef = useRef(null);
     const pipVideoRef = useRef(null);
     const hiddenAudioRef = useRef(null);
@@ -34,13 +33,9 @@ export function ActiveCallInterface() {
     const isVideo = activeCall?.type === 'VIDEO' || activeCall?.type === 'video';
     const isCalling = callStatus === 'calling';
 
-    // Determine which stream goes where
-    // Default: Main = Remote, PiP = Local
-    // Swapped: Main = Local, PiP = Remote
     const mainStream = isSwapped ? localStream : remoteStream;
     const pipStream = isSwapped ? remoteStream : localStream;
 
-    // Attach streams to video elements
     useEffect(() => {
         if (mainVideoRef.current) {
             mainVideoRef.current.srcObject = mainStream;
@@ -55,11 +50,6 @@ export function ActiveCallInterface() {
         }
     }, [pipStream, isSwapped]);
 
-    // Handle Audio Echo - Only use hidden audio element if we are in an AUDIO call (no video elements)
-    // or if for some reason the video element logic fails.
-    // actually, simpler logic:
-    // If it's a VIDEO call, the `<video>` elements play the audio.
-    // If it's an AUDIO call, we need the hidden `<audio>` element.
     useEffect(() => {
         if (!isVideo && remoteStream && hiddenAudioRef.current) {
             hiddenAudioRef.current.srcObject = remoteStream;
@@ -67,7 +57,6 @@ export function ActiveCallInterface() {
         }
     }, [isVideo, remoteStream]);
 
-    // Track call duration
     useEffect(() => {
         if (callStatus === 'active' && activeCall) {
             const interval = setInterval(() => {
@@ -118,7 +107,6 @@ export function ActiveCallInterface() {
         return formatDuration(callDuration);
     };
 
-    // Helper to check if a stream is "Local" (for mirroring)
     const isLocalStream = (stream) => stream === localStream;
 
     return (
@@ -128,7 +116,6 @@ export function ActiveCallInterface() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[var(--z-modal)] bg-[var(--color-background)] flex flex-col font-sans"
         >
-            {/* Main View Area */}
             <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
                 {isVideo ? (
                     <div className="w-full h-full relative">
@@ -143,7 +130,6 @@ export function ActiveCallInterface() {
                                 ref={mainVideoRef}
                                 autoPlay
                                 playsInline
-                                // Mute if it's the local stream to prevent echo/feedback
                                 muted={isLocalStream(mainStream)}
                                 className={cn(
                                     "w-full h-full object-cover transition-opacity duration-700",
@@ -200,7 +186,6 @@ export function ActiveCallInterface() {
                                     ref={pipVideoRef}
                                     autoPlay
                                     playsInline
-                                    // Mute if it's local stream
                                     muted={isLocalStream(pipStream)}
                                     className={cn(
                                         "w-full h-full object-cover",
@@ -214,7 +199,6 @@ export function ActiveCallInterface() {
                         )}
                     </div>
                 ) : (
-                    /* Audio Call UI */
                     <div className="w-full h-full flex items-center justify-center bg-[var(--color-background)]">
                         <div className="text-center">
                             <Motion.div
@@ -248,7 +232,6 @@ export function ActiveCallInterface() {
                     </div>
                 )}
 
-                {/* Top Status Bar */}
                 <div className="absolute top-6 left-6 z-30 pointer-events-none">
                     <div className="px-4 py-2 rounded-2xl flex items-center gap-3 border border-[var(--color-border)] bg-[var(--color-background)]/80 backdrop-blur-md">
                         <div className={cn(
@@ -267,11 +250,9 @@ export function ActiveCallInterface() {
                 </div>
             </div>
 
-            {/* Controls Bar - Fixed at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-40">
                 <div className="max-w-xl mx-auto flex items-center justify-center gap-6 sm:gap-10">
 
-                    {/* Audio Toggle */}
                     <div className="flex flex-col items-center gap-2">
                         <Button
                             variant="ghost"
@@ -295,7 +276,6 @@ export function ActiveCallInterface() {
                         </span>
                     </div>
 
-                    {/* End Call Button */}
                     <div className="flex flex-col items-center gap-2">
                         <Button
                             variant="danger"
@@ -308,7 +288,6 @@ export function ActiveCallInterface() {
                         <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">End</span>
                     </div>
 
-                    {/* Video Toggle */}
                     {isVideo && (
                         <div className="flex flex-col items-center gap-2">
                             <Button
@@ -323,9 +302,9 @@ export function ActiveCallInterface() {
                                 )}
                             >
                                 {isVideoEnabled ? (
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg>
                                 ) : (
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="2" y2="22" /><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" ry="2" /></svg>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="2" x2="22" y1="2" y2="22" /><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg>
                                 )}
                             </Button>
                             <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider drop-shadow-md">
@@ -334,7 +313,6 @@ export function ActiveCallInterface() {
                         </div>
                     )}
 
-                    {/* Screen Share */}
                     {isVideo && (
                         <div className="flex flex-col items-center gap-2">
                             <Button
@@ -356,8 +334,6 @@ export function ActiveCallInterface() {
                 </div>
             </div>
 
-            {/* Hidden audio element for audio-only calls */}
-            {/* Conditional rendering ensures this is ONLY present when we are NOT in video mode, preventing double audio */}
             {!isVideo && (
                 <audio
                     ref={hiddenAudioRef}
