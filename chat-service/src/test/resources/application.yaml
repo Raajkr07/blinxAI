@@ -63,3 +63,13 @@ app:
   frontend-url: http://localhost:3000
   cors:
     allowed-origins: http://localhost:5173
+  oauth2:
+    google:
+      client-id: test-client-id
+      client-secret: test-client-secret
+      redirect-uri: http://localhost:8080/callback
+      scopes: ["email", "profile"]
+      encryption-password: test-password
+      encryption-salt: 5c0744940b5c369b
+      default-redirect-uri: http://localhost:5173/chat
+      error-redirect-uri: http://localhost:5173/auth?error=true
