@@ -27,18 +27,24 @@ const App = () => {
   }, [theme]);
 
   // Handle public verification routes
-  const path = window.location.pathname;
-  if (path === '/privacy-policy') {
+  const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();
+
+  if (rawPath === '/privacy-policy') {
     document.title = 'Privacy Policy | Blink';
     return <PrivacyPolicy />;
   }
-  if (path === '/terms') {
+  if (rawPath === '/terms') {
     document.title = 'Terms of Service | Blink';
     return <TermsOfService />;
   }
-  if (path === '/data-deletion') {
+  if (rawPath === '/data-deletion') {
     document.title = 'Data Deletion | Blink';
     return <DataDeletion />;
+  }
+
+  // Restore default title for app pages
+  if (typeof document !== 'undefined' && document.title !== 'Blink | Chat') {
+    document.title = 'Blink | Chat';
   }
 
   useEffect(() => {
