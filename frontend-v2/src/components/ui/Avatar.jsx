@@ -22,15 +22,13 @@ export function Avatar({
     const initials = getInitials(name || alt);
 
     return (
-        <div className={cn('relative inline-block flex-shrink-0', className)}>
+        <div className={cn('relative inline-block flex-shrink-0 rounded-full', avatarSizes[size], className)}>
             <div
                 className={cn(
-                    'rounded-full overflow-hidden',
+                    'rounded-full overflow-hidden w-full h-full',
                     'bg-gray-800 text-white',
                     'flex items-center justify-center',
                     'font-medium',
-                    'border border-gray-700',
-                    avatarSizes[size]
                 )}
             >
                 {src ? (

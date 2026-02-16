@@ -13,3 +13,5 @@ export { EmailPreviewModal } from './EmailPreviewModal';
 export { SettingsModal } from './SettingsModal';
 export { ProfileModal } from './ProfileModal';
 export { CalendarPreviewModal } from './CalendarPreviewModal';
+export { BrowseGroupsModal } from './BrowseGroupsModal';
+export { OnlineUsersPanel } from './OnlineUsersPanel';

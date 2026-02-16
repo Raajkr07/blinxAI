@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { chatService, socketService, aiService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
-import { useAuthStore, useChatStore } from '../../stores';
+import { useAuthStore, useChatStore, useUIStore } from '../../stores';
 import { Button, Textarea } from '../ui';
 import { AutoReplySuggestions } from './AutoReplySuggestions';
 import { generateId } from '../../lib/utils';
@@ -61,6 +61,7 @@ export function MessageInput({ conversationId }) {
 
     // Check if this is an AI conversation
     const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
+    const { addTypingUser, removeTypingUser } = useChatStore();
 
     const sendMessageMutation = useMutation({
         mutationFn: async (body) => {
@@ -74,6 +75,24 @@ export function MessageInput({ conversationId }) {
             const payload = { conversationId, body };
 
             socketService.send(destination, payload);
+
+            // For AI chats, simulate typing indicator using the AI analysis endpoint
+            if (isAiChat) {
+                try {
+                    const typingData = await aiService.simulateTyping(body);
+                    const durationMs = typingData?.typing_duration_ms || typingData?.typingDurationMs || 2000;
+                    addTypingUser(conversationId, 'ai-assistant');
+                    setTimeout(() => {
+                        removeTypingUser(conversationId, 'ai-assistant');
+                    }, Math.min(durationMs, 15000)); // cap at 15s
+                } catch {
+                    // Fallback: show typing for 2 seconds if the endpoint fails
+                    addTypingUser(conversationId, 'ai-assistant');
+                    setTimeout(() => {
+                        removeTypingUser(conversationId, 'ai-assistant');
+                    }, 2000);
+                }
+            }
         },
         onMutate: async (body) => {
             const tempId = `temp-${generateId()}`;
@@ -113,11 +132,47 @@ export function MessageInput({ conversationId }) {
         }
     }, [conversationId]);
 
+    const { openModal } = useUIStore();
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
         const trimmedMessage = message.trim();
         if (!trimmedMessage) return;
+
+        // Slash command handling
+        if (trimmedMessage.startsWith('/')) {
+            const [command, ...args] = trimmedMessage.split(' ');
+
+            if (command === '/email') {
+                // Usage: /email rk82100@example.com subject body
+                if (args.length < 3) {
+                    toast.error('Usage: /email <to> <subject> <body>');
+                    return;
+                }
+                const to = args[0];
+                const subject = args[1];
+                const body = args.slice(2).join(' ');
+
+                openModal('emailPreview', { to, subject, body });
+                setMessage('');
+                return;
+            }
+
+            if (command === '/save') {
+                // Usage: /save filename.txt content
+                if (args.length < 2) {
+                    toast.error('Usage: /save <filename> <content>');
+                    return;
+                }
+                const fileName = args[0];
+                const content = args.slice(1).join(' ');
+
+                openModal('filePermission', { fileName, content, location: 'Desktop' });
+                setMessage('');
+                return;
+            }
+        }
 
         // Clear input immediately for better responsiveness
         setMessage('');

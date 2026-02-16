@@ -3,12 +3,16 @@ import { useAuthStore, useUIStore, useCallStore } from './stores';
 import { socketService } from './services';
 import { AuthPage, ChatPage, PrivacyPolicy, TermsOfService, DataDeletion } from './pages';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
+import { usePresence } from './lib/usePresence';
 
 const App = () => {
   // 1. Initialize all state hooks
   const { isAuthenticated, user, checkSession, isLoading } = useAuthStore();
   const { setIsMobile, theme } = useUIStore();
   const { hasActiveCall, hasIncomingCall } = useCallStore();
+
+  // Subscribe to real-time presence updates
+  usePresence();
 
   // 2. Routing Logic
   const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();

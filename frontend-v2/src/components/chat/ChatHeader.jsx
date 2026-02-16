@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useChatStore, useUIStore, useCallStore, useTabsStore, useAuthStore } from '../../stores';
-import { Avatar, Button, SimpleDropdown, SimpleDropdownItem, ConfirmDialog } from '../ui';
+import { Avatar, Button, Skeleton, SkeletonAvatar, SimpleDropdown, SimpleDropdownItem, ConfirmDialog } from '../ui';
 import { SidebarToggle } from '../layout';
 import { ConversationAnalysisModal } from './ConversationAnalysisModal';
 import { ProfileModal } from './ProfileModal';
@@ -47,13 +47,24 @@ export function ChatHeader() {
         ? (typeof otherUserIdRaw === 'string' ? otherUserIdRaw : otherUserIdRaw.id)
         : null;
 
-    const { data: otherUser } = useQuery({
+    const { data: otherUser, isLoading: isLoadingUser } = useQuery({
         queryKey: ['user', otherUserId],
         queryFn: () => userService.getUserById(otherUserId),
         enabled: !!otherUserId,
-        staleTime: 1000 * 10, // 10 seconds for fresh online status
-        refetchInterval: 1000 * 30, // Refetch every 30 seconds
+        staleTime: 1000 * 60 * 5,
+        refetchInterval: 1000 * 30,
+        placeholderData: () => queryClient.getQueryData(['user', otherUserId]),
     });
+
+    // Live online presence check for 1:1 chats
+    const { data: isPartnerOnline } = useQuery({
+        queryKey: ['userOnline', otherUserId],
+        queryFn: () => userService.isUserOnline(otherUserId),
+        enabled: !!otherUserId && !isGroup && !isAI,
+        refetchInterval: 30000,
+        staleTime: 15000,
+    });
+
 
     const initiateCallMutation = useMutation({
         mutationFn: ({ callType, targetUserId }) =>
@@ -139,25 +150,37 @@ export function ChatHeader() {
         }
     }
 
-    displayTitle = displayTitle || 'Unknown Chat';
+    // Show skeleton header while user profile is loading
+    const needsUserFetch = !!otherUserId && !conversation.title && !isGroup && !isAI;
+    const isProfileLoading = needsUserFetch && isLoadingUser && !displayTitle;
+
+    displayTitle = displayTitle || 'Chat';
 
     return (
         <>
             <div className="flex items-center gap-4">
                 {isMobile && <SidebarToggle />}
 
-                <Avatar
-                    src={displayAvatar}
-                    name={displayTitle}
-                    size="md"
-                    online={otherUser?.online}
-                    showOffline={!otherUser?.online && !isGroup && !isAI}
-                />
+                {isProfileLoading ? (
+                    <SkeletonAvatar size="md" />
+                ) : (
+                    <Avatar
+                        src={displayAvatar}
+                        name={displayTitle}
+                        size="md"
+                        online={isPartnerOnline ?? otherUser?.online}
+                        showOffline={!(isPartnerOnline ?? otherUser?.online) && !isGroup && !isAI}
+                    />
+                )}
 
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h2 className="text-base font-semibold text-[var(--color-foreground)] truncate leading-tight">
-                        {displayTitle}
-                    </h2>
+                    {isProfileLoading ? (
+                        <Skeleton className="h-4 w-32 mb-1" />
+                    ) : (
+                        <h2 className="text-base font-semibold text-[var(--color-foreground)] truncate leading-tight">
+                            {displayTitle}
+                        </h2>
+                    )}
                     <div className="h-4 flex items-center overflow-hidden">
                         <div className="text-xs text-[var(--color-gray-400)] truncate italic flex items-baseline">
                             {(() => {
@@ -180,6 +203,10 @@ export function ChatHeader() {
 
                                 if (isAI) return '';
                                 if (isGroup) return `${conversation.participants?.length || 0} members`;
+                                // 1:1 chat status from live presence endpoint
+                                const partnerOnline = isPartnerOnline ?? otherUser?.online;
+                                if (partnerOnline === true) return 'Online';
+                                if (partnerOnline === false) return 'Offline';
                                 return '';
                             })()}
                         </div>

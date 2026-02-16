@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { aiService } from '../../services';
-import { Modal, ModalFooter, Button } from '../ui';
+import { Modal, ModalFooter, Button, AILogo } from '../ui';
 import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 
-
 export function ConversationAnalysisModal({ open, onOpenChange, conversationId }) {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [activeTab, setActiveTab] = useState('summary');
 
     const { data: analysis, isLoading, refetch } = useQuery({
         queryKey: ['conversationAnalysis', conversationId],
@@ -15,190 +15,269 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
         enabled: false,
     });
 
+    const { data: taskData, isLoading: isExtractingTasks, refetch: refetchTasks } = useQuery({
+        queryKey: ['conversationTasks', conversationId],
+        queryFn: async () => {
+            const summaryText = analysis?.summary || '';
+            const keyPointsText = (analysis?.key_points || []).join('. ');
+            const fullText = `${summaryText} ${keyPointsText}`.trim();
+            if (!fullText) return null;
+            return aiService.extractTask(fullText);
+        },
+        enabled: false,
+    });
+
     const handleAnalyze = async () => {
         setIsAnalyzing(true);
-        await refetch();
-        setIsAnalyzing(false);
+        try {
+            const result = await refetch();
+            if (result.data) {
+                await refetchTasks();
+            }
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
+
+    const tabs = [
+        { id: 'summary', label: 'Summary' },
+        { id: 'tasks', label: 'Tasks' },
+    ];
+
+    const hasTasks = taskData?.tasks && taskData.tasks.length > 0;
 
     return (
         <Modal
             open={open}
             onOpenChange={onOpenChange}
-            title="Conversation Insights"
-            description="AI-powered analysis of this conversation"
+            title="Conversation Analysis"
+            description="AI-powered insights from this conversation"
             size="lg"
         >
-            <div className="space-y-6">
-                {!analysis && !isLoading && (
-                    <div className="text-center py-8">
-                        <div className="mb-4">
-                            <svg
-                                className="h-16 w-16 mx-auto text-gray-600"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={1.5}
-                                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                                />
-                            </svg>
+            <div className="space-y-5 py-2">
+                {/* Initial State */}
+                {!analysis && !isLoading && !isAnalyzing && (
+                    <div className="flex flex-col items-center justify-center py-12 gap-6">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                            <AILogo className="w-8 h-8 text-blue-400" />
                         </div>
-                        <p className="text-gray-400 mb-4">
-                            Get AI-powered insights about this conversation
-                        </p>
+                        <div className="text-center space-y-1.5">
+                            <h3 className="text-base font-bold text-[var(--color-foreground)]">Analyze Conversation</h3>
+                            <p className="text-xs text-[var(--color-gray-500)] max-w-[260px] leading-relaxed">
+                                Extract key points, sentiment, action items, and tasks from this thread.
+                            </p>
+                        </div>
                         <Button
                             variant="default"
                             onClick={handleAnalyze}
-                            loading={isAnalyzing}
+                            className="text-xs font-semibold h-9 px-6"
                         >
-                            Analyze Conversation
+                            Run Analysis
                         </Button>
                     </div>
                 )}
 
+                {/* Loading */}
                 {(isLoading || isAnalyzing) && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-center py-8">
-                            <div className="animate-spin h-8 w-8 border-2 border-white border-t-transparent rounded-full" />
+                    <div className="flex flex-col items-center justify-center py-16 gap-4">
+                        <div className="w-10 h-10 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+                        <div className="text-center">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-400">Analyzing…</p>
+                            <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">Processing conversation data</p>
                         </div>
-                        <p className="text-center text-gray-400 text-sm">
-                            Analyzing conversation...
-                        </p>
                     </div>
                 )}
 
-                {analysis && (
+                {/* Results */}
+                {analysis && !isAnalyzing && (
                     <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-6"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="space-y-5"
                     >
-                        <div className="glass rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-white mb-2">
-                                Summary
-                            </h3>
-                            <p className="text-sm text-gray-300">
-                                {analysis.summary || 'No summary available'}
-                            </p>
-                        </div>
-
-                        {analysis.key_points && analysis.key_points.length > 0 && (
-                            <div className="glass rounded-lg p-4">
-                                <h3 className="text-sm font-semibold text-white mb-3">
-                                    Key Points
-                                </h3>
-                                <ul className="space-y-2">
-                                    {analysis.key_points.map((point, index) => (
-                                        <Motion.li
-                                            key={index}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.1 }}
-                                            className="flex items-start gap-2 text-sm text-gray-300"
-                                        >
-                                            <span className="text-white mt-0.5">•</span>
-                                            <span>{point}</span>
-                                        </Motion.li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                            {analysis.sentiment && (
-                                <div className="glass rounded-lg p-4">
-                                    <h3 className="text-xs font-semibold text-gray-400 mb-2">
-                                        Sentiment
-                                    </h3>
-                                    <p className={cn(
-                                        'text-sm font-medium',
-                                        analysis.sentiment === 'positive' && 'text-green-400',
-                                        analysis.sentiment === 'negative' && 'text-red-400',
-                                        analysis.sentiment === 'neutral' && 'text-gray-300'
-                                    )}>
-                                        {analysis.sentiment.charAt(0).toUpperCase() + analysis.sentiment.slice(1)}
-                                    </p>
-                                </div>
-                            )}
-
-                            {analysis.urgency && (
-                                <div className="glass rounded-lg p-4">
-                                    <h3 className="text-xs font-semibold text-gray-400 mb-2">
-                                        Urgency
-                                    </h3>
-                                    <p className={cn(
-                                        'text-sm font-medium',
-                                        analysis.urgency === 'high' && 'text-red-400',
-                                        analysis.urgency === 'medium' && 'text-yellow-400',
-                                        analysis.urgency === 'low' && 'text-green-400'
-                                    )}>
-                                        {analysis.urgency.charAt(0).toUpperCase() + analysis.urgency.slice(1)}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        {analysis.follow_up_required !== undefined && (
-                            <div className="glass rounded-lg p-4">
-                                <div className="flex items-center gap-2">
-                                    {analysis.follow_up_required ? (
-                                        <>
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 15 15"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="text-yellow-400"
-                                            >
-                                                <path
-                                                    d="M7.5 0.875C5.49797 0.875 3.875 2.49797 3.875 4.5C3.875 6.50203 5.49797 8.125 7.5 8.125C9.50203 8.125 11.125 6.50203 11.125 4.5C11.125 2.49797 9.50203 0.875 7.5 0.875Z"
-                                                    fill="currentColor"
-                                                />
-                                            </svg>
-                                            <span className="text-sm text-white">
-                                                Follow-up action recommended
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg
-                                                width="16"
-                                                height="16"
-                                                viewBox="0 0 15 15"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="text-green-400"
-                                            >
-                                                <path
-                                                    d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z"
-                                                    fill="currentColor"
-                                                    fillRule="evenodd"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                            <span className="text-sm text-white">
-                                                No follow-up needed
-                                            </span>
-                                        </>
+                        {/* Tabs */}
+                        <div className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/5">
+                            {tabs.map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={cn(
+                                        "flex-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all",
+                                        activeTab === tab.id
+                                            ? "bg-white/10 text-[var(--color-foreground)]"
+                                            : "text-[var(--color-gray-500)] hover:text-[var(--color-gray-300)]"
                                     )}
-                                </div>
-                            </div>
-                        )}
+                                >
+                                    {tab.label}
+                                    {tab.id === 'tasks' && hasTasks && (
+                                        <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[9px]">
+                                            {taskData.tasks.length}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <AnimatePresence mode="wait">
+                            {activeTab === 'summary' && (
+                                <Motion.div
+                                    key="summary"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-4"
+                                >
+                                    {/* Summary */}
+                                    <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                                        <h3 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] mb-2">Summary</h3>
+                                        <p className="text-sm text-[var(--color-gray-200)] leading-relaxed">
+                                            {analysis.summary || 'No summary generated'}
+                                        </p>
+                                    </div>
+
+                                    {/* Key Points */}
+                                    {analysis.key_points && analysis.key_points.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <h3 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] px-1">Key Points</h3>
+                                            {analysis.key_points.map((point, index) => (
+                                                <Motion.div
+                                                    key={index}
+                                                    initial={{ opacity: 0, y: 4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: index * 0.04 }}
+                                                    className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5"
+                                                >
+                                                    <span className="text-[10px] font-bold text-[var(--color-gray-500)] mt-px">{String(index + 1).padStart(2, '0')}</span>
+                                                    <span className="text-xs text-[var(--color-gray-300)] leading-relaxed">{point}</span>
+                                                </Motion.div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Metrics */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {analysis.sentiment && (
+                                            <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
+                                                <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5">Sentiment</p>
+                                                <span className={cn(
+                                                    'px-2.5 py-0.5 rounded-full text-[10px] font-semibold',
+                                                    analysis.sentiment === 'positive' && 'bg-green-500/10 text-green-400',
+                                                    analysis.sentiment === 'negative' && 'bg-red-500/10 text-red-400',
+                                                    analysis.sentiment === 'neutral' && 'bg-white/5 text-[var(--color-gray-300)]'
+                                                )}>
+                                                    {analysis.sentiment}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {analysis.urgency && (
+                                            <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
+                                                <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5">Priority</p>
+                                                <span className={cn(
+                                                    'px-2.5 py-0.5 rounded-full text-[10px] font-semibold',
+                                                    analysis.urgency === 'high' && 'bg-red-500/10 text-red-400',
+                                                    analysis.urgency === 'medium' && 'bg-yellow-500/10 text-yellow-400',
+                                                    analysis.urgency === 'low' && 'bg-green-500/10 text-green-400'
+                                                )}>
+                                                    {analysis.urgency}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </Motion.div>
+                            )}
+
+                            {activeTab === 'tasks' && (
+                                <Motion.div
+                                    key="tasks"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="space-y-3"
+                                >
+                                    {isExtractingTasks ? (
+                                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                            <div className="w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+                                            <p className="text-[10px] font-semibold text-blue-400">Extracting tasks…</p>
+                                        </div>
+                                    ) : hasTasks ? (
+                                        taskData.tasks.map((task, index) => (
+                                            <Motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, y: 4 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.04 }}
+                                                className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5"
+                                            >
+                                                <div className={cn(
+                                                    "mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0",
+                                                    task.priority === 'HIGH' ? "border-red-500/50 bg-red-500/10" :
+                                                        task.priority === 'MEDIUM' ? "border-yellow-500/50 bg-yellow-500/10" :
+                                                            "border-white/20 bg-white/5"
+                                                )}>
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full",
+                                                        task.priority === 'HIGH' ? "bg-red-500" :
+                                                            task.priority === 'MEDIUM' ? "bg-yellow-400" : "bg-white/40"
+                                                    )} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium text-[var(--color-foreground)] leading-relaxed">
+                                                        {task.title || task.description || task}
+                                                    </p>
+                                                    {task.assignee && (
+                                                        <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">→ {task.assignee}</p>
+                                                    )}
+                                                    {task.dueDate && (
+                                                        <p className="text-[10px] text-blue-400/60 mt-0.5">Due: {task.dueDate}</p>
+                                                    )}
+                                                </div>
+                                                {task.priority && (
+                                                    <span className={cn(
+                                                        "text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded self-start",
+                                                        task.priority === 'HIGH' && "bg-red-500/10 text-red-400",
+                                                        task.priority === 'MEDIUM' && "bg-yellow-500/10 text-yellow-400",
+                                                        task.priority === 'LOW' && "bg-green-500/10 text-green-400"
+                                                    )}>
+                                                        {task.priority}
+                                                    </span>
+                                                )}
+                                            </Motion.div>
+                                        ))
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                            <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-gray-500)]">
+                                                    <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                                                </svg>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xs font-medium text-[var(--color-gray-400)]">No tasks found</p>
+                                                <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">This conversation has no actionable items</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Motion.div>
+                            )}
+                        </AnimatePresence>
                     </Motion.div>
                 )}
             </div>
 
             <ModalFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                <Button
+                    variant="ghost"
+                    onClick={() => onOpenChange(false)}
+                    className="text-xs font-medium text-[var(--color-gray-400)]"
+                >
                     Close
                 </Button>
                 {analysis && (
-                    <Button variant="default" onClick={handleAnalyze} loading={isAnalyzing}>
+                    <Button
+                        variant="default"
+                        onClick={handleAnalyze}
+                        loading={isAnalyzing}
+                        className="text-xs font-semibold h-9 px-6"
+                    >
                         Re-analyze
                     </Button>
                 )}

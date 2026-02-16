@@ -3,67 +3,74 @@ import { Modal, ModalFooter, Button } from '../ui';
 export function CalendarPreviewModal({ isOpen, onClose, eventInfo }) {
     if (!eventInfo) return null;
 
+    const formattedTime = eventInfo.startTime || eventInfo.start?.dateTime;
+    const dateStr = formattedTime ? new Date(formattedTime).toLocaleString([], {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) : 'Scheduled Event';
+
     return (
         <Modal
             open={isOpen}
             onOpenChange={(open) => !open && onClose()}
-            title="Event Scheduled"
-            description="Successfully added to your Google Calendar."
-            size="lg"
+            title="Calendar Event"
+            description="Event details and scheduling"
+            size="md"
         >
-            <div className="space-y-6">
-                <div className="space-y-4">
-                    <h4 className="text-2xl font-bold text-[var(--color-foreground)] leading-tight">
-                        {eventInfo.title || eventInfo.summary}
-                    </h4>
+            <div className="space-y-5 py-2">
+                {/* Event Header */}
+                <div className="flex flex-col items-center gap-3 py-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-2xl">
+                        🗓️
+                    </div>
+                    <div className="text-center">
+                        <h4 className="text-lg font-bold text-[var(--color-foreground)] leading-tight">
+                            {eventInfo.title || eventInfo.summary || 'Untitled Event'}
+                        </h4>
+                    </div>
+                </div>
 
-                    <div className="grid gap-4">
-                        {/* Time */}
-                        <div className="flex items-center gap-4 text-[var(--color-gray-300)]">
-                            <div className="w-10 h-10 rounded-lg border border-[var(--color-border)] bg-white/5 flex items-center justify-center text-lg">
-                                🕒
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] text-[var(--color-gray-500)] uppercase font-bold tracking-widest">Time</span>
-                                <span className="text-sm font-medium">
-                                    {eventInfo.startTime || eventInfo.start?.dateTime || 'Not specified'}
-                                </span>
+                {/* Details Card */}
+                <div className="rounded-2xl bg-white/[0.03] border border-white/5 divide-y divide-white/5">
+                    <div className="flex items-center gap-4 p-4">
+                        <span className="text-lg">⏱️</span>
+                        <div>
+                            <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-0.5">Time</p>
+                            <p className="text-sm font-medium text-[var(--color-foreground)]">{dateStr}</p>
+                        </div>
+                    </div>
+
+                    {eventInfo.location && (
+                        <div className="flex items-center gap-4 p-4">
+                            <span className="text-lg">📍</span>
+                            <div>
+                                <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-0.5">Location</p>
+                                <p className="text-sm font-medium text-[var(--color-foreground)]">{eventInfo.location}</p>
                             </div>
                         </div>
+                    )}
 
-                        {/* Location */}
-                        {eventInfo.location && (
-                            <div className="flex items-center gap-4 text-[var(--color-gray-300)]">
-                                <div className="w-10 h-10 rounded-lg border border-[var(--color-border)] bg-white/5 flex items-center justify-center text-lg">
-                                    📍
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] text-[var(--color-gray-500)] uppercase font-bold tracking-widest">Location</span>
-                                    <span className="text-sm font-medium">{eventInfo.location}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Description */}
-                        <div className="flex items-start gap-4 text-[var(--color-gray-300)]">
-                            <div className="w-10 h-10 rounded-lg border border-[var(--color-border)] bg-white/5 flex items-center justify-center text-lg">
-                                📝
-                            </div>
-                            <div className="flex flex-col flex-1">
-                                <span className="text-[10px] text-[var(--color-gray-500)] uppercase font-bold tracking-widest">Description</span>
-                                <p className="text-sm text-[var(--color-gray-400)] mt-1 leading-relaxed">
-                                    {eventInfo.description || 'No description provided.'}
-                                </p>
-                            </div>
+                    <div className="flex items-start gap-4 p-4">
+                        <span className="text-lg mt-0.5">📝</span>
+                        <div className="flex-1">
+                            <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-0.5">Description</p>
+                            <p className="text-xs text-[var(--color-gray-300)] leading-relaxed">
+                                {eventInfo.description || 'No description provided.'}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 {eventInfo.error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <p className="text-xs text-red-500 flex items-center gap-2">
-                            <span>⚠️</span> Sync Error: {eventInfo.error}
-                        </p>
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+                        <span className="text-red-400 text-sm">⚠️</span>
+                        <div>
+                            <p className="text-[10px] uppercase font-semibold tracking-wider text-red-400">Sync Error</p>
+                            <p className="text-xs text-red-300/70 mt-0.5">{eventInfo.error}</p>
+                        </div>
                     </div>
                 )}
             </div>
@@ -73,17 +80,17 @@ export function CalendarPreviewModal({ isOpen, onClose, eventInfo }) {
                     <Button
                         variant="ghost"
                         onClick={() => window.open(eventInfo.googleCalendarUrl, '_blank')}
-                        className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 mr-auto"
+                        className="text-xs font-medium text-blue-400 mr-auto"
                     >
-                        View in Browser
+                        Open in Calendar
                     </Button>
                 )}
                 <Button
                     onClick={onClose}
-                    variant="outline"
-                    className="px-8"
+                    variant="default"
+                    className="text-xs font-semibold h-9 px-6"
                 >
-                    Close
+                    Done
                 </Button>
             </ModalFooter>
         </Modal>

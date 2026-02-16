@@ -26,7 +26,10 @@ function getDateLabel(dateString) {
     if (diffDays === 1) return 'Yesterday';
     if (diffDays === -1) return 'Tomorrow';
 
-    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 function getDateKey(dateString) {
@@ -99,11 +102,13 @@ export function MessageList({ conversationId }) {
         : otherParticipant;
 
     // Get the full profile if participants are just IDs
+    const queryClient = useQueryClient();
     const { data: partnerProfile } = useQuery({
         queryKey: ['user', otherUserId],
         queryFn: () => userService.getUserById(otherUserId),
         enabled: !!otherUserId,
         staleTime: 1000 * 60 * 5,
+        placeholderData: () => queryClient.getQueryData(['user', otherUserId]),
     });
 
     let partnerInfo = {
