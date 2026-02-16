@@ -4,10 +4,9 @@ import { useUIStore } from '../../stores';
 import { Button } from '../ui';
 
 export function Sidebar({ children }) {
-    const { isSidebarOpen, toggleSidebar, isMobile, sidebarWidth, setSidebarWidth } = useUIStore();
+    const { isSidebarOpen, isSidebarCollapsed, toggleSidebar, isMobile, sidebarWidth, setSidebarWidth } = useUIStore();
     const [isResizing, setIsResizing] = useState(false);
     const sidebarRef = useRef(null);
-
 
     useEffect(() => {
         if (isMobile) {
@@ -58,6 +57,8 @@ export function Sidebar({ children }) {
         return null;
     }
 
+    const collapsedWidth = 60;
+
     return (
         <>
             {isMobile && isSidebarOpen && (
@@ -67,39 +68,87 @@ export function Sidebar({ children }) {
                 />
             )}
 
-            <aside
-                ref={sidebarRef}
+            <div
                 className={cn(
-                    'h-full bg-[var(--color-background)] border-r border-[var(--color-border)]',
-                    'flex flex-col flex-shrink-0',
-                    'transition-[width] ease-in-out',
-                    isResizing ? 'duration-0' : 'duration-200',
-                    isMobile ? 'fixed left-0 top-0 z-50' : 'relative z-20',
+                    'group/sidebar relative flex-shrink-0 h-full',
+                    'transition-[width,min-width,max-width] ease-[cubic-bezier(0.4,0,0.2,1)]',
+                    isResizing ? 'duration-0' : 'duration-300',
+                    isMobile ? 'fixed left-0 top-0 z-50' : 'z-20',
                     !isSidebarOpen && isMobile && 'hidden',
-                    'pointer-events-auto'
                 )}
                 style={{
-                    width: isMobile ? '100%' : sidebarWidth,
-                    minWidth: 240,
-                    maxWidth: 600
+                    width: isMobile ? '100%' : (isSidebarCollapsed ? collapsedWidth : sidebarWidth),
+                    minWidth: isSidebarCollapsed ? collapsedWidth : 240,
+                    maxWidth: isSidebarCollapsed ? collapsedWidth : 600,
                 }}
             >
-                {children}
+                <aside
+                    ref={sidebarRef}
+                    className={cn(
+                        'h-full w-full bg-[var(--color-background)] border-r border-[var(--color-border)]',
+                        'flex flex-col',
+                        'pointer-events-auto'
+                    )}
+                >
+                    {children}
 
+                    {/* Desktop resize handle hidden when collapsed */}
+                    {!isMobile && !isSidebarCollapsed && (
+                        <div
+                            className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 active:bg-blue-500 transition-colors z-50"
+                            onMouseDown={startResizing}
+                        />
+                    )}
+                </aside>
+
+                {/* Sidebar toggle — outside aside, never clipped by overflow */}
                 {!isMobile && (
-                    <div
-                        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 active:bg-blue-500 transition-colors z-50"
-                        onMouseDown={startResizing}
-                    />
+                    <button
+                        onClick={toggleSidebar}
+                        className={cn(
+                            'absolute top-1/2 -translate-y-1/2 -right-4 z-50',
+                            'w-4 h-8 rounded-r-md',
+                            'bg-[var(--color-border)] hover:bg-white/20',
+                            'flex items-center justify-center',
+                            'text-[var(--color-gray-400)] hover:text-[var(--color-foreground)]',
+                            'cursor-pointer border-y border-r border-white/5',
+                            'opacity-0 group-hover/sidebar:opacity-100',
+                            'transition-all duration-200'
+                        )}
+                        aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 15 15"
+                            fill="none"
+                            className={cn(
+                                'transition-transform duration-300',
+                                isSidebarCollapsed ? 'rotate-0' : 'rotate-180'
+                            )}
+                        >
+                            <path
+                                d="M6.18194 4.18185C6.35767 4.00611 6.64236 4.00611 6.81809 4.18185L9.81809 7.18185C9.90672 7.27048 9.95652 7.3903 9.95652 7.51497C9.95652 7.63964 9.90672 7.75945 9.81809 7.84809L6.81809 10.8481C6.64236 11.0238 6.35767 11.0238 6.18194 10.8481C6.0062 10.6724 6.0062 10.3877 6.18194 10.2119L8.87891 7.51497L6.18194 4.81809C6.0062 4.64236 6.0062 4.35759 6.18194 4.18185Z"
+                                fill="currentColor"
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                            />
+                        </svg>
+                    </button>
                 )}
-            </aside>
+            </div>
         </>
     );
 }
 
 export function SidebarHeader({ children }) {
+    const { isSidebarCollapsed } = useUIStore();
+
     return (
-        <div className="h-16 px-4 flex items-center justify-between border-b border-[var(--color-border)] flex-shrink-0">
+        <div className={cn(
+            "h-14 flex items-center justify-between border-b border-[var(--color-border)] flex-shrink-0 transition-all duration-300 overflow-hidden",
+            isSidebarCollapsed ? "px-2 justify-center" : "px-3"
+        )}>
             {children}
         </div>
     );
@@ -114,11 +163,17 @@ export function SidebarContent({ children, className }) {
 }
 
 export function SidebarFooter({ children }) {
-    const { theme, toggleTheme } = useUIStore();
+    const { theme, toggleTheme, isSidebarCollapsed } = useUIStore();
 
     return (
-        <div className="flex items-center justify-between border-t border-[var(--color-border)] flex-shrink-0 transition-all h-16 px-4">
-            <div className="flex items-center gap-2 flex-1">
+        <div className={cn(
+            "flex border-t border-[var(--color-border)] flex-shrink-0 transition-all duration-300 bg-[var(--color-background)]",
+            isSidebarCollapsed ? "p-2 flex-col items-center gap-2 h-auto py-4" : "px-3 items-center justify-between gap-2 h-16"
+        )}>
+            <div className={cn(
+                "flex items-center",
+                isSidebarCollapsed ? "justify-center" : "gap-2"
+            )}>
                 {children}
             </div>
 
@@ -127,13 +182,14 @@ export function SidebarFooter({ children }) {
                 size="icon"
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
+                className={cn("transition-all duration-300", isSidebarCollapsed ? "h-9 w-9" : "")}
             >
                 {theme === 'dark' ? (
-                    <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="18" height="18" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M7.5 1.5V2.5M7.5 12.5V13.5M2.5 7.5H1.5M13.5 7.5H12.5M3.96447 3.96447L3.25736 3.25736M11.7426 11.7426L11.0355 11.0355M3.96447 11.0355L3.25736 11.7426M11.7426 3.25736L11.0355 3.96447M7.5 10C8.88071 10 10 8.88071 10 7.5C10 6.11929 8.88071 5 7.5 5C6.11929 5 5 6.11929 5 7.5C5 8.88071 6.11929 10 7.5 10Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 ) : (
-                    <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="18" height="18" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M10.4 10.4C10.4 11.4 9.2 12.5 7.5 12.5C4.73858 12.5 2.5 10.2614 2.5 7.5C2.5 5.8 3.6 4.6 4.6 4.6C4.6 4.6 4.6 7.00001 7.00001 9.4C9.4 11.8 11.8 11.8 11.8 11.8C11.5 12.2 11 12.5 10.4 12.5V12.5Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                         <path d="M12.5 4.5C12.5 5.05228 12.0523 5.5 11.5 5.5C10.9477 5.5 10.5 5.05228 10.5 4.5C10.5 3.94772 10.9477 3.5 11.5 3.5C12.0523 3.5 12.5 3.94772 12.5 4.5Z" fill="currentColor" />
                     </svg>
