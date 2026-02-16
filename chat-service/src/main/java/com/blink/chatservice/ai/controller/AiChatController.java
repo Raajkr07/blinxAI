@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,9 +23,17 @@ public class AiChatController {
 
     @PostMapping("/chat")
     public ResponseEntity<Message> chat(Authentication auth, @RequestBody ChatRequest request) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         String userId = auth.getName();
-        
-        if (request.message() == null || request.message().isBlank()) {
+
+        if (request == null || request.message() == null || request.message().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        String trimmed = request.message().trim();
+        if (trimmed.length() > 4000) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -35,13 +42,16 @@ public class AiChatController {
         }
 
         Conversation conversation = aiService.getOrCreateAiConversation(userId);
-        Message response = aiService.processAiMessage(userId, conversation.getId(), request.message().trim(), true);
-        
+        Message response = aiService.processAiMessage(userId, conversation.getId(), trimmed, true);
+
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/conversation")
     public ResponseEntity<Conversation> getConversation(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         return ResponseEntity.ok(aiService.getOrCreateAiConversation(auth.getName()));
     }
 
@@ -61,7 +71,11 @@ public class AiChatController {
     }
 
     private boolean isRateAllowed(String userId) {
-        return rateLimiters.computeIfAbsent(userId, k -> 
+        // Evict stale entries to prevent unbounded growth
+        if (rateLimiters.size() > 10000) {
+            rateLimiters.clear();
+        }
+        return rateLimiters.computeIfAbsent(userId, k ->
             new TokenBucket(AiConstants.RATE_LIMIT_REQUESTS_PER_MINUTE, AiConstants.RATE_LIMIT_BURST_CAPACITY)
         ).tryConsume();
     }
@@ -90,7 +104,9 @@ public class AiChatController {
 
         private void refill() {
             long now = System.currentTimeMillis();
-            int refill = (int) ((now - lastRefill) / 60000.0 * refillRate);
+            long elapsed = now - lastRefill;
+            if (elapsed <= 0) return;
+            int refill = (int) (elapsed / 60000.0 * refillRate);
             if (refill > 0) {
                 tokens = Math.min(capacity, tokens + refill);
                 lastRefill = now;

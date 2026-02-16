@@ -35,10 +35,7 @@ public class SendEmailTool implements McpTool {
 
     @Override
     public String description() {
-        return "Send a professional, human-like email using Gmail. " +
-               "When generating content, use 'Indian English' nuances, avoid generic boilerplate, " +
-               "and write interesting, connecting content that resonates with the receiver. " +
-               "If the user says 'write as you like', be creative, warm, and professional.";
+        return "Send an email via Gmail. Confirm recipient and purpose before sending.";
     }
 
     @Override
@@ -84,53 +81,27 @@ public class SendEmailTool implements McpTool {
         }
 
         try {
-            log.info("Attempting to send Gmail for user: {} to: {}", userId, to);
-            String accessToken = oAuthService.getAccessToken(userId);
-
-            // Construct RFC 2822 message
-            String rawMessage = "To: " + to + "\r\n" +
-                              "Subject: " + subject + "\r\n" +
-                              "Content-Type: text/plain; charset=utf-8\r\n\r\n" +
-                              finalBody;
-
-            String encodedMessage = Base64.getUrlEncoder().withoutPadding().encodeToString(rawMessage.getBytes(StandardCharsets.UTF_8));
-
-            Map<String, String> requestBody = Map.of("raw", encodedMessage);
-
-            restClient.post()
-                    .uri("https://www.googleapis.com/gmail/v1/users/me/messages/send")
-                    .header("Authorization", "Bearer " + accessToken)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .toBodilessEntity();
-
-            log.info("Email successfully sent via Gmail API for user: {}", userId);
+            // We NO LONGER send via Gmail API here. 
+            // We only trigger the frontend modal for user confirmation/edit.
+            // because of security reason we can't provide user OAuth token to AI.
             
-            // Always notify frontend for preview/history
             messagingTemplate.convertAndSend("/topic/user/" + userId + "/actions", Map.of(
                 "type", "SEND_EMAIL_REQUEST",
                 "payload", Map.of(
                     "to", to,
                     "subject", subject,
-                    "body", finalBody,
-                    "success", true
+                    "body", finalBody
                 )
             ));
 
-            return Map.of("success", true, "message", "Email successfully sent to " + to);
+            return Map.of(
+                "success", true, 
+                "message", "Email preview sent to user."
+            );
         } catch (Exception e) {
-            log.error("Gmail API send failed for user: {}. Error: {}", userId, e.getMessage(), e);
-            messagingTemplate.convertAndSend("/topic/user/" + userId + "/actions", Map.of(
-                "type", "SEND_EMAIL_REQUEST",
-                "payload", Map.of(
-                    "to", to,
-                    "subject", subject,
-                    "body", finalBody,
-                    "error", e.getMessage()
-                )
-            ));
-            return Map.of("success", false, "message", "Failed to send email: " + e.getMessage());
+            String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            log.error("Failed to prepare email preview for user: {}. Error: {}", userId, errMsg);
+            return Map.of("success", false, "message", "Failed to prepare email: " + errMsg);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.blink.chatservice.user.controller;
 
 import com.blink.chatservice.user.dto.UpdateProfileRequest;
 import com.blink.chatservice.user.entity.User;
+import com.blink.chatservice.user.repository.UserRepository;
 import com.blink.chatservice.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @GetMapping("/me")
     @Operation(summary = "Get current user profile")
@@ -50,5 +55,15 @@ public class UserController {
         User user = userService.getProfile(userId);
         return ResponseEntity.ok(user);
     }
-}
 
+    @PostMapping("/users/batch")
+    @Operation(summary = "Get multiple user profiles by IDs")
+    public ResponseEntity<List<User>> getUsersBatch(@RequestBody Map<String, List<String>> request) {
+        List<String> ids = request.get("ids");
+        if (ids == null || ids.isEmpty() || ids.size() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<User> users = userRepository.findAllById(ids);
+        return ResponseEntity.ok(users);
+    }
+}

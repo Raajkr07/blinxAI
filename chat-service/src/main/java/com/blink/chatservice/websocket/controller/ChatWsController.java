@@ -13,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.concurrent.CompletableFuture;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,10 +41,16 @@ public class ChatWsController {
         try {
             messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", true));
 
-            Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body(), false);
-
-            messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));
-            messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, aiResponse);
+            // Offload to a non-blocking thread to keep the broker responsive
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body(), false);
+                    messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));
+                    messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, aiResponse);
+                } catch (Exception e) {
+                    messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));
+                }
+            });
         } catch (Exception ignored) {}
     }
 

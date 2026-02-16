@@ -51,7 +51,7 @@ public class WebSearchTool implements McpTool {
 
     @Override
     public String description() {
-        return "Search the web for current information including latest news, facts, and recent events. Returns real search results from Google.";
+        return "Search the web for any current information, latest news, facts, and recent events, social media profiles (Instagram, etc.). Provides real-time Google search results.";
     }
 
     @Override
@@ -156,6 +156,7 @@ public class WebSearchTool implements McpTool {
                 headers
         );
         
+        // Use Serper's advanced search capability for better accuracy
         ResponseEntity<String> response = restTemplate.postForEntity(
                 "https://google.serper.dev/search", 
                 entity, 
@@ -176,47 +177,36 @@ public class WebSearchTool implements McpTool {
         Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
         List<Map<String, Object>> results = new ArrayList<>();
         
-        // Parse organic results
-        Object organicObj = response.get("organic");
-        if (organicObj instanceof List) {
-            List<?> organic = (List<?>) organicObj;
-            
-            for (Object item : organic) {
+        // 1. Answer Box / Knowledge Graph (Highest Accuracy)
+        if (response.get("answerBox") instanceof Map) {
+            Map<?, ?> box = (Map<?, ?>) response.get("answerBox");
+            results.add(createResult(
+                getString(box, "title").isEmpty() ? "Direct Answer" : getString(box, "title"),
+                getString(box, "answer").isEmpty() ? getString(box, "snippet") : getString(box, "answer"),
+                getString(box, "link"), 
+                "Google Knowledge"
+            ));
+        }
+
+        // 2. Social Results (Specific for User Search like Instagram)
+        if (response.get("social") instanceof List) {
+            for (Object item : (List<?>) response.get("social")) {
                 if (results.size() >= maxResults) break;
-                
                 if (item instanceof Map) {
-                    Map<?, ?> result = (Map<?, ?>) item;
-                    
-                    String title = getString(result, "title");
-                    String snippet = getString(result, "snippet");
-                    String link = getString(result, "link");
-                    
-                    if (!title.isEmpty() && !link.isEmpty()) {
-                        results.add(createResult(title, snippet, link, "Google"));
-                    }
+                    Map<?, ?> res = (Map<?, ?>) item;
+                    results.add(createResult(getString(res, "title"), getString(res, "snippet"), getString(res, "link"), "Social Profile"));
                 }
             }
         }
         
-        // Parse news results
-        Object newsObj = response.get("news");
-        if (newsObj instanceof List && results.size() < maxResults) {
-            List<?> news = (List<?>) newsObj;
-            
-            for (Object item : news) {
+        // 3. Organic Results
+        Object organicObj = response.get("organic");
+        if (organicObj instanceof List) {
+            for (Object item : (List<?>) organicObj) {
                 if (results.size() >= maxResults) break;
-                
                 if (item instanceof Map) {
                     Map<?, ?> result = (Map<?, ?>) item;
-                    
-                    String title = getString(result, "title");
-                    String snippet = getString(result, "snippet");
-                    String link = getString(result, "link");
-                    String source = getString(result, "source");
-                    
-                    if (!title.isEmpty() && !link.isEmpty()) {
-                        results.add(createResult(title, snippet, link, source.isEmpty() ? "News" : source));
-                    }
+                    results.add(createResult(getString(result, "title"), getString(result, "snippet"), getString(result, "link"), "Web"));
                 }
             }
         }

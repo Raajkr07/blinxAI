@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AiAnalysisService {
 
-    @Qualifier("aiRestTemplate")
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${ai.provider:openai}")
-    private String aiProvider;
 
     @Value("${ai.api-key:}")
     private String apiKey;
@@ -38,84 +35,51 @@ public class AiAnalysisService {
     @Value("${ai.base-url:https://api.openai.com}")
     private String baseUrl;
 
-    public AiAnalysisService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public AiAnalysisService(@Qualifier("aiRestTemplate") RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
 
     public ConversationAnalysis analyzeConversation(List<Message> messages) {
-        String prompt = "Analyze the following conversation history and provide insights.";
         String context = messages.stream()
-                .map(m -> m.getSenderId() + ": " + m.getBody())
+                .map(m -> String.format("[%s] %s: %s",
+                    m.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM HH:mm")),
+                    m.getSenderId(), m.getBody()))
                 .collect(Collectors.joining("\n"));
 
-        return callAi(prompt, context, ConversationAnalysis.class,
+        return callAi(context, ConversationAnalysis.class,
                 """
-                You are a conversation analyst. Analyze the chat log provided.
-                Return a JSON object with:
-                - summary: string (max 3 lines)
-                - key_points: array of strings (3-5 items)
-                - sentiment: "positive" | "neutral" | "negative"
-                - urgency: "low" | "medium" | "high"
-                - follow_up_required: boolean
+                Analyze chat log. Return JSON:
+                {"summary":"str(max 3 lines)","key_points":["str"](3-5),"sentiment":"positive|neutral|negative","urgency":"low|medium|high","follow_up_required":bool}
                 """);
     }
 
     public AutoReplySuggestions suggestReplies(Message lastMessage) {
-        String prompt = "Generate smart auto-replies for the last message.";
-        String context = "Last message from " + lastMessage.getSenderId() + ": " + lastMessage.getBody();
+        String context = lastMessage.getSenderId() + ": " + lastMessage.getBody();
 
-        return callAi(prompt, context, AutoReplySuggestions.class,
+        return callAi(context, AutoReplySuggestions.class,
                 """
-                You are a smart messaging assistant.
-                Generate distinct, context-aware auto-replies.
-                Return a JSON object with:
-                - suggested_replies: array of strings (3-5 items)
-                
-                CRITICAL RULES:
-                - Each reply MUST be 5-10 words maximum
-                - MUST be complete sentences (no truncation, no ellipsis)
-                - Match conversation tone (formal / informal)
-                - No repetition
-                - Be natural and conversational
-                - Examples: "Thanks for the update!", "I'll get back to you soon.", "Sounds good to me!"
+                Generate 3-5 auto-replies. Return JSON:
+                {"suggested_replies":["str"]}
+                Rules: 5-10 words each, complete sentences, match tone, no repetition.
                 """);
     }
 
     public SearchCriteria extractSearchQuery(String naturalQuery) {
-        return callAi("Extract structured search criteria.", naturalQuery, SearchCriteria.class,
+        return callAi(naturalQuery, SearchCriteria.class,
                 """
-                You are a search query parser. Extract structured filters from the natural language query.
-                Return a JSON object with:
-                - keywords: array of strings
-                - user_names: array of strings (or empty)
-                - date_range: { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" } or null
-                - sentiment: "positive" | "neutral" | "negative" | null
-                - conversation_type: "direct" | "group" | null
-                
-                If required data is missing, return null for that field.
+                Extract search filters. Return JSON:
+                {"keywords":["str"],"user_names":["str"],"date_range":{"from":"DD-MM-YYYY","to":"DD-MM-YYYY"}|null,"sentiment":"positive|neutral|negative"|null,"conversation_type":"direct|group"|null}
                 """);
     }
 
     public TaskListExtraction extractTasks(String messageText) {
-        String currentDate = LocalDate.now().toString();
-        return callAi("Extract all tasks or reminders.", messageText, TaskListExtraction.class,
+        String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+        return callAi(messageText, TaskListExtraction.class,
                 """
-                You are a task extractor. Analyze the conversation history for actionable tasks.
-                Current Date: %s
-                
-                Identify ALL tasks mentioned.
-                Categorize each task as "pending" (upcoming/future) or "done" (completed/past).
-                
-                Return a JSON object with:
-                - tasks: array of task objects
-                  - task_title: string
-                  - description: string
-                  - due_date: ISO 8601 string or null (calculated based on Current Date)
-                  - priority: "low" | "medium" | "high"
-                  - status: "pending" | "done"
-                
-                If NO tasks are detected, return { "tasks": [] }.
+                Extract tasks. Current Date: %s. Return JSON:
+                {"tasks":[{"task_title":"str","description":"str","date":"DD-MM-YYYY"|null,"priority":"low|medium|high","status":"pending|done"}]}
+                Categorize: "pending" (future) or "done" (past). Empty if none: {"tasks":[]}
                 """.formatted(currentDate));
     }
 
@@ -128,21 +92,18 @@ public class AiAnalysisService {
     }
 
     public TypingSimulation simulateTyping(String messageText) {
-         return callAi("Estimate typing behavior.", messageText, TypingSimulation.class,
+         return callAi(messageText, TypingSimulation.class,
                  """
-                 You are a UI behavior simulator. Estimate the complexity and typing duration for responding to or typing the provided text.
-                 Return a JSON object with:
-                 - response_complexity: "low" | "medium" | "high"
-                 - typing_duration_ms: integer (realistic human typing delay for the text)
+                 Estimate typing complexity. Return JSON:
+                 {"response_complexity":"low|medium|high","typing_duration_ms":int}
                  """);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T callAi(String userPrompt, String userContext, Class<T> responseType, String systemInstructions) {
+    private <T> T callAi(String userContext, Class<T> responseType, String systemInstructions) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("AI API key is not configured");
         }
-        String url = baseUrl + "/v1/chat/completions";
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", model);
@@ -151,8 +112,8 @@ public class AiAnalysisService {
         requestBody.put("response_format", Map.of("type", "json_object"));
 
         List<Map<String, String>> messages = List.of(
-                Map.of("role", "system", "content", systemInstructions + "\nIMPORTANT: Return ONLY valid JSON."),
-                Map.of("role", "user", "content", userPrompt + "\n\nContext:\n" + userContext)
+                Map.of("role", "system", "content", systemInstructions + "\nReturn ONLY valid JSON."),
+                Map.of("role", "user", "content", userContext)
         );
         requestBody.put("messages", messages);
 
@@ -163,24 +124,30 @@ public class AiAnalysisService {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            Map<String, Object> response = restTemplate.postForObject(url, entity, Map.class);
-            
+            Map<String, Object> response = restTemplate.postForObject(
+                    baseUrl + "/v1/chat/completions", entity, Map.class);
+
             if (response == null || !response.containsKey("choices")) {
                 throw new RuntimeException("Empty AI response");
             }
 
             List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-            if (choices.isEmpty()) throw new RuntimeException("No choices in AI response");
+            if (choices == null || choices.isEmpty()) {
+                throw new RuntimeException("No choices in AI response");
+            }
 
             Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-            String content = (String) message.get("content");
+            if (message == null) {
+                throw new RuntimeException("No message in AI response");
+            }
 
+            String content = (String) message.get("content");
             if (content == null || content.trim().isEmpty()) return null;
 
             return objectMapper.readValue(content, responseType);
 
         } catch (Exception e) {
-            log.error("Error during AI analysis call: {}", e.getMessage());
+            log.error("AI analysis call failed: {}", e.getMessage());
             throw new RuntimeException("AI Analysis failed: " + e.getMessage(), e);
         }
     }

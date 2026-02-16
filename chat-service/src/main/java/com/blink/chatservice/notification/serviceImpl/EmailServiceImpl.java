@@ -1,5 +1,6 @@
 package com.blink.chatservice.notification.serviceImpl;
 import com.blink.chatservice.notification.service.EmailService;
+import com.blink.chatservice.user.service.OAuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -12,6 +13,8 @@ import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +24,7 @@ public class EmailServiceImpl implements EmailService {
 
     private final RestTemplate restTemplate;
     private final SpringTemplateEngine templateEngine;
+    private final OAuthService oAuthService;
 
     @Value("${spring.mail.brevo.api-key}")
     private String brevoApiKey;
@@ -34,9 +38,10 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.sender.name}")
     private String senderName;
 
-    public EmailServiceImpl(RestTemplateBuilder restTemplateBuilder, SpringTemplateEngine templateEngine) {
+    public EmailServiceImpl(RestTemplateBuilder restTemplateBuilder, SpringTemplateEngine templateEngine, OAuthService oAuthService) {
         this.restTemplate = restTemplateBuilder.build();
         this.templateEngine = templateEngine;
+        this.oAuthService = oAuthService;
     }
 
     @Async
@@ -86,7 +91,6 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    @Async
     @Override
     public void sendCustomEmail(String to, String subject, String body) {
         if (to == null || to.trim().isEmpty()) {
@@ -113,6 +117,43 @@ public class EmailServiceImpl implements EmailService {
         } catch (Exception e) {
             log.error("Unexpected error sending custom email to {}: {}", to, e.getMessage(), e);
         }
+    }
+
+    @Async
+    @Override
+    public void sendUserEmail(String userId, String to, String subject, String body) {
+        try {
+            log.info("Attempting to send Gmail for user: {} to: {}", userId, to);
+            String accessToken = oAuthService.getAccessToken(userId);
+
+            // Construct RFC 2822 message
+            String rawMessage = "To: " + to + "\r\n" +
+                                "Subject: " + subject + "\r\n" +
+                                "Content-Type: text/plain; charset=utf-8\r\n\r\n" +
+                                body;
+
+            String encodedMessage = Base64.getUrlEncoder().withoutPadding().encodeToString(rawMessage.getBytes(StandardCharsets.UTF_8));
+
+            Map<String, String> requestBody = Map.of("raw", encodedMessage);
+
+            restTemplate.postForEntity(
+                    "https://www.googleapis.com/gmail/v1/users/me/messages/send",
+                    new HttpEntity<>(requestBody, createGmailHeaders(accessToken)),
+                    String.class
+            );
+
+            log.info("Email successfully sent via Gmail API for user: {}", userId);
+        } catch (Exception e) {
+            log.warn("Gmail API failed for user: {}. Falling back to Brevo. Error: {}", userId, e.getMessage());
+            sendCustomEmail(to, subject, body);
+        }
+    }
+
+    private HttpHeaders createGmailHeaders(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
     }
 
     private void sendBrevoEmail(String to, String subject, String htmlContent) {

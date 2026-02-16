@@ -32,6 +32,7 @@ public class ExtractTasksTool implements McpTool {
     private final MessageRepository messageRepository;
     private final UserLookupHelper userLookupHelper;
     private final UserService userService;
+    private static final DateTimeFormatter DD_MM_YYYY = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     @Override
     public String name() {
@@ -48,11 +49,11 @@ public class ExtractTasksTool implements McpTool {
         return Map.of(
             "type", "object",
             "properties", Map.of(
-                "text", Map.of("type", "string", "description", "The message text to analyze (optional if targetUser/conversationId set)"),
-                "targetUser", Map.of("type", "string", "description", "The user to extract tasks from their chat"),
-                "conversationId", Map.of("type", "string", "description", "The conversation ID to extract tasks from"),
-                "startDate", Map.of("type", "string", "description", "Filter tasks from date (YYYY-MM-DD)"),
-                "endDate", Map.of("type", "string", "description", "Filter tasks to date (YYYY-MM-DD)")
+                "text", Map.of("type", "string", "description", "Text to analyze (optional if targetUser/conversationId set)"),
+                "targetUser", Map.of("type", "string", "description", "User to extract tasks from"),
+                "conversationId", Map.of("type", "string", "description", "Conversation ID to extract tasks from"),
+                "startDate", Map.of("type", "string", "description", "Filter from date (DD-MM-YYYY"),
+                "endDate", Map.of("type", "string", "description", "Filter to date (DD-MM-YYYY)")
             )
         );
     }
@@ -66,8 +67,8 @@ public class ExtractTasksTool implements McpTool {
         String endDateStr = (String) args.get("endDate");
 
         try {
-            LocalDate start = startDateStr != null ? LocalDate.parse(startDateStr) : null;
-            LocalDate end = endDateStr != null ? LocalDate.parse(endDateStr) : null;
+            LocalDate start = startDateStr != null ? LocalDate.parse(startDateStr, DD_MM_YYYY) : null;
+            LocalDate end = endDateStr != null ? LocalDate.parse(endDateStr, DD_MM_YYYY) : null;
 
             if (conversationId != null && !conversationId.isBlank()) {
                 text = fetchMessages(conversationId, start, end);
@@ -112,16 +113,33 @@ public class ExtractTasksTool implements McpTool {
         String formattedDate = t.date();
         if (formattedDate != null && !formattedDate.isBlank()) {
             try {
-                 LocalDateTime dt = LocalDateTime.parse(formattedDate, DateTimeFormatter.ISO_DATE_TIME);
-                 formattedDate = dt.format(DateTimeFormatter.ofPattern("dd MMM yyyy, h:mm a"));
-            } catch (Exception e1) {
-                try {
-                     LocalDate d = LocalDate.parse(formattedDate);
-                     formattedDate = d.format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-                } catch (Exception ignored) {}
+                if (formattedDate.contains("T")) {
+                    LocalDateTime dt = LocalDateTime.parse(formattedDate, DateTimeFormatter.ISO_DATE_TIME);
+                    formattedDate = dt.format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"));
+                } else if (formattedDate.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                    // Already in dd-MM-yyyy, keep it or re-format if needed
+                } else {
+                    LocalDate d = parseDatePart(formattedDate);
+                    formattedDate = d.format(DD_MM_YYYY);
+                }
+            } catch (Exception e) {
+                // Fallback to original
             }
         }
         return new AiAnalysisModels.TaskExtraction(t.taskTitle(), t.description(), formattedDate, t.priority(), t.status());
+    }
+
+    private LocalDate parseDatePart(String datePart) {
+        try {
+            if (datePart.contains("-")) {
+                String[] parts = datePart.split("-");
+                if (parts[0].length() == 4) return LocalDate.parse(datePart); // yyyy-MM-dd
+                return LocalDate.parse(datePart, DD_MM_YYYY);
+            }
+            return LocalDate.parse(datePart);
+        } catch (Exception e) {
+            return LocalDate.now();
+        }
     }
 
     private User resolveUser(String identifier, String currentUserId) {
@@ -144,7 +162,9 @@ public class ExtractTasksTool implements McpTool {
              return true;
          })
          .sorted(Comparator.comparing(Message::getCreatedAt))
-         .map(m -> String.format("[%s] %s: %s", m.getCreatedAt().toString(), m.getSenderId(), m.getBody()))
+         .map(m -> String.format("[%s] %s: %s", 
+             m.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")), 
+             m.getSenderId(), m.getBody()))
          .collect(Collectors.joining("\n"));
     }
 }

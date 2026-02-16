@@ -99,7 +99,17 @@ public class ChatController {
     @PostMapping("/send-email")
     public ResponseEntity<Object> sendEmail(Authentication auth, @RequestBody SendEmailRequest request) {
         if (request.to() == null || request.to().isBlank()) return ResponseEntity.badRequest().body("Recipient is required");
-        emailService.sendCustomEmail(request.to().trim(), request.subject() != null ? request.subject() : "Message from Blink", request.body() != null ? request.body() : "");
+        
+        emailService.sendUserEmail(auth.getName(), request.to().trim(), request.subject() != null ? request.subject() : "Message from Blink", request.body() != null ? request.body() : "");
+        
+        if (request.conversationId() != null && !request.conversationId().isBlank()) {
+            try {
+                chatService.sendMessage(request.conversationId(), "ai-assistant", "✅ Email sent successfully to " + request.to());
+            } catch (Exception e) {
+                // Ignore if bot is not a participant or other chat error
+            }
+        }
+        
         return ResponseEntity.ok(Map.of("success", true));
     }
 }

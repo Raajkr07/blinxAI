@@ -8,7 +8,7 @@ public final class AiConstants {
 
     // AI User Identity
     public static final String AI_USER_ID = "ai-assistant";
-    public static final String AI_USER_NAME = "Blink AI";
+    public static final String AI_USER_NAME = "Blinx";
 
     // Tool Execution Limits
     public static final int MAX_TOOL_ITERATIONS = 5;
@@ -16,10 +16,10 @@ public final class AiConstants {
 
     // Conversation Context
     public static final int MAX_HISTORY_MESSAGES = 20;
-    public static final int MAX_SYSTEM_PROMPT_LENGTH = 4000;
+    public static final int MAX_SYSTEM_PROMPT_LENGTH = 5000;
 
     // AI API Configuration
-    public static final int DEFAULT_MAX_TOKENS = 1000;
+    public static final int DEFAULT_MAX_TOKENS = 1500;
     public static final double DEFAULT_TEMPERATURE = 0.7;
     public static final int AI_API_TIMEOUT_SECONDS = 60;
     public static final int AI_API_RETRY_ATTEMPTS = 3;

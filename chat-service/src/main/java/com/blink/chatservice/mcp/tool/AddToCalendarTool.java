@@ -10,8 +10,11 @@ import org.springframework.http.MediaType;
 
 import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,11 +34,7 @@ public class AddToCalendarTool implements McpTool {
 
     @Override
     public String description() {
-        return "Directly add an event to the user's Google Calendar. " +
-               "CRITICAL: Always look back at the conversation history to extract the date, time, and context. " +
-               "If a date (e.g., '20th Feb') or time was mentioned earlier, use it automatically. " +
-               "Only ask the user if the information is genuinely missing or highly ambiguous. " +
-               "Write even summaries in professional Indian English style.";
+        return "Create an event in Google Calendar. Confirm details before creating.";
     }
 
     @Override
@@ -45,10 +44,10 @@ public class AddToCalendarTool implements McpTool {
             "properties", Map.of(
                 "title", Map.of("type", "string", "description", "Engaging, professional Indian English title. Avoid 'Meeting' or 'Date' - use 'Coffee catch-up with Raj Kumar' etc."),
                 "description", Map.of("type", "string", "description", "Rich, human-like description that connects with the context. Write it like a personal note."),
-                "startTime", Map.of("type", "string", "description", "Start time (ISO 8601: YYYY-MM-DDTHH:MM:SS)"),
-                "endTime", Map.of("type", "string", "description", "End time (optional)"),
-                "location", Map.of("type", "string", "description", "Location or link (optional)"),
-                "timeZone", Map.of("type", "string", "description", "User's timezone (e.g. 'Asia/Kolkata') if known")
+                "startTime", Map.of("type", "string", "description", "Start time (DD-MM-YYYYTHH:MM:SS)"),
+                "endTime", Map.of("type", "string", "description", "End time (optional, defaults to +1hr)"),
+                "location", Map.of("type", "string", "description", "Location or meeting link"),
+                "timeZone", Map.of("type", "string", "description", "Timezone (default: Asia/Kolkata)")
             ),
             "required", List.of("title", "startTime")
         );
@@ -63,29 +62,22 @@ public class AddToCalendarTool implements McpTool {
         String timezone = (String) args.getOrDefault("timeZone", "Asia/Kolkata");
         String location = (String) args.getOrDefault("location", "");
 
-        if (title == null || startDateStr == null) {
+        if (title == null || title.isBlank() || startDateStr == null || startDateStr.isBlank()) {
             return Map.of("error", true, "message", "Title and startTime are required");
+        }
+        if (title.length() > 500) {
+            return Map.of("error", true, "message", "Title too long (max 500 chars)");
         }
 
         try {
             log.info("Adding calendar event for user {}: {} in timezone {}", userId, title, timezone);
             String accessToken = oAuthService.getAccessToken(userId);
 
-            // Robust Date Parsing
-            String rawStart = startDateStr.replace(" ", "T");
-            String startPart = rawStart.contains("T") ? rawStart.substring(0, 19).replace("Z", "") : rawStart;
-            if (startPart.length() == 10) startPart += "T00:00:00";
-            else if (startPart.length() == 16) startPart += ":00";
-            
-            LocalDateTime startLdt = LocalDateTime.parse(startPart.substring(0, 19));
-            
+            // Robust Date Parsing for dd-MM-yyyy
+            LocalDateTime startLdt = parseDateTime(startDateStr);
             LocalDateTime endLdt;
             if (endDateStr != null && !endDateStr.isBlank()) {
-                String rawEnd = endDateStr.replace(" ", "T");
-                String endPart = rawEnd.contains("T") ? rawEnd.substring(0, 19).replace("Z", "") : rawEnd;
-                if (endPart.length() == 10) endPart += "T00:00:00";
-                else if (endPart.length() == 16) endPart += ":00";
-                endLdt = LocalDateTime.parse(endPart.substring(0, 19));
+                endLdt = parseDateTime(endDateStr);
             } else {
                 endLdt = startLdt.plusHours(1);
             }
@@ -128,18 +120,49 @@ public class AddToCalendarTool implements McpTool {
             return Map.of("success", true, "message", "Event '" + title + "' successfully added to Google Calendar.");
 
         } catch (Exception e) {
-            log.error("Failed to add Google Calendar event for user {}: {}", userId, e.getMessage(), e);
+            String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            log.error("Failed to add Google Calendar event for user {}: {}", userId, errMsg, e);
+            Map<String, Object> errorPayload = new LinkedHashMap<>();
+            errorPayload.put("title", title);
+            errorPayload.put("description", description);
+            errorPayload.put("startTime", startDateStr);
+            errorPayload.put("location", location);
+            errorPayload.put("error", errMsg);
             messagingTemplate.convertAndSend("/topic/user/" + userId + "/actions", Map.of(
                 "type", "ADD_TO_CALENDAR_REQUEST",
-                "payload", Map.of(
-                    "title", title,
-                    "description", description,
-                    "startTime", startDateStr,
-                    "location", location,
-                    "error", e.getMessage()
-                )
+                "payload", errorPayload
             ));
-            return Map.of("error", true, "message", "Failed to add to calendar: " + e.getMessage());
+            return Map.of("error", true, "message", "Failed to add to calendar: " + errMsg);
+        }
+    }
+    private LocalDateTime parseDateTime(String dateStr) {
+        String clean = dateStr.replace(" ", "T").replace("Z", "");
+        if (clean.contains("T")) {
+            String timePart = clean.substring(clean.indexOf("T") + 1);
+            String datePart = clean.substring(0, clean.indexOf("T"));
+            if (timePart.length() == 5) timePart += ":00";
+            else if (timePart.length() > 8) timePart = timePart.substring(0, 8);
+            
+            return parseDatePart(datePart).atTime(LocalTime.parse(timePart));
+        } else {
+            return parseDatePart(clean).atStartOfDay();
+        }
+    }
+
+    private LocalDate parseDatePart(String datePart) {
+        if (datePart == null || datePart.isBlank()) {
+            throw new IllegalArgumentException("Date is required");
+        }
+        try {
+            if (datePart.contains("-")) {
+                String[] parts = datePart.split("-");
+                if (parts[0].length() == 4) return LocalDate.parse(datePart); // yyyy-MM-dd
+                return LocalDate.parse(datePart, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            }
+            return LocalDate.parse(datePart);
+        } catch (Exception e) {
+            log.warn("Could not parse date '{}', falling back to today", datePart);
+            return LocalDate.now();
         }
     }
 }

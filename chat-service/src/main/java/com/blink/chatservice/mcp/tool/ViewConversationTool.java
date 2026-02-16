@@ -11,10 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -78,13 +76,15 @@ public class ViewConversationTool implements McpTool {
         Set<String> senderIds = messages.stream().map(Message::getSenderId).collect(Collectors.toSet());
         Map<String, Map<String, Object>> userInfoMap = userLookupHelper.getUserInfoBatch(senderIds);
 
-        List<Map<String, Object>> list = messages.stream().map(m -> Map.of(
-            "id", m.getId(),
-            "senderId", m.getSenderId(),
-            "content", m.getBody(),
-            "createdAt", m.getCreatedAt(),
-            "sender", userInfoMap.getOrDefault(m.getSenderId(), Map.of("id", m.getSenderId(), "displayName", "Unknown"))
-        )).toList();
+        List<Map<String, Object>> list = messages.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", m.getId());
+            map.put("senderId", m.getSenderId());
+            map.put("content", m.getBody());
+            map.put("createdAt", m.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")));
+            map.put("sender", userInfoMap.getOrDefault(m.getSenderId(), Map.of("id", m.getSenderId(), "displayName", "Unknown")));
+            return map;
+        }).collect(Collectors.toList());
 
         return Map.of("messages", list, "count", list.size(), "conversationId", convId);
     }

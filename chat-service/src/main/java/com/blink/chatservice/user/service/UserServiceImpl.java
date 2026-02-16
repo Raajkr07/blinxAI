@@ -71,8 +71,14 @@ public class UserServiceImpl implements UserService {
         validateSignup(email, phone);
         User user = getUserByIdentifier(identifier);
         
-        if (user.getUsername() == null) user.setUsername(username);
-        if (user.getAvatarUrl() == null) user.setAvatarUrl(avatarUrl);
+        if (user.getUsername() == null) {
+            user.setUsername(username);
+            user.setUsernameManual(true);
+        }
+        if (user.getAvatarUrl() == null) {
+            user.setAvatarUrl(avatarUrl);
+            user.setAvatarManual(true);
+        }
         if (user.getBio() == null) user.setBio(bio);
         if (phone != null && user.getPhone() == null) user.setPhone(phone);
         if (email != null && user.getEmail() == null) user.setEmail(email.trim().toLowerCase(Locale.ROOT));
@@ -156,8 +162,12 @@ public class UserServiceImpl implements UserService {
             if (username.contains("java.util.")) throw new IllegalArgumentException("Invalid username");
             checkUsername(username, userId);
             user.setUsername(username.trim());
+            user.setUsernameManual(true);
         }
-        if (avatarUrl != null) user.setAvatarUrl(avatarUrl.isBlank() ? null : avatarUrl.trim());
+        if (avatarUrl != null) {
+            user.setAvatarUrl(avatarUrl.isBlank() ? null : avatarUrl.trim());
+            user.setAvatarManual(true);
+        }
         if (bio != null) user.setBio(bio.isBlank() ? null : bio.trim());
         if (email != null && !email.isBlank()) {
             checkEmail(email, userId);

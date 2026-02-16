@@ -10,8 +10,9 @@ import com.blink.chatservice.mcp.registry.McpToolRegistry;
 import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -24,10 +25,16 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class AiService {
+
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     private final ChatService chatService;
     private final UserRepository userRepository;
@@ -36,6 +43,7 @@ public class AiService {
     private final McpToolRegistry toolRegistry;
     private final McpToolExecutor toolExecutor;
     private final ObjectMapper objectMapper;
+    private final ExecutorService toolExecutorService;
 
     @Value("${ai.api-key:}")
     private String apiKey;
@@ -60,6 +68,24 @@ public class AiService {
         this.toolRegistry = toolRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
+        this.toolExecutorService = Executors.newFixedThreadPool(10, r -> {
+            Thread t = new Thread(r, "ai-tool-exec");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        toolExecutorService.shutdown();
+        try {
+            if (!toolExecutorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                toolExecutorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            toolExecutorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     public Message processAiMessage(String userId, String conversationId, String userMessage, boolean shouldSave) {
@@ -70,8 +96,14 @@ public class AiService {
         }
 
         List<Map<String, Object>> context = buildContext(conversationId, user);
-        String response = executeReasoning(userId, context);
-        
+        String response;
+        try {
+            response = executeReasoning(userId, context);
+        } catch (Exception e) {
+            log.error("AI reasoning failed for user {}: {}", userId, e.getMessage(), e);
+            response = AiConstants.ERROR_AI_API_FAILED;
+        }
+
         return saveMessage(AiConstants.AI_USER_ID, conversationId, response);
     }
 
@@ -79,18 +111,58 @@ public class AiService {
         int iterations = 0;
         while (iterations++ < AiConstants.MAX_TOOL_ITERATIONS) {
             OpenAiResponse response = callApi(messages);
+            if (response == null || response.choices() == null || response.choices().isEmpty()) {
+                log.warn("Empty API response at iteration {}", iterations);
+                return AiConstants.ERROR_AI_API_FAILED;
+            }
+
             OpenAiMessage lastMsg = response.choices().get(0).message();
+            if (lastMsg == null) {
+                return AiConstants.ERROR_AI_API_FAILED;
+            }
 
             if (lastMsg.tool_calls() != null && !lastMsg.tool_calls().isEmpty()) {
-                messages.add(Map.of(
+                // Build new list preserving order
+                List<Map<String, Object>> updatedMessages = new ArrayList<>(messages);
+                updatedMessages.add(Map.of(
                     "role", "assistant",
                     "content", lastMsg.content() != null ? lastMsg.content() : "",
                     "tool_calls", lastMsg.tool_calls()
                 ));
 
-                for (ToolCall call : lastMsg.tool_calls()) {
-                    executeTool(userId, call, messages);
+                // Execute tools in parallel, collect results in order
+                List<CompletableFuture<Map<String, Object>>> futures = lastMsg.tool_calls().stream()
+                    .map(call -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            var execution = toolExecutor.execute(userId, call.function().name(), call.function().arguments());
+                            return Map.<String, Object>of(
+                                "role", "tool",
+                                "tool_call_id", call.id(),
+                                "name", call.function().name(),
+                                "content", execution.toJson(objectMapper)
+                            );
+                        } catch (Exception e) {
+                            log.error("Tool {} execution threw: {}", call.function().name(), e.getMessage());
+                            return Map.<String, Object>of(
+                                "role", "tool",
+                                "tool_call_id", call.id(),
+                                "name", call.function().name(),
+                                "content", "{\"error\":\"Tool execution failed\"}"
+                            );
+                        }
+                    }, toolExecutorService))
+                    .toList();
+
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+                for (var future : futures) {
+                    try {
+                        updatedMessages.add(future.get());
+                    } catch (Exception e) {
+                        log.error("Failed to retrieve tool result: {}", e.getMessage());
+                    }
                 }
+                messages = updatedMessages;
                 continue;
             }
 
@@ -98,17 +170,7 @@ public class AiService {
                 return lastMsg.content();
             }
         }
-        return "I'm sorry, I couldn't complete that request.";
-    }
-
-    private void executeTool(String userId, ToolCall call, List<Map<String, Object>> messages) {
-        var execution = toolExecutor.execute(userId, call.function().name(), call.function().arguments());
-        messages.add(Map.of(
-            "role", "tool",
-            "tool_call_id", call.id(),
-            "name", call.function().name(),
-            "content", execution.toJson(objectMapper)
-        ));
+        return AiConstants.ERROR_MAX_ITERATIONS;
     }
 
     private OpenAiResponse callApi(List<Map<String, Object>> messages) {
@@ -116,12 +178,13 @@ public class AiService {
         body.put("model", model);
         body.put("messages", messages);
         body.put("max_tokens", AiConstants.DEFAULT_MAX_TOKENS);
-        
+        body.put("temperature", AiConstants.DEFAULT_TEMPERATURE);
+
         List<Map<String, Object>> tools = toolRegistry.all().stream()
-            .map(t -> Map.of("type", "function", "function", Map.of(
+            .map(t -> Map.<String, Object>of("type", "function", "function", Map.of(
                 "name", t.name(), "description", t.description(), "parameters", t.inputSchema()
             ))).toList();
-        
+
         if (!tools.isEmpty()) {
             body.put("tools", tools);
             body.put("tool_choice", "auto");
@@ -131,7 +194,15 @@ public class AiService {
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.postForObject(baseUrl + "/v1/chat/completions", new HttpEntity<>(body, headers), OpenAiResponse.class);
+        try {
+            return restTemplate.postForObject(
+                    baseUrl + "/v1/chat/completions",
+                    new HttpEntity<>(body, headers),
+                    OpenAiResponse.class);
+        } catch (Exception e) {
+            log.error("AI API call failed: {}", e.getMessage());
+            return null;
+        }
     }
 
     private List<Map<String, Object>> buildContext(String conversationId, User user) {
@@ -151,20 +222,19 @@ public class AiService {
     }
 
     private String buildPrompt(User user) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("You are ").append(AiConstants.AI_USER_NAME).append(", a helpful assistant in Blink Chat.\n")
-          .append("User: ").append(user.getUsername()).append(" (ID: ").append(user.getId()).append(")\n")
-          .append("Date: ").append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))).append("\n\n")
-          .append("Capabilities:\n");
-        
-        toolRegistry.all().forEach(t -> sb.append("- ").append(t.name()).append(": ").append(t.description()).append("\n"));
-        
-        sb.append("\nGuidelines:\n")
-          .append("1. Use tools for actions like sending messages or searching and more.\n")
-          .append("2. Be concise and friendly.\n")
-          .append("3. For save_file, ask for confirmation first.\n");
-        
-        return sb.toString();
+        String timestamp = LocalDateTime.now(IST).format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm"));
+        return """
+            You are %s, AI assistant in BlinX Chat.
+            User: %s | Now: %s IST
+
+            Rules:
+            - Concise, proactive, professional. No fluff.
+            - Call tools directly without asking permission.
+            - Infer missing details (default event duration: 1hr). Ask only if essential.
+            - For "What can you do?": list Email, Calendar, Messaging, Intelligence capabilities briefly.
+            - Calendar adds: infer details, confirm with user.
+            - Email sends: call the send_email tool first. The UI will automatically pop up a preview modal for the user to edit/confirm. Do NOT repeat the email content in your chat response.
+            """.formatted(AiConstants.AI_USER_NAME, user.getUsername(), timestamp);
     }
 
     private Message saveMessage(String senderId, String conversationId, String content) {

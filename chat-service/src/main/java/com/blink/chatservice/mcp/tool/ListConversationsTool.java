@@ -7,6 +7,7 @@ import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,7 +48,8 @@ public class ListConversationsTool implements McpTool {
             map.put("id", c.getId());
             map.put("type", c.getType().toString());
             map.put("title", c.getTitle() != null ? c.getTitle() : "Untitled");
-            map.put("lastMessageAt", c.getLastMessageAt());
+            map.put("lastMessageAt", c.getLastMessageAt() != null ? 
+                c.getLastMessageAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm")) : null);
             map.put("preview", c.getLastMessagePreview());
 
             List<Map<String, Object>> participants = c.getParticipants().stream()

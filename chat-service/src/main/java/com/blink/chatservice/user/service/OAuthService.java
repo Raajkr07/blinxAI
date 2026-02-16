@@ -146,20 +146,33 @@ public class OAuthService {
         String picture = userInfo.has("picture") ? userInfo.get("picture").asText() : "";
 
         User user = userRepository.findByEmail(email).orElse(null);
+        boolean isNewUser = false;
         if (user == null) {
             user = new User();
             user.setEmail(email);
-            user.setUsername(name.replaceAll("\\s+", "").toLowerCase() + UUID.randomUUID().toString().substring(0, 4));
             user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+            isNewUser = true;
         }
         
-        // Sync Latest Profile Info & Status
-        if (name != null && !name.isBlank()) {
-            user.setUsername(name);
+        // 1. Username protection
+        if (!user.isUsernameManual()) {
+            boolean currentUsernameBlank = user.getUsername() == null || user.getUsername().isBlank();
+            if (currentUsernameBlank && name != null && !name.isBlank()) {
+                user.setUsername(name.trim());
+            } else if (isNewUser && currentUsernameBlank) {
+                // Generate a unique fallback if Google provides no name
+                user.setUsername("user_" + UUID.randomUUID().toString().substring(0, 8));
+            }
         }
-        if (picture != null && !picture.isBlank()) {
-            user.setAvatarUrl(picture);
+
+        // 2. Avatar protection
+        if (!user.isAvatarManual()) {
+            boolean currentAvatarBlank = user.getAvatarUrl() == null || user.getAvatarUrl().isBlank();
+            if (currentAvatarBlank && picture != null && !picture.isBlank()) {
+                user.setAvatarUrl(picture.trim());
+            }
         }
+
         user.setOnline(true);
         user.setLastSeen(LocalDateTime.now(ZoneId.of("UTC")));
         user = userRepository.save(user);

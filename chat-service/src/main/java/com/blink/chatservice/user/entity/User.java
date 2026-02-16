@@ -33,6 +33,8 @@ public class User implements Serializable {
     private String username;
     private String avatarUrl;
     private String bio;
+    private boolean avatarManual = false;
+    private boolean usernameManual = false;
     private boolean online = false;
     private LocalDateTime lastSeen;
     private Set<String> devices = new HashSet<>();
