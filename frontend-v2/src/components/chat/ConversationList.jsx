@@ -284,6 +284,7 @@ export function ConversationList() {
 function ConversationItem({ conversation, currentUser, userMap, isActive, hasTab, onClick }) {
     const isGroup = conversation.type === 'GROUP' || conversation.type === 'COMMUNITY';
     const isAI = conversation.type === 'AI_ASSISTANT';
+    const { isSidebarCollapsed } = useUIStore();
 
     let displayTitle = conversation.title;
     let displayAvatar = conversation.avatarUrl;
@@ -311,6 +312,39 @@ function ConversationItem({ conversation, currentUser, userMap, isActive, hasTab
     }
 
     displayTitle = displayTitle || 'Chat';
+
+    // Collapsed: avatar is centered
+    if (isSidebarCollapsed) {
+        return (
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={onClick}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onClick(e);
+                    }
+                }}
+                className={cn(
+                    'w-full py-2 flex items-center justify-center cursor-pointer outline-none',
+                    'hover:bg-[var(--color-border)] transition-colors relative',
+                    isActive && 'bg-[var(--color-border)]'
+                )}
+                title={displayTitle}
+            >
+                {isActive && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[var(--color-foreground)] rounded-r" />
+                )}
+                <Avatar
+                    src={displayAvatar}
+                    name={displayTitle}
+                    size="sm"
+                    online={false}
+                />
+            </div>
+        );
+    }
 
     return (
         <div

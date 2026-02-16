@@ -96,7 +96,7 @@ const ChatPage = () => {
                 sub.unsubscribe();
             }
         };
-    }, [user?.id]);
+    }, [user?.id, openModal]);
 
     const activeTab = getActiveTab();
     const displayConversationId = activeTab?.conversationId || activeConversationId;
@@ -111,10 +111,11 @@ const ChatPage = () => {
                         <SidebarHeader>
                             <div
                                 className={cn(
-                                    "flex items-center gap-3 flex-1 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors",
-                                    isSidebarCollapsed && "justify-center px-0"
+                                    "flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-lg transition-colors",
+                                    isSidebarCollapsed ? "justify-center p-1" : "flex-1 p-2"
                                 )}
                                 onClick={() => setShowSettingsModal(true)}
+                                title={isSidebarCollapsed ? user?.username : undefined}
                             >
                                 <Avatar src={user?.avatarUrl} name={user?.username} size="sm" online />
                                 {!isSidebarCollapsed && (
@@ -125,20 +126,29 @@ const ChatPage = () => {
                                 )}
                             </div>
 
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={toggleCallsView}
-                                className={cn(activeView === 'calls' && "bg-blue-500/10 text-blue-500")}
-                            >
-                                {activeView === 'calls' ? <BackIcon /> : <PhoneIcon />}
-                            </Button>
+                            {!isSidebarCollapsed && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={toggleCallsView}
+                                    className={cn(activeView === 'calls' && "bg-blue-500/10 text-blue-500")}
+                                >
+                                    {activeView === 'calls' ? <BackIcon /> : <PhoneIcon />}
+                                </Button>
+                            )}
                         </SidebarHeader>
 
-                        <div className={cn("p-4 border-b border-white/5 space-y-3", isSidebarCollapsed && "px-2")}>
+                        <div className={cn(
+                            "border-b border-white/5 flex flex-col gap-2 transition-all duration-300",
+                            isSidebarCollapsed ? "p-2 items-center" : "p-3"
+                        )}>
                             <SimpleDropdown
                                 trigger={
-                                    <Button variant="default" className="w-full" size={isSidebarCollapsed ? "icon" : "default"}>
+                                    <Button
+                                        variant="default"
+                                        className={cn("transition-all duration-300", isSidebarCollapsed ? "h-9 w-9 p-0" : "w-full h-10")}
+                                        size="sm"
+                                    >
                                         <PlusIcon className={isSidebarCollapsed ? "" : "mr-2"} />
                                         {!isSidebarCollapsed && "New Chat"}
                                     </Button>
@@ -162,19 +172,23 @@ const ChatPage = () => {
                             <ConversationList />
                         </SidebarContent>
 
-                        {!isSidebarCollapsed && <OnlineUsersPanel />}
+                        <OnlineUsersPanel />
 
                         <SidebarFooter>
                             <Button
+                                id="logout-button"
                                 variant="ghost"
-                                size={isSidebarCollapsed ? "icon" : "sm"}
-                                className={cn("justify-start", isSidebarCollapsed && "w-10 h-10")}
+                                className={cn(
+                                    "transition-all duration-300",
+                                    isSidebarCollapsed ? "h-9 w-9 p-0 justify-center" : "w-full h-10 justify-start"
+                                )}
                                 onClick={async () => {
                                     await logout();
                                     toast.success("Signed out");
                                 }}
+                                title={isSidebarCollapsed ? "Logout" : undefined}
                             >
-                                <LogoutIcon className={isSidebarCollapsed ? "" : "mr-2"} />
+                                <LogoutIcon className={cn("transition-all", isSidebarCollapsed ? "" : "mr-2")} />
                                 {!isSidebarCollapsed && "Logout"}
                             </Button>
                         </SidebarFooter>

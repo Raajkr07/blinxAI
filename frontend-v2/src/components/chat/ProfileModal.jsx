@@ -4,7 +4,6 @@ import { chatService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores';
 import { Modal, Avatar, Button, AILogo, Input, ModalFooter } from '../ui';
-import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
 
 export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' }) {
@@ -45,7 +44,6 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
             return await userService.getUsersBatch([...conversation.participants]);
         },
         enabled: isGroup && !!conversation?.participants && isOpen,
-        staleTime: 1000 * 60 * 5,
     });
 
     const { data: searchResults } = useQuery({
@@ -74,18 +72,20 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
 
     const addParticipantMutation = useMutation({
         mutationFn: (participantIds) => chatService.addParticipants(conversationId, participantIds),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
-            queryClient.invalidateQueries({ queryKey: ['group-participants', conversationId] });
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: queryKeys.conversation(conversationId) });
+            await queryClient.refetchQueries({ queryKey: ['group-participants', conversationId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             toast.success('Member added');
         },
     });
 
     const removeParticipantMutation = useMutation({
         mutationFn: (userId) => chatService.removeParticipant(conversationId, userId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
-            queryClient.invalidateQueries({ queryKey: ['group-participants', conversationId] });
+        onSuccess: async () => {
+            await queryClient.refetchQueries({ queryKey: queryKeys.conversation(conversationId) });
+            await queryClient.refetchQueries({ queryKey: ['group-participants', conversationId] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
             toast.success('Member removed');
         },
     });

@@ -6,7 +6,7 @@ export const useUIStore = create((set) => ({
     isSidebarOpen: true,
     sidebarWidth: 320,
     setSidebarWidth: (width) => set({ sidebarWidth: width }),
-    isSidebarCollapsed: false,
+    isSidebarCollapsed: storage.get(STORAGE_KEYS.SIDEBAR_COLLAPSED) || false,
 
     onlinePanelHeight: storage.get(STORAGE_KEYS.ONLINE_PANEL_HEIGHT) || 200,
     setOnlinePanelHeight: (height) => {
@@ -51,7 +51,9 @@ export const useUIStore = create((set) => ({
         if (state.isMobile) {
             return { isSidebarOpen: !state.isSidebarOpen };
         }
-        return { isSidebarCollapsed: !state.isSidebarCollapsed };
+        const newValue = !state.isSidebarCollapsed;
+        storage.set(STORAGE_KEYS.SIDEBAR_COLLAPSED, newValue);
+        return { isSidebarCollapsed: newValue };
     }),
 
     openModal: (modalName, data = null) =>

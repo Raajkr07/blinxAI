@@ -166,7 +166,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-[var(--color-foreground)]">Connected</p>
+                                        <p className="text-xs font-semibold text-[var(--color-foreground)]">Google</p>
                                         <p className="text-[10px] text-[var(--color-gray-500)]">Used for email & calendar</p>
                                     </div>
                                 </div>

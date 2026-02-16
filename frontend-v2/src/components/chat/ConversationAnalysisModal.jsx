@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { aiService } from '../../services';
 import { Modal, ModalFooter, Button, AILogo } from '../ui';
 import { cn } from '../../lib/utils';
@@ -8,6 +8,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 export function ConversationAnalysisModal({ open, onOpenChange, conversationId }) {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [activeTab, setActiveTab] = useState('summary');
+    const queryClient = useQueryClient();
 
     const { data: analysis, isLoading, refetch } = useQuery({
         queryKey: ['conversationAnalysis', conversationId],
@@ -15,15 +16,9 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
         enabled: false,
     });
 
-    const { data: taskData, isLoading: isExtractingTasks, refetch: refetchTasks } = useQuery({
+    const { data: taskData, isLoading: isExtractingTasks } = useQuery({
         queryKey: ['conversationTasks', conversationId],
-        queryFn: async () => {
-            const summaryText = analysis?.summary || '';
-            const keyPointsText = (analysis?.key_points || []).join('. ');
-            const fullText = `${summaryText} ${keyPointsText}`.trim();
-            if (!fullText) return null;
-            return aiService.extractTask(fullText);
-        },
+        queryFn: () => null, // placeholder — actual fetch is done via fetchQuery below
         enabled: false,
     });
 
@@ -31,8 +26,19 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
         setIsAnalyzing(true);
         try {
             const result = await refetch();
-            if (result.data) {
-                await refetchTasks();
+            const analysisData = result.data;
+            if (analysisData) {
+                // Build the text from the freshly-fetched data 
+                const summaryText = analysisData.summary || '';
+                const keyPointsText = (analysisData.key_points || []).join('. ');
+                const fullText = `${summaryText} ${keyPointsText}`.trim();
+                if (fullText) {
+                    await queryClient.fetchQuery({
+                        queryKey: ['conversationTasks', conversationId],
+                        queryFn: () => aiService.extractTask(fullText),
+                        staleTime: 0,
+                    });
+                }
             }
         } finally {
             setIsAnalyzing(false);

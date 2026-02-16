@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
     AI_SUGGESTIONS: 'blink_ai_suggestions',
     ONLINE_PANEL_HEIGHT: 'blink_online_panel_height',
     ONLINE_PANEL_OPEN: 'blink_online_panel_open',
+    SIDEBAR_COLLAPSED: 'blink_sidebar_collapsed',
 };
 
 class Storage {

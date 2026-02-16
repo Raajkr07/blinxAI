@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { aiService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
-import { useChatStore, useTabsStore, useUIStore } from '../../stores';
+import { useChatStore, useTabsStore } from '../../stores';
 import { Modal, Button, AILogo } from '../ui';
 import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 export function AIAssistantButton({ compact }) {
     const { setActiveConversation } = useChatStore();
     const { openTab } = useTabsStore();
-    const { openModal } = useUIStore();
     const [showCapabilities, setShowCapabilities] = useState(false);
 
     const { data: aiConversation, isLoading } = useQuery({
@@ -70,10 +69,8 @@ export function AIAssistantButton({ compact }) {
                 onContextMenu={handleContextMenu}
                 disabled={isLoading || !aiConversation}
                 className={cn(
-                    'justify-start',
-                    'hover-glow',
-                    'h-12',
-                    compact ? 'w-10 justify-center' : 'w-full'
+                    'transition-all duration-300 overflow-hidden',
+                    compact ? 'h-9 w-9 justify-center px-0' : 'w-full h-10 justify-start'
                 )}
                 title="AI Assistant (right-click for capabilities)"
             >
