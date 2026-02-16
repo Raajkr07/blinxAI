@@ -83,8 +83,8 @@ export const chatService = {
         return data;
     },
 
-    sendEmail: async (to, subject, body) => {
-        const { data } = await apiClient.post('/api/v1/chat/send-email', { to, subject, body });
+    sendEmail: async (to, subject, body, conversationId) => {
+        const { data } = await apiClient.post('/api/v1/chat/send-email', { to, subject, body, conversationId });
         return data;
     }
 };

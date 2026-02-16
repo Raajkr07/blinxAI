@@ -16,6 +16,12 @@ export const userService = {
         return data;
     },
 
+    getUsersBatch: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data } = await apiClient.post('/api/v1/users/batch', { ids });
+        return data;
+    },
+
     searchUsers: async (query) => {
         const { data } = await apiClient.get('/api/v1/users/search', { params: { query } });
         return data;

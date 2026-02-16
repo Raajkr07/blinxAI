@@ -6,6 +6,21 @@ export const useUIStore = create((set) => ({
     isSidebarOpen: true,
     sidebarWidth: 320,
     setSidebarWidth: (width) => set({ sidebarWidth: width }),
+    isSidebarCollapsed: false,
+
+    onlinePanelHeight: storage.get(STORAGE_KEYS.ONLINE_PANEL_HEIGHT) || 200,
+    setOnlinePanelHeight: (height) => {
+        storage.set(STORAGE_KEYS.ONLINE_PANEL_HEIGHT, height);
+        set({ onlinePanelHeight: height });
+    },
+    isOnlinePanelOpen: storage.get(STORAGE_KEYS.ONLINE_PANEL_OPEN) !== null
+        ? storage.get(STORAGE_KEYS.ONLINE_PANEL_OPEN)
+        : false,
+    toggleOnlinePanel: () => set((state) => {
+        const newValue = !state.isOnlinePanelOpen;
+        storage.set(STORAGE_KEYS.ONLINE_PANEL_OPEN, newValue);
+        return { isOnlinePanelOpen: newValue };
+    }),
 
     activeModal: null,
     modalData: null,

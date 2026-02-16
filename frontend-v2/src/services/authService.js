@@ -1,8 +1,8 @@
 import apiClient from './client';
 
 export const authService = {
-    requestOtp: async (identifier, email) => {
-        const { data } = await apiClient.post('/api/v1/auth/request-otp', { identifier, email });
+    requestOtp: async (identifier) => {
+        const { data } = await apiClient.post('/api/v1/auth/request-otp', { identifier });
         return data;
     },
 
@@ -50,6 +50,16 @@ export const authService = {
 
     logoutGoogle: async () => {
         const { data } = await apiClient.post('/api/v1/auth/google/logout');
+        return data;
+    },
+
+    refreshGoogleToken: async () => {
+        const { data } = await apiClient.post('/api/v1/auth/google/refresh');
+        return data;
+    },
+
+    revokeGoogleAccess: async () => {
+        const { data } = await apiClient.post('/api/v1/auth/google/revoke');
         return data;
     }
 };

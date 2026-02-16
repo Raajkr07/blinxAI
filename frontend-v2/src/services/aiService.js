@@ -34,5 +34,10 @@ export const aiService = {
     simulateTyping: async (text) => {
         const { data } = await apiClient.post('/api/v1/ai/analysis/typing-indicator', { text });
         return data;
+    },
+
+    getCapabilities: async () => {
+        const { data } = await apiClient.get('/api/v1/ai/capabilities');
+        return data;
     }
 };

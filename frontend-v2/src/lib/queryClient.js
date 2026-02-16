@@ -44,4 +44,5 @@ export const queryKeys = {
 
     calls: ['calls'],
     call: (callId) => ['call', callId],
+    callHistory: (params) => ['callHistory', params],
 };

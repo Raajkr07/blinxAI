@@ -48,15 +48,17 @@ apiClient.interceptors.response.use(
         const originalRequest = error.config;
         const isAuthError = error.response?.status === 401 || error.response?.status === 403;
 
+        const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        if (!refreshToken || originalRequest.url.includes('/session')) {
+            throw error; // No refresh token or it's the session check, just fail
+        }
+
         if (isAuthError && !originalRequest._retry) {
             originalRequest._retry = true;
             try {
-                const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-                const payload = refreshToken ? { refreshToken } : {};
-
                 const { data } = await axios.post(
                     `${env.API_BASE_URL}/api/v1/auth/refresh`,
-                    payload,
+                    { refreshToken },
                     { withCredentials: true }
                 );
 

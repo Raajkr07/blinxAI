@@ -24,7 +24,10 @@ export function formatRelativeTime(date) {
     if (diffDay === 1) return 'Yesterday';
     if (diffDay < 7) return `${diffDay}d ago`;
 
-    return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const day = String(then.getDate()).padStart(2, '0');
+    const month = String(then.getMonth() + 1).padStart(2, '0');
+    const year = then.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 export function formatTime(date) {
@@ -32,11 +35,8 @@ export function formatTime(date) {
     const dateStr = typeof date === 'string' && !date.endsWith('Z') && !date.includes('+') ? `${date}Z` : date;
     const d = new Date(dateStr);
 
-    return d.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: 'numeric',
+    return d.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
         minute: '2-digit',
         hour12: true
     });

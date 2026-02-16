@@ -52,9 +52,28 @@ export const useAuthStore = create((set, get) => ({
     },
 
     checkSession: async () => {
-        set({ isLoading: true });
+        const { user: localUser, accessToken: localToken } = get();
+
+        if (localUser && localToken) {
+            set({ isAuthenticated: true, isLoading: false });
+            return true;
+        }
+
+        // NEW USER OPTIMIZATION: If no local profile exists, don't show the loading screen
+        if (!localUser) {
+            set({ isLoading: false });
+        } else {
+            set({ isLoading: true });
+        }
+
         try {
-            const { user, accessToken } = await authService.getGoogleSession();
+            const sessionPromise = authService.getGoogleSession();
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Session check timeout')), 10000)
+            );
+
+            const { user, accessToken } = await Promise.race([sessionPromise, timeoutPromise]);
+
             if (user && user.id) {
                 storage.set(STORAGE_KEYS.USER, user);
                 if (accessToken) {
@@ -63,8 +82,12 @@ export const useAuthStore = create((set, get) => ({
                 set({ user, accessToken, isAuthenticated: true, error: null });
                 return true;
             }
-        } catch {
-            set({ isAuthenticated: false, user: null, accessToken: null });
+        } catch (error) {
+            console.warn('Session initialization fallback:', error.message);
+            // If network fails or timeouts, we still stay on the auth page (or uses local if present)
+            if (!localToken) {
+                set({ isAuthenticated: false, user: null, accessToken: null });
+            }
         } finally {
             set({ isLoading: false });
         }
