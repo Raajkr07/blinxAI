@@ -1,1 +1,10 @@
 R:\chat-service\k8s\backend\secret.yaml
+frontend-v2/coverage/
+frontend-v2/node_modules/
+frontend-v2/dist/
+chat-service/target/
+__pycache__/
+*.pyc
+*.png
+test_output.txt
+page_dump.html

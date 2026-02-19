@@ -45,3 +45,6 @@ npm-debug.log*
 
 # ESLint cache
 .eslintcache
+
+# Coverage
+coverage/
