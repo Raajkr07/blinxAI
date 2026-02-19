@@ -226,7 +226,7 @@ I actually built two different frontend implementations to explore different app
 - **AWS Load Balancer** - Traffic management
 - **MongoDB** - Document database for flexible data models
 - **Redis** - In-memory store for performance-critical features
-- **GitHub Actions** && **ArgoCD** - CI/CD pipelines
+- **GitHub Actions** & **ArgoCD** - CI/CD pipelines
 
 ## 📡 API & Documentation
 
