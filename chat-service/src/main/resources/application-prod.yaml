@@ -9,6 +9,12 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:16}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${REDIS_POOL_MIN_IDLE:2}
+          max-wait: ${REDIS_POOL_MAX_WAIT:2000ms}
 
   mail:
     brevo:
@@ -17,6 +23,15 @@ spring:
     sender:
       email: ${BREVO_SENDER_EMAIL}
       name: ${BREVO_SENDER_NAME:Blink}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 springdoc:
   api-docs:

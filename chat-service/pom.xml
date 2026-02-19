@@ -66,6 +66,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Actuator for Health Checks & Metrics -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- MongoDB (driver managed by Spring Boot) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
