@@ -4,13 +4,19 @@ spring:
 
   data:
     mongodb:
-      # Here write container/service name instead of localhost inside Docker.
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/blink_chat}
-      # example for Docker Compose: SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/blink_chat
+      # Connection pool tuned via URI parameters
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/blink_chat?minPoolSize=10&maxPoolSize=100}
+      auto-index-creation: false # Best practice for production
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
+      lettuce:
+        pool:
+          max-active: ${SPRING_DATA_REDIS_POOL_MAX_ACTIVE:8}
+          max-idle: ${SPRING_DATA_REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${SPRING_DATA_REDIS_POOL_MIN_IDLE:0}
+          max-wait: ${SPRING_DATA_REDIS_POOL_MAX_WAIT:-1ms}
 
   mail:
     brevo:
@@ -30,6 +36,12 @@ server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
+  # Tomcat embedded server tuning
+  tomcat:
+    threads:
+      max: ${SERVER_TOMCAT_MAX_THREADS:200}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:10}
+    connection-timeout: ${SERVER_TOMCAT_CONNECTION_TIMEOUT:20000ms}
 
 jwt:
   secret: ${JWT_SECRET:2e804WBYw6Ke/fBUrvcmS9CHUeZK9uLzUw1A4qbh8vY=}
