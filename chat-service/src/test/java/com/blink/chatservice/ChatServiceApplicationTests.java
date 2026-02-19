@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoCo
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -63,6 +64,9 @@ class ChatServiceApplicationTests {
 
 	@MockBean(name = "aiRestTemplate")
 	private RestTemplate aiRestTemplate;
+
+	@MockBean
+	private MongoTemplate mongoTemplate;
 
 	@Test
 	void contextLoads() {
