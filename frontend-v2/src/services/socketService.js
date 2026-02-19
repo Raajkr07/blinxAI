@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import { useSocketStore } from '../stores/socketStore';
 
 class SocketService {
     constructor() {
@@ -73,6 +74,7 @@ class SocketService {
 
                 onConnect: () => {
                     this.connected = true;
+                    useSocketStore.getState().setConnected(true);
                     this._reconnectAttempts = 0;
                     this._clearReconnectTimer();
 
@@ -84,6 +86,7 @@ class SocketService {
 
                 onDisconnect: () => {
                     this.connected = false;
+                    useSocketStore.getState().setConnected(false);
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
                         this._scheduleReconnect();
@@ -92,6 +95,7 @@ class SocketService {
 
                 onStompError: (frame) => {
                     this.connected = false;
+                    useSocketStore.getState().setConnected(false);
                     this.connectionPromise = null;
                     reject(frame);
                     if (!this._intentionalDisconnect) {
@@ -101,6 +105,7 @@ class SocketService {
 
                 onWebSocketClose: () => {
                     this.connected = false;
+                    useSocketStore.getState().setConnected(false);
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
                         this._scheduleReconnect();
@@ -127,6 +132,7 @@ class SocketService {
             this.client = null;
         }
         this.connected = false;
+        useSocketStore.getState().setConnected(false);
         this.connectionPromise = null;
     }
 

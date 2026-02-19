@@ -12,6 +12,7 @@ build/
 .DS_Store
 Thumbs.db
 .git/
+.github/
 .gitignore
 **/Dockerfile*
 **/docker-compose*
@@ -21,3 +22,6 @@ mvnw
 mvnw.cmd
 .mvn/
 src/test/
+k8s/
+ss/
+frontend-v1/

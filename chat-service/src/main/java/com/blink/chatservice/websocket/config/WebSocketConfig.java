@@ -2,6 +2,7 @@ package com.blink.chatservice.websocket.config;
 
 import com.blink.chatservice.websocket.WebSocketAuthChannelInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,11 +15,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
 
+    @Value("${app.cors.allowed-origins:*}")
+    private String[] allowedOrigins;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                // Allowing all origins for dev simplicity, but should be restricted in Prod.
-                .setAllowedOriginPatterns("*")
+                // Allowing configured origins
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
     }
 

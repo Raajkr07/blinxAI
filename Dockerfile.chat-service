@@ -2,14 +2,33 @@ FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
+# Copy everything to a temporary location to inspect what we have
 COPY . /tmp/src
-RUN if [ -f /tmp/src/chat-service/pom.xml ]; then \
-        cp -r /tmp/src/chat-service/* . && \
+
+RUN if [ -f /tmp/src/app.jar ]; then \
+        # Case A: CI pipeline provided a pre-built JAR
+        cp /tmp/src/app.jar /tmp/app.jar ; \
+    elif [ -f /tmp/src/chat-service/pom.xml ]; then \
+        # Case B: Building from source (monorepo root context)
+        # Optimization: Copy pom.xml first to cache dependencies
+        cp /tmp/src/chat-service/pom.xml . && \
         mvn dependency:go-offline -B && \
+        # Then copy source and build
+        cp -r /tmp/src/chat-service/src ./src && \
         mvn clean package -DskipTests -B && \
         cp target/*.jar /tmp/app.jar ; \
-    elif [ -f /tmp/src/app.jar ]; then \
-        cp /tmp/src/app.jar /tmp/app.jar ; \
+    elif [ -f /tmp/src/pom.xml ]; then \
+        # Case C: Building from source (chat-service dir context)
+        cp /tmp/src/pom.xml . && \
+        mvn dependency:go-offline -B && \
+        cp -r /tmp/src/src ./src && \
+        mvn clean package -DskipTests -B && \
+        cp target/*.jar /tmp/app.jar ; \
+    else \
+        # Fallback to original logic if structure is unexpected but try to build
+        if [ -d /tmp/src/chat-service ]; then cp -r /tmp/src/chat-service/* .; else cp -r /tmp/src/* .; fi && \
+        mvn clean package -DskipTests -B && \
+        cp target/*.jar /tmp/app.jar ; \
     fi
 
 # ── Stage 2: Runtime ────────────────────────────────────────
@@ -28,6 +47,9 @@ RUN chown appuser:appuser app.jar
 USER appuser
 
 EXPOSE 8080
+
+# Tuned JVM options for container environment
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/actuator/health || exit 1

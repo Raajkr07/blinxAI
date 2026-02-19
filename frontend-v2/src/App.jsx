@@ -1,10 +1,24 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAuthStore, useUIStore, useCallStore } from './stores';
 import { socketService } from './services';
-import { AuthPage, ChatPage, PrivacyPolicy, TermsOfService, DataDeletion } from './pages';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
 import { usePresence } from './lib/usePresence';
-import NetworkStatus from './components/NetworkStatus';
+import { ConnectionStatus } from './components/ConnectionStatus';
+
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const PrivacyPolicy = lazy(() => import('./pages/verification/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/verification/TermsOfService'));
+const DataDeletion = lazy(() => import('./pages/verification/DataDeletion'));
+
+const Loading = () => (
+  <div className="flex h-screen items-center justify-center bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
+      <p className="text-gray-400 text-sm animate-pulse">Initializing session...</p>
+    </div>
+  </div>
+);
 
 const App = () => {
   // 1. Initialize all state hooks
@@ -71,40 +85,22 @@ const App = () => {
 
   // 4. Render Hierarchy
 
-  // Helper to render content based on state
-  const renderContent = () => {
-    // Public verification pages take precedence
-    if (isPrivacy) return <PrivacyPolicy />;
-    if (isTerms) return <TermsOfService />;
-    if (isDeletion) return <DataDeletion />;
-
-    if (isLoading) {
-      return (
-        <div className="flex h-screen items-center justify-center bg-[var(--color-background)] text-[var(--color-foreground)]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
-            <p className="text-gray-400 text-sm animate-pulse">Initializing session...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (!isAuthenticated) return <AuthPage />;
-
-    return (
-      <>
-        {hasIncomingCall() && <IncomingCallDialog />}
-        {hasActiveCall() && <ActiveCallInterface />}
-        {!hasActiveCall() && <ChatPage />}
-      </>
-    );
-  };
-
   return (
-    <>
-      <NetworkStatus />
-      {renderContent()}
-    </>
+    <Suspense fallback={<Loading />}>
+      <ConnectionStatus />
+      {isPrivacy ? <PrivacyPolicy /> :
+       isTerms ? <TermsOfService /> :
+       isDeletion ? <DataDeletion /> :
+       isLoading ? <Loading /> :
+       !isAuthenticated ? <AuthPage /> :
+       (
+         <>
+            {hasIncomingCall() && <IncomingCallDialog />}
+            {hasActiveCall() && <ActiveCallInterface />}
+            {!hasActiveCall() && <ChatPage />}
+         </>
+       )}
+    </Suspense>
   );
 };
 
