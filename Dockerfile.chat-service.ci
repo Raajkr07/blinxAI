@@ -1,0 +1,25 @@
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Create non-root user
+RUN addgroup -S appuser && adduser -S appuser -G appuser
+
+# Copy jar from build context
+COPY app.jar app.jar
+
+# Set ownership
+RUN chown appuser:appuser app.jar
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
