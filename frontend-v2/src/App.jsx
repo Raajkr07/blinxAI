@@ -87,19 +87,19 @@ const App = () => {
 
   return (
     <Suspense fallback={<Loading />}>
-      <ConnectionStatus />
       {isPrivacy ? <PrivacyPolicy /> :
-       isTerms ? <TermsOfService /> :
-       isDeletion ? <DataDeletion /> :
-       isLoading ? <Loading /> :
-       !isAuthenticated ? <AuthPage /> :
-       (
-         <>
-            {hasIncomingCall() && <IncomingCallDialog />}
-            {hasActiveCall() && <ActiveCallInterface />}
-            {!hasActiveCall() && <ChatPage />}
-         </>
-       )}
+        isTerms ? <TermsOfService /> :
+          isDeletion ? <DataDeletion /> :
+            isLoading ? <Loading /> :
+              !isAuthenticated ? <AuthPage /> :
+                (
+                  <>
+                    <ConnectionStatus />
+                    {hasIncomingCall() && <IncomingCallDialog />}
+                    {hasActiveCall() && <ActiveCallInterface />}
+                    {!hasActiveCall() && <ChatPage />}
+                  </>
+                )}
     </Suspense>
   );
 };
