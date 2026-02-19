@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { BlinkingFace } from '../BlinkingFace';
+import { env } from '../../config/env';
 
 const TermsOfService = () => {
     return (
@@ -20,8 +21,8 @@ const TermsOfService = () => {
                     <BlinkingFace className="w-20 h-20 mb-6" />
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Terms of Service</h1>
                     <div className="h-1 w-24 bg-purple-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blinx AI Assistant - Educational Project</p>
-                    <p className="text-xs text-slate-600">Site: <span className="text-purple-500/70">blinx-app.netlify.app</span></p>
+                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">{env.APP_NAME} - Educational Project</p>
+                    <p className="text-xs text-slate-600">Site: <span className="text-purple-500/70">{env.APP_DOMAIN}</span></p>
                 </div>
 
                 <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
@@ -88,7 +89,7 @@ const TermsOfService = () => {
                 </div>
 
                 <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    Blinx AI Assistant - Educational Project • rk8210032@gmail.com
+                    {env.APP_NAME} - Educational Project • {env.CONTACT_EMAIL}
                 </p>
             </Motion.div>
         </div>

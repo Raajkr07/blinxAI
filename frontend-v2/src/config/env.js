@@ -13,6 +13,11 @@ export const env = {
     ENV: import.meta.env.MODE || 'development',
     IS_DEV: import.meta.env.DEV,
     IS_PROD: import.meta.env.PROD,
+
+    // App Identity
+    APP_NAME: 'Blinx AI Assistant',
+    APP_DOMAIN: import.meta.env.VITE_APP_DOMAIN || 'blinx-app.netlify.app', // Update this to custom domain, after purchas
+    CONTACT_EMAIL: 'rk8210032@gmail.com',
 };
 
 export const getApiUrl = (path) => {

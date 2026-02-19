@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { BlinkingFace } from '../BlinkingFace';
+import { env } from '../../config/env';
 
 const PrivacyPolicy = () => {
     return (
@@ -20,8 +21,8 @@ const PrivacyPolicy = () => {
                     <BlinkingFace className="w-20 h-20 mb-6" />
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Privacy Policy</h1>
                     <div className="h-1 w-24 bg-blue-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Blinx AI Assistant - Educational Project</p>
-                    <p className="text-xs text-slate-600">Hosted at: <span className="text-blue-500/70">blinx-app.netlify.app</span></p>
+                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">{env.APP_NAME} - Educational Project</p>
+                    <p className="text-xs text-slate-600">Hosted at: <span className="text-blue-500/70">{env.APP_DOMAIN}</span></p>
                 </div>
 
                 <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
@@ -114,7 +115,7 @@ const PrivacyPolicy = () => {
                             </li>
                             <li className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm">
                                 <strong className="text-white block mb-1">Data Deletion</strong>
-                                Request account wipe via <span className="text-blue-400 font-mono">rk8210032@gmail.com</span>.
+                                Request account wipe via <span className="text-blue-400 font-mono">{env.CONTACT_EMAIL}</span>.
                             </li>
                         </ul>
                     </section>
@@ -131,7 +132,7 @@ const PrivacyPolicy = () => {
                 </div>
 
                 <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    Blinx AI Assistant is a student-led educational initiative • rk8210032@gmail.com
+                    {env.APP_NAME} is a student-led educational initiative • {env.CONTACT_EMAIL}
                 </p>
             </Motion.div>
         </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { BlinkingFace } from '../BlinkingFace';
+import { env } from '../../config/env';
 
 const DataDeletion = () => {
     return (
@@ -21,7 +22,7 @@ const DataDeletion = () => {
                     <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Data Deletion</h1>
                     <div className="h-1 w-24 bg-rose-500/50 rounded-full mt-6 mb-4" />
                     <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Privacy & Security Control</p>
-                    <p className="text-xs text-slate-600">Blinx AI Assistant (blinx-app.netlify.app)</p>
+                    <p className="text-xs text-slate-600">{env.APP_NAME} ({env.APP_DOMAIN})</p>
                 </div>
 
                 <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
@@ -57,7 +58,7 @@ const DataDeletion = () => {
                             <p className="text-sm text-slate-400 mb-6">To permanently delete your Blinx AI Assistant account and all associated temporary metadata, contact us.</p>
                             <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 transition-colors">
                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Direct Support Email</p>
-                                <p className="text-sm font-mono text-white select-all">rk8210032@gmail.com</p>
+                                <p className="text-sm font-mono text-white select-all">{env.CONTACT_EMAIL}</p>
                             </div>
                         </section>
                     </div>
