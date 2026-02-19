@@ -65,6 +65,8 @@ class ChatServiceApplicationTests {
 	@MockBean(name = "aiRestTemplate")
 	private RestTemplate aiRestTemplate;
 
+	// Mocking MongoTemplate is required because HealthCheckController dependency
+	// relies on it, but Mongo auto-configuration is excluded in this test slice.
 	@MockBean
 	private MongoTemplate mongoTemplate;
 
