@@ -82,7 +82,7 @@ class ChatServiceImplTest {
         assertNotNull(result);
         assertEquals("Hello", result.getBody());
         verify(messageRepository).save(any(Message.class));
-        verify(messagingTemplate, atLeastOnce()).convertAndSend(anyString(), any(Object.class));
+        verify(messagingTemplate, timeout(1000).atLeastOnce()).convertAndSend(anyString(), any(Object.class));
     }
 
     @Test
