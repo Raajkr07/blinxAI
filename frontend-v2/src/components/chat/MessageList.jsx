@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState, useLayoutEffect, useCallback } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect, useCallback, useMemo, memo } from 'react';
 import { chatService, socketService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
@@ -43,7 +43,7 @@ function getDateKey(dateString) {
 }
 
 // ─── Date separator component ────────────────────────────────────────
-function DateSeparator({ label }) {
+const DateSeparator = memo(function DateSeparator({ label }) {
     return (
         <div className="flex items-center justify-center my-4 select-none pointer-events-none">
             <div className="flex items-center gap-3 w-full max-w-xs">
@@ -55,7 +55,7 @@ function DateSeparator({ label }) {
             </div>
         </div>
     );
-}
+});
 
 // ─── Main component ──────────────────────────────────────────────────
 export function MessageList({ conversationId }) {
@@ -249,53 +249,57 @@ export function MessageList({ conversationId }) {
     };
 
     // Deduplicate history messages by ID
-    const allHistoryMessages = data?.pages.flatMap(parseMessages) || [];
-    const historyMessagesMap = new Map();
-    allHistoryMessages.forEach(rxMsg => {
-        const msg = {
-            ...rxMsg,
-            createdAt: rxMsg.createdAt && !rxMsg.createdAt.endsWith('Z')
-                ? `${rxMsg.createdAt}Z`
-                : rxMsg.createdAt
-        };
-        historyMessagesMap.set(msg.id, msg);
-    });
-    const historyMessages = Array.from(historyMessagesMap.values());
-
-    const optimisticArray = Object.values(optimisticMessages).filter(
-        (msg) => msg.conversationId === conversationId
-    );
-
-    // COMPREHENSIVE DEDUPLICATION
-    const allMessagesMap = new Map();
-    historyMessages.forEach(msg => { allMessagesMap.set(msg.id, msg); });
-
-    const currentLive = liveMessages[conversationId] || [];
-    currentLive.forEach(msg => { allMessagesMap.set(msg.id, msg); });
-
-    optimisticArray.forEach(optMsg => {
-        const isDuplicate = Array.from(allMessagesMap.values()).some(realMsg => {
-            const contentMatch = realMsg.body?.trim() === optMsg.body?.trim();
-            const senderMatch = realMsg.senderId === optMsg.senderId ||
-                (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
-                (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
-            const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
-            const timeMatch = timeDiff < 300000;
-            return contentMatch && senderMatch && timeMatch;
+    const historyMessages = useMemo(() => {
+        const allHistoryMessages = data?.pages.flatMap(parseMessages) || [];
+        const historyMessagesMap = new Map();
+        allHistoryMessages.forEach(rxMsg => {
+            const msg = {
+                ...rxMsg,
+                createdAt: rxMsg.createdAt && !rxMsg.createdAt.endsWith('Z')
+                    ? `${rxMsg.createdAt}Z`
+                    : rxMsg.createdAt
+            };
+            historyMessagesMap.set(msg.id, msg);
         });
-        if (!isDuplicate) {
-            allMessagesMap.set(optMsg.id, optMsg);
-        }
-    });
+        return Array.from(historyMessagesMap.values());
+    }, [data]);
 
-    const sortedMessages = Array.from(allMessagesMap.values()).sort((a, b) => {
-        const isRealA = a.id && /^[0-9a-fA-F]{24}$/.test(a.id);
-        const isRealB = b.id && /^[0-9a-fA-F]{24}$/.test(b.id);
-        if (isRealA && isRealB) {
-            return a.id.localeCompare(b.id);
-        }
-        return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
-    });
+    const sortedMessages = useMemo(() => {
+        const optimisticArray = Object.values(optimisticMessages).filter(
+            (msg) => msg.conversationId === conversationId
+        );
+
+        // COMPREHENSIVE DEDUPLICATION
+        const allMessagesMap = new Map();
+        historyMessages.forEach(msg => { allMessagesMap.set(msg.id, msg); });
+
+        const currentLive = liveMessages[conversationId] || [];
+        currentLive.forEach(msg => { allMessagesMap.set(msg.id, msg); });
+
+        optimisticArray.forEach(optMsg => {
+            const isDuplicate = Array.from(allMessagesMap.values()).some(realMsg => {
+                const contentMatch = realMsg.body?.trim() === optMsg.body?.trim();
+                const senderMatch = realMsg.senderId === optMsg.senderId ||
+                    (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
+                    (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
+                const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
+                const timeMatch = timeDiff < 300000;
+                return contentMatch && senderMatch && timeMatch;
+            });
+            if (!isDuplicate) {
+                allMessagesMap.set(optMsg.id, optMsg);
+            }
+        });
+
+        return Array.from(allMessagesMap.values()).sort((a, b) => {
+            const isRealA = a.id && /^[0-9a-fA-F]{24}$/.test(a.id);
+            const isRealB = b.id && /^[0-9a-fA-F]{24}$/.test(b.id);
+            if (isRealA && isRealB) {
+                return a.id.localeCompare(b.id);
+            }
+            return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
+        });
+    }, [historyMessages, liveMessages, optimisticMessages, conversationId, user?.id]);
 
     // ─── Scroll helpers ──────────────────────────────────────────────
     const isInitialLoadRef = useRef(true);
@@ -588,7 +592,7 @@ function renderMessageWithLinks(text, isOwn) {
 }
 
 // ─── Message bubble ──────────────────────────────────────────────────
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
     message,
     isOwn,
     showAvatar,
@@ -766,4 +770,4 @@ function MessageBubble({
             </div>
         </div>
     );
-}
+});

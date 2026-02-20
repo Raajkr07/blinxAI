@@ -165,10 +165,12 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private void broadcast(Message msg) {
-        var resp = new com.blink.chatservice.websocket.dto.RealtimeMessageResponse(msg.getId(), msg.getConversationId(), msg.getSenderId(), msg.getRecipientId(), msg.getBody(), msg.getCreatedAt());
-        messagingTemplate.convertAndSend("/topic/conversations/" + msg.getConversationId(), resp);
-        if (msg.getRecipientId() != null) messagingTemplate.convertAndSendToUser(msg.getRecipientId(), "/queue/messages", resp);
-        messagingTemplate.convertAndSendToUser(msg.getSenderId(), "/queue/messages", resp);
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            var resp = new com.blink.chatservice.websocket.dto.RealtimeMessageResponse(msg.getId(), msg.getConversationId(), msg.getSenderId(), msg.getRecipientId(), msg.getBody(), msg.getCreatedAt());
+            messagingTemplate.convertAndSend("/topic/conversations/" + msg.getConversationId(), resp);
+            if (msg.getRecipientId() != null) messagingTemplate.convertAndSendToUser(msg.getRecipientId(), "/queue/messages", resp);
+            messagingTemplate.convertAndSendToUser(msg.getSenderId(), "/queue/messages", resp);
+        });
     }
 
     @Override

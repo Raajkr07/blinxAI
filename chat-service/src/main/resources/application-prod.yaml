@@ -13,7 +13,7 @@ spring:
         pool:
           max-active: ${REDIS_POOL_MAX_ACTIVE:16}
           max-idle: ${REDIS_POOL_MAX_IDLE:8}
-          min-idle: ${REDIS_POOL_MIN_IDLE:2}
+          min-idle: ${REDIS_POOL_MIN_IDLE:4}
           max-wait: ${REDIS_POOL_MAX_WAIT:2000ms}
 
   mail:
