@@ -45,11 +45,13 @@ class SocketService {
         if (this.connectionPromise) return this.connectionPromise;
 
         this._intentionalDisconnect = false;
+        useSocketStore.getState().setStatus('connecting');
 
         this.connectionPromise = new Promise((resolve, reject) => {
             const token = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
             if (!token) {
                 this.connectionPromise = null;
+                useSocketStore.getState().setStatus('disconnected');
                 return reject(new Error('No auth token'));
             }
 
@@ -74,7 +76,7 @@ class SocketService {
 
                 onConnect: () => {
                     this.connected = true;
-                    useSocketStore.getState().setConnected(true);
+                    useSocketStore.getState().setStatus('connected');
                     this._reconnectAttempts = 0;
                     this._clearReconnectTimer();
 
@@ -86,7 +88,7 @@ class SocketService {
 
                 onDisconnect: () => {
                     this.connected = false;
-                    useSocketStore.getState().setConnected(false);
+                    useSocketStore.getState().setStatus('disconnected');
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
                         this._scheduleReconnect();
@@ -95,7 +97,7 @@ class SocketService {
 
                 onStompError: (frame) => {
                     this.connected = false;
-                    useSocketStore.getState().setConnected(false);
+                    useSocketStore.getState().setStatus('error');
                     this.connectionPromise = null;
                     reject(frame);
                     if (!this._intentionalDisconnect) {
@@ -105,7 +107,7 @@ class SocketService {
 
                 onWebSocketClose: () => {
                     this.connected = false;
-                    useSocketStore.getState().setConnected(false);
+                    useSocketStore.getState().setStatus('disconnected');
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
                         this._scheduleReconnect();
@@ -132,7 +134,7 @@ class SocketService {
             this.client = null;
         }
         this.connected = false;
-        useSocketStore.getState().setConnected(false);
+        useSocketStore.getState().setStatus('disconnected');
         this.connectionPromise = null;
     }
 
@@ -212,6 +214,7 @@ class SocketService {
         this._reconnectTimer = setTimeout(() => {
             this._reconnectTimer = null;
             if (!this._intentionalDisconnect && !this.connected) {
+                useSocketStore.getState().setStatus('reconnecting');
                 this.connect().catch(() => {
                     // connect() rejection triggers onStompError/onWebSocketClose
                     // which will schedule another reconnect
