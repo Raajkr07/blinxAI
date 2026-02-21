@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: chat-service
-  namespace: blink-chat
+  namespace: blinx-chat
   labels:
     app: chat-service
     version: v1
@@ -146,6 +146,11 @@ spec:
             configMapKeyRef:
               name: chat-service-config
               key: APP_CORS_ALLOWED_ORIGINS
+        - name: APP_FRONTEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chat-service-config
+              key: APP_FRONTEND_URL
         - name: API_SERVER_URL
           valueFrom:
             configMapKeyRef:
@@ -182,6 +187,21 @@ spec:
             configMapKeyRef:
               name: chat-service-config
               key: LOG_FILE_PATH
+        - name: GOOGLE_REDIRECT_URI
+          valueFrom:
+            secretKeyRef:
+              name: chat-service-secret
+              key: GOOGLE_REDIRECT_URI
+        - name: GOOGLE_OAUTH_ENCRYPTION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chat-service-secret
+              key: GOOGLE_OAUTH_ENCRYPTION_PASSWORD
+        - name: GOOGLE_OAUTH_ENCRYPTION_SALT
+          valueFrom:
+            secretKeyRef:
+              name: chat-service-secret
+              key: GOOGLE_OAUTH_ENCRYPTION_SALT
         livenessProbe:
           tcpSocket:
             port: 8080

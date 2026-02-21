@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongodb
-  namespace: blink-chat
+  namespace: blinx-chat
   labels:
     app: mongodb
 spec:
@@ -27,7 +27,7 @@ spec:
         - name: MONGO_INITDB_ROOT_PASSWORD
           value: "password"
         - name: MONGO_INITDB_DATABASE
-          value: "blink_chat"
+          value: "blinx_chat"
         volumeMounts:
         - name: mongo-storage
           mountPath: /data/db
@@ -81,7 +81,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mongo
-  namespace: blink-chat
+  namespace: blinx-chat
   labels:
     app: mongodb
 spec:

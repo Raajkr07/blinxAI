@@ -16,7 +16,7 @@ export const env = {
 
     // App Identity
     APP_NAME: 'Blinx AI Assistant',
-    APP_DOMAIN: import.meta.env.VITE_APP_DOMAIN || 'blinx-app.netlify.app', // Update this to custom domain, after purchas
+    APP_DOMAIN: import.meta.env.VITE_APP_DOMAIN || 'blinxAI.me', // Updated to custom domain blinxAI.me
     CONTACT_EMAIL: 'rk8210032@gmail.com',
 };
 

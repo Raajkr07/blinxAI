@@ -49,18 +49,32 @@ apiClient.interceptors.response.use(
         const isAuthError = error.response?.status === 401 || error.response?.status === 403;
 
         const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-        if (!refreshToken || originalRequest.url.includes('/session')) {
-            throw error; // No refresh token or it's the session check, just fail
-        }
+        const hasSession = !!storage.get(STORAGE_KEYS.USER);
 
-        if (isAuthError && !originalRequest._retry) {
+        // Try to refresh if we have a refresh token OR if we have a session (might be cookie-based OAuth)
+        if (isAuthError && !originalRequest._retry && (refreshToken || hasSession)) {
             originalRequest._retry = true;
             try {
-                const { data } = await axios.post(
-                    `${env.API_BASE_URL}/api/v1/auth/refresh`,
-                    { refreshToken },
-                    { withCredentials: true }
-                );
+                let data;
+                if (refreshToken) {
+                    // Standard JWT refresh
+                    const response = await axios.post(
+                        `${env.API_BASE_URL}/api/v1/auth/refresh`,
+                        { refreshToken },
+                        { withCredentials: true }
+                    );
+                    data = response.data;
+                } else {
+                    // Try Google/OAuth cookie-based refresh
+                    const response = await axios.post(
+                        `${env.API_BASE_URL}/api/v1/auth/google/refresh`,
+                        null,
+                        { withCredentials: true }
+                    );
+                    // For Google refresh, it often just updates cookies and returns 200
+                    // So we may need to call session again if it didn't return data
+                    data = response.data || {};
+                }
 
                 if (data.accessToken) {
                     storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);

@@ -10,6 +10,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage'));
 const PrivacyPolicy = lazy(() => import('./pages/verification/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/verification/TermsOfService'));
 const DataDeletion = lazy(() => import('./pages/verification/DataDeletion'));
+const VerifyPage = lazy(() => import('./pages/verification/VerifyPage'));
 
 const Loading = () => (
   <div className="flex h-screen items-center justify-center bg-[var(--color-background)] text-[var(--color-foreground)]">
@@ -34,7 +35,8 @@ const App = () => {
   const isPrivacy = rawPath === '/privacy-policy';
   const isTerms = rawPath === '/terms';
   const isDeletion = rawPath === '/data-deletion';
-  const isPublicRoute = isPrivacy || isTerms || isDeletion;
+  const isVerify = rawPath === '/verify';
+  const isPublicRoute = isPrivacy || isTerms || isDeletion || isVerify;
 
   // 3. Side Effects
   useEffect(() => {
@@ -59,6 +61,7 @@ const App = () => {
     if (isPrivacy) document.title = 'Privacy Policy | Blinx AI Assistant';
     else if (isTerms) document.title = 'Terms of Service | Blinx AI Assistant';
     else if (isDeletion) document.title = 'Data Deletion | Blinx AI Assistant';
+    else if (isVerify) document.title = 'Verifying Account | Blinx AI Assistant';
     else document.title = 'Blinx AI Assistant | Chat';
   }, [isPrivacy, isTerms, isDeletion]);
 
@@ -90,16 +93,17 @@ const App = () => {
       {isPrivacy ? <PrivacyPolicy /> :
         isTerms ? <TermsOfService /> :
           isDeletion ? <DataDeletion /> :
-            isLoading ? <Loading /> :
-              !isAuthenticated ? <AuthPage /> :
-                (
-                  <>
-                    <ConnectionStatus />
-                    {hasIncomingCall() && <IncomingCallDialog />}
-                    {hasActiveCall() && <ActiveCallInterface />}
-                    {!hasActiveCall() && <ChatPage />}
-                  </>
-                )}
+            isVerify ? <VerifyPage /> :
+              isLoading ? <Loading /> :
+                !isAuthenticated ? <AuthPage /> :
+                  (
+                    <>
+                      <ConnectionStatus />
+                      {hasIncomingCall() && <IncomingCallDialog />}
+                      {hasActiveCall() && <ActiveCallInterface />}
+                      {!hasActiveCall() && <ChatPage />}
+                    </>
+                  )}
     </Suspense>
   );
 };

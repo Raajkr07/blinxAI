@@ -6,12 +6,24 @@ import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
 
-export function Signup({ onSwitchToLogin }) {
+export function Signup({ onSwitchToLogin, initialIdentifier }) {
     const [step, setStep] = useState('phone');
-    const [identifier, setIdentifier] = useState('');
+    const [identifier, setIdentifier] = useState(initialIdentifier || '');
     const [otp, setOtp] = useState('');
     const [profile, setProfile] = useState({ username: '', bio: '' });
     const { setUser, setTokens } = useAuthStore();
+
+    useEffect(() => {
+        if (initialIdentifier) setIdentifier(initialIdentifier);
+
+        // Auto-skip to profile if OTP is in URL
+        const params = new URLSearchParams(window.location.search);
+        const urlOtp = params.get('otp');
+        if (urlOtp && initialIdentifier) {
+            setOtp(urlOtp);
+            setStep('profile');
+        }
+    }, [initialIdentifier]);
 
     const requestOtpMutation = useMutation({
         mutationFn: () => authService.requestOtp(identifier),

@@ -6,11 +6,15 @@ import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
 
-export function Login({ onSwitchToSignup }) {
+export function Login({ onSwitchToSignup, initialIdentifier }) {
     const [step, setStep] = useState('phone');
-    const [identifier, setIdentifier] = useState('');
+    const [identifier, setIdentifier] = useState(initialIdentifier || '');
     const [otp, setOtp] = useState('');
     const { setUser, setTokens } = useAuthStore();
+
+    useEffect(() => {
+        if (initialIdentifier) setIdentifier(initialIdentifier);
+    }, [initialIdentifier]);
 
     const requestOtpMutation = useMutation({
         mutationFn: () => authService.requestOtp(identifier),

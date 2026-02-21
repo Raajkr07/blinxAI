@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: blink-chat
+  name: blinx-chat
   labels:
-    name: blink-chat
-    app: blink-chat
+    name: blinx-chat
+    app: blinx-chat

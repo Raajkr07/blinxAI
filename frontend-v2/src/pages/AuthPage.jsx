@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Login } from './Login';
 import { Signup } from './Signup';
@@ -7,7 +7,17 @@ import { cn } from '../lib/utils';
 
 const AuthPage = () => {
     const [mode, setMode] = useState('login');
+    const [initialIdentifier, setInitialIdentifier] = useState('');
     const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const urlMode = params.get('mode');
+        const urlId = params.get('identifier');
+
+        if (urlMode === 'signup' || urlMode === 'login') setMode(urlMode);
+        if (urlId) setInitialIdentifier(urlId);
+    }, []);
 
     return (
         <div className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -90,7 +100,7 @@ const AuthPage = () => {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                         >
-                            <Login onSwitchToSignup={() => setMode('signup')} />
+                            <Login onSwitchToSignup={() => setMode('signup')} initialIdentifier={initialIdentifier} />
                         </Motion.div>
                     ) : (
                         <Motion.div
@@ -99,7 +109,7 @@ const AuthPage = () => {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                         >
-                            <Signup onSwitchToLogin={() => setMode('login')} />
+                            <Signup onSwitchToLogin={() => setMode('login')} initialIdentifier={initialIdentifier} />
                         </Motion.div>
                     )}
                 </AnimatePresence>

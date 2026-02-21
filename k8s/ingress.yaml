@@ -1,8 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: blink-chat-ingress
-  namespace: blink-chat
+  name: blinx-chat-ingress
+  namespace: blinx-chat
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -22,7 +22,18 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-  - http:
+  - host: blinxAI.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: chat-service
+            port:
+              number: 8080
+  - host: www.blinxAI.me
+    http:
       paths:
       - path: /
         pathType: Prefix

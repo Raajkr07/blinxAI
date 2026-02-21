@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { authService } from '../services';
+import { authService, userService } from '../services';
 
 export const useAuthStore = create((set, get) => ({
     user: storage.get(STORAGE_KEYS.USER),
@@ -54,17 +54,14 @@ export const useAuthStore = create((set, get) => ({
     checkSession: async () => {
         const { user: localUser, accessToken: localToken } = get();
 
-        if (localUser && localToken) {
-            set({ isAuthenticated: true, isLoading: false });
-            return true;
+        // Proactively clear state if we have a token but no user, or vice versa (shouldn't happen)
+        if (!localUser && localToken) {
+            storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
+            set({ accessToken: null, isAuthenticated: false });
         }
 
-        // NEW USER OPTIMIZATION: If no local profile exists, don't show the loading screen
-        if (!localUser) {
-            set({ isLoading: false });
-        } else {
-            set({ isLoading: true });
-        }
+        // Initialize loading state based on whether we have a local profile
+        set({ isLoading: !!localUser });
 
         try {
             const sessionPromise = authService.getGoogleSession();
@@ -84,7 +81,24 @@ export const useAuthStore = create((set, get) => ({
             }
         } catch (error) {
             console.warn('Session initialization fallback:', error.message);
-            // If network fails or timeouts, we still stay on the auth page (or uses local if present)
+
+            // If OAuth session check failed, try using standard refresh token if we have one
+            const { refreshToken: localRT } = get();
+            if (localRT) {
+                try {
+                    const data = await authService.refreshToken(localRT);
+                    if (data.accessToken) {
+                        get().setTokens(data.accessToken, data.refreshToken);
+                        // Fetch fresh user data
+                        const user = await userService.getMe();
+                        get().setUser(user);
+                        return true;
+                    }
+                } catch (refreshErr) {
+                    console.error('Local refresh fallback failed:', refreshErr);
+                }
+            }
+
             if (!localToken) {
                 set({ isAuthenticated: false, user: null, accessToken: null });
             }
