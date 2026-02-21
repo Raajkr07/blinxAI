@@ -1,2 +1,1 @@
-/* /index.html 200
-/*  https://blinxai.me/:splat  301!
+# Redirects are handled in netlify.toml with host-based conditions
