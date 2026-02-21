@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Base64;
 import java.util.Map;
 
 @RestController
@@ -37,8 +38,9 @@ public class AuthController {
         log.info("OTP requested for: {}", maskIdentifier(identifier));
 
         try {
-            String fullVerifyUrl = frontendUrl + "/verify?otp=" + otp + "&identifier=" + identifier;
-            boolean sent = notificationService.sendOtp(identifier, otp, "Blinx", fullVerifyUrl);
+            String token = Base64.getEncoder().encodeToString((otp + ":" + identifier).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String fullVerifyUrl = frontendUrl + "/verify?v=" + token;
+            boolean sent = notificationService.sendOtp(identifier, otp, "BlinxAI", fullVerifyUrl);
             if (!sent) {
                 log.warn("OTP generated but delivery failed for: {}", maskIdentifier(identifier));
             }

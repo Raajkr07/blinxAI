@@ -63,7 +63,7 @@ const App = () => {
     else if (isDeletion) document.title = 'Data Deletion | Blinx AI Assistant';
     else if (isVerify) document.title = 'Verifying Account | Blinx AI Assistant';
     else document.title = 'Blinx AI Assistant | Chat';
-  }, [isPrivacy, isTerms, isDeletion]);
+  }, [isPrivacy, isTerms, isDeletion, isVerify]);
 
   useEffect(() => {
     if (isPublicRoute || !isAuthenticated || !user?.id) return;

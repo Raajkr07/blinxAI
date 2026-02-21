@@ -7,26 +7,36 @@ import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
 
 export function Signup({ onSwitchToLogin, initialIdentifier }) {
-    const [step, setStep] = useState('phone');
-    const [identifier, setIdentifier] = useState(initialIdentifier || '');
-    const [otp, setOtp] = useState('');
+    const [step, setStep] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const hasDirectAuth = params.get('otp') || params.get('v');
+        return (hasDirectAuth && initialIdentifier) ? 'profile' : 'phone';
+    });
+    const [identifier, setIdentifier] = useState(() => {
+        if (initialIdentifier) return initialIdentifier;
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('v');
+        if (token) {
+            try { return atob(token).split(':')[1] || ''; } catch { return ''; }
+        }
+        return '';
+    });
+    const [otp, setOtp] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('v');
+        if (token) {
+            try { return atob(token).split(':')[0] || ''; } catch { return ''; }
+        }
+        return params.get('otp') || '';
+    });
     const [profile, setProfile] = useState({ username: '', bio: '' });
     const { setUser, setTokens } = useAuthStore();
 
-    useEffect(() => {
-        if (initialIdentifier) setIdentifier(initialIdentifier);
-
-        // Auto-skip to profile if OTP is in URL
-        const params = new URLSearchParams(window.location.search);
-        const urlOtp = params.get('otp');
-        if (urlOtp && initialIdentifier) {
-            setOtp(urlOtp);
-            setStep('profile');
-        }
-    }, [initialIdentifier]);
-
     const requestOtpMutation = useMutation({
-        mutationFn: () => authService.requestOtp(identifier),
+        mutationFn: () => {
+            const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+            return authService.requestOtp(normalized);
+        },
         onSuccess: () => {
             toast.success('OTP sent');
             setStep('otp');
@@ -35,7 +45,10 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
     });
 
     const verifyOtpMutation = useMutation({
-        mutationFn: () => authService.verifyOtp(identifier, otp),
+        mutationFn: () => {
+            const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+            return authService.verifyOtp(normalized, otp.trim());
+        },
         onSuccess: (data) => {
             if (data.valid) {
                 toast.success('OTP verified');
@@ -69,12 +82,13 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
             verifyOtpMutation.mutate();
         } else {
             if (!profile.username.trim()) return toast.error('Enter username');
-            const isEmail = identifier.includes('@');
+            const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+            const isEmail = normalized.includes('@');
             signupMutation.mutate({
-                identifier,
-                username: profile.username,
-                bio: profile.bio || undefined,
-                [isEmail ? 'email' : 'phone']: identifier
+                identifier: normalized,
+                username: profile.username.trim(),
+                bio: profile.bio?.trim() || undefined,
+                [isEmail ? 'email' : 'phone']: normalized
             });
         }
     };

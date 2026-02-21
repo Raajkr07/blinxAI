@@ -37,39 +37,43 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String requestOtp(String identifier) {
-        if (!isValidPhone(identifier) && !isValidEmail(identifier)) throw new IllegalArgumentException("Invalid format");
-
-        if (isValidPhone(identifier)) {
-            userRepository.findByPhone(identifier).orElseGet(() -> {
+        String normalized = normalizeIdentifier(identifier);
+        
+        if (isValidPhone(normalized)) {
+            userRepository.findByPhone(normalized).orElseGet(() -> {
                 User user = new User();
-                user.setPhone(identifier);
+                user.setPhone(normalized);
+                user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+                return userRepository.save(user);
+            });
+        } else if (isValidEmail(normalized)) {
+            userRepository.findFirstByEmail(normalized).orElseGet(() -> {
+                User user = new User();
+                user.setEmail(normalized);
                 user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
                 return userRepository.save(user);
             });
         } else {
-            String email = identifier.trim().toLowerCase(Locale.ROOT);
-            userRepository.findFirstByEmail(email).orElseGet(() -> {
-                User user = new User();
-                user.setEmail(email);
-                user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-                return userRepository.save(user);
-            });
+            throw new IllegalArgumentException("Invalid identifier format. Please provide a valid email or 10-digit mobile number.");
         }
-        return otpService.generateOtp(identifier);
+        
+        return otpService.generateOtp(normalized);
     }
 
     @Override
     public boolean verifyOtp(String identifier, String otp) {
-        boolean valid = otpService.validateOtp(identifier, otp);
-        if (valid) otpService.markOtpAsVerified(identifier);
+        String normalized = normalizeIdentifier(identifier);
+        boolean valid = otpService.validateOtp(normalized, otp);
+        if (valid) otpService.markOtpAsVerified(normalized);
         return valid;
     }
 
     @Override
     @Transactional
     public Map<String, String> signup(String identifier, String username, String avatarUrl, String bio, String email, String phone) {
+        String normalized = normalizeIdentifier(identifier);
         validateSignup(email, phone);
-        User user = getUserByIdentifier(identifier);
+        User user = getUserByIdentifier(normalized);
         
         if (user.getUsername() == null) {
             user.setUsername(username);
@@ -100,15 +104,16 @@ public class UserServiceImpl implements UserService {
     public Map<String, String> login(AuthDto.LoginRequest request) {
         if (request == null || request.identifier() == null || request.identifier().isBlank()) throw new IllegalArgumentException("Identifier required");
 
-        User user = getUserByIdentifier(request.identifier());
+        String normalized = normalizeIdentifier(request.identifier());
+        User user = getUserByIdentifier(normalized);
         if (user.getUsername() == null || user.getUsername().isBlank()) throw new IllegalStateException("Profile incomplete");
 
         if (request.otp() != null && !request.otp().isBlank()) {
-            if (!otpService.validateOtp(request.identifier(), request.otp())) throw new IllegalStateException("Invalid OTP");
-            otpService.deleteOtp(request.identifier());
+            if (!otpService.validateOtp(normalized, request.otp())) throw new IllegalStateException("Invalid OTP");
+            otpService.deleteOtp(normalized);
         } else {
-            if (!otpService.isOtpVerified(request.identifier())) throw new IllegalStateException("OTP verification required");
-            otpService.clearVerification(request.identifier());
+            if (!otpService.isOtpVerified(normalized)) throw new IllegalStateException("OTP verification required");
+            otpService.clearVerification(normalized);
         }
 
         return Map.of("accessToken", jwtUtil.generateToken(user), "refreshToken", createRefreshToken(user.getId()));
@@ -240,9 +245,17 @@ public class UserServiceImpl implements UserService {
     private boolean isValidPhone(String s) { return PHONE_PATTERN.matcher(s).matches(); }
     private boolean isValidEmail(String s) { return EMAIL_PATTERN.matcher(s).matches(); }
 
+    private String normalizeIdentifier(String id) {
+        if (id == null) return null;
+        String trimmed = id.trim();
+        if (isValidEmail(trimmed)) return trimmed.toLowerCase(Locale.ROOT);
+        return trimmed;
+    }
+
     private User getUserByIdentifier(String id) {
-        if (isValidPhone(id)) return userRepository.findByPhone(id).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return userRepository.findFirstByEmail(id.trim().toLowerCase(Locale.ROOT)).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        String normalized = normalizeIdentifier(id);
+        if (isValidPhone(normalized)) return userRepository.findByPhone(normalized).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return userRepository.findFirstByEmail(normalized).orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
     private void checkUsername(String name, String id) {

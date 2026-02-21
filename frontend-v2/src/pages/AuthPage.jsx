@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Login } from './Login';
 import { Signup } from './Signup';
@@ -6,18 +6,20 @@ import { BlinkingFace } from './BlinkingFace';
 import { cn } from '../lib/utils';
 
 const AuthPage = () => {
-    const [mode, setMode] = useState('login');
-    const [initialIdentifier, setInitialIdentifier] = useState('');
-    const [isHovered, setIsHovered] = useState(false);
-
-    useEffect(() => {
+    const [mode, setMode] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         const urlMode = params.get('mode');
-        const urlId = params.get('identifier');
-
-        if (urlMode === 'signup' || urlMode === 'login') setMode(urlMode);
-        if (urlId) setInitialIdentifier(urlId);
-    }, []);
+        return (urlMode === 'signup' || urlMode === 'login') ? urlMode : 'login';
+    });
+    const [initialIdentifier] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('v');
+        if (token) {
+            try { return atob(token).split(':')[1] || ''; } catch { return ''; }
+        }
+        return params.get('identifier') || '';
+    });
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <div className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">

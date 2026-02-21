@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { BlinkingFace } from '../BlinkingFace';
 import { authService, userService } from '../../services';
@@ -7,49 +7,57 @@ import { Button } from '../../components/ui';
 import { cn } from '../../lib/utils';
 
 const VerifyPage = () => {
-    const [status, setStatus] = useState('verifying'); // verifying, success, error
-    const [message, setMessage] = useState('Verifying your credentials...');
+    const [status, setStatus] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return !params.get('v') ? 'error' : 'verifying';
+    });
+    const [message, setMessage] = useState(() => {
+        const params = new URLSearchParams(window.location.search);
+        return !params.get('v')
+            ? 'Invalid verification link. Missing token.'
+            : 'Verifying your credentials...';
+    });
     const { setUser, setTokens } = useAuthStore();
+    const hasAttempted = useRef(false);
 
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const otp = urlParams.get('otp');
-        const identifier = urlParams.get('identifier');
+        if (hasAttempted.current) return;
 
-        if (!otp || !identifier) {
-            setStatus('error');
-            setMessage('Invalid verification link. Missing OTP or identifier.');
-            return;
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('v');
+
+        if (!token) return;
 
         const performVerification = async () => {
+            hasAttempted.current = true;
             try {
-                // First verify the OTP
-                const verifyData = await authService.verifyOtp(identifier, otp);
-                if (!verifyData.valid) {
-                    setStatus('error');
-                    setMessage('Invalid or expired OTP.');
-                    return;
+                // Decode token (Base64)
+                let decoded;
+                try {
+                    decoded = atob(token);
+                } catch {
+                    throw new Error('Invalid verification token format');
                 }
 
-                // If valid, perform login
-                const loginData = await authService.login({ identifier, otp });
+                const [otp, identifier] = decoded.split(':');
+                if (!otp || !identifier) throw new Error('Malformed verification token');
+
+                const normalizedId = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+
+                // Call login directly which handles OTP verification
+                const loginData = await authService.login({
+                    identifier: normalizedId,
+                    otp: otp.trim()
+                });
 
                 if (loginData.accessToken) {
-                    // Update tokens in store
                     setTokens(loginData.accessToken, loginData.refreshToken);
-
-                    // Fetch user profile
                     const userData = await userService.getMe();
                     setUser(userData);
 
                     setStatus('success');
                     setMessage('Identity verified successfully! Redirecting to chat...');
-
-                    // Redirect after a short delay
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
                 } else {
                     setStatus('error');
                     setMessage('Verification failed. Use the code 000000 if testing locally.');
@@ -62,7 +70,7 @@ const VerifyPage = () => {
                     setStatus('success');
                     setMessage('Identity verified! Redirecting to set up your profile...');
                     setTimeout(() => {
-                        window.location.href = `/auth?mode=signup&identifier=${encodeURIComponent(identifier)}&otp=${encodeURIComponent(otp)}`;
+                        window.location.href = `/auth?mode=signup&v=${encodeURIComponent(token)}`;
                     }, 2000);
                     return;
                 }
@@ -77,7 +85,6 @@ const VerifyPage = () => {
 
     return (
         <div className="min-h-screen w-full bg-[var(--color-background)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
-            {/* Background Accents - adjusted for theme */}
             <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none opacity-20 transition-opacity duration-300">
                 <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500 blur-3xl animate-pulse" />
                 <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500 blur-3xl animate-pulse" />
@@ -141,4 +148,3 @@ const VerifyPage = () => {
 };
 
 export default VerifyPage;
-

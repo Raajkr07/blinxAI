@@ -12,12 +12,11 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
     const [otp, setOtp] = useState('');
     const { setUser, setTokens } = useAuthStore();
 
-    useEffect(() => {
-        if (initialIdentifier) setIdentifier(initialIdentifier);
-    }, [initialIdentifier]);
-
     const requestOtpMutation = useMutation({
-        mutationFn: () => authService.requestOtp(identifier),
+        mutationFn: () => {
+            const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+            return authService.requestOtp(normalized);
+        },
         onSuccess: (data) => {
             toast.success(data.message || 'OTP sent successfully');
             setStep('otp');
@@ -28,14 +27,18 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
     });
 
     const verifyOtpMutation = useMutation({
-        mutationFn: () => authService.verifyOtp(identifier, otp),
+        mutationFn: () => {
+            const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+            return authService.verifyOtp(normalized, otp.trim());
+        },
         onSuccess: async (data) => {
             if (!data.valid) {
                 return toast.error('Invalid OTP');
             }
 
             try {
-                const loginData = await authService.login({ identifier });
+                const normalized = identifier.trim().includes('@') ? identifier.trim().toLowerCase() : identifier.trim();
+                const loginData = await authService.login({ identifier: normalized });
                 if (loginData.accessToken) {
                     setTokens(loginData.accessToken, loginData.refreshToken);
                     const userData = await userService.getMe();
