@@ -12,3 +12,4 @@ export {
     ChatWindowContent,
     ChatWindowFooter,
 } from './ChatWindow';
+export { LegalLayout } from './LegalLayout';

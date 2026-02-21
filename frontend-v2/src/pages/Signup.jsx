@@ -101,7 +101,7 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Create Account</h2>
-                <p className="text-gray-400">Join Blinx AI Assistant today</p>
+                <p className="text-gray-400">Join Blinx Assistant</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -172,12 +172,17 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
                 </>
             )}
 
-            <div className="text-center pt-4 border-t border-white/5">
+            <div className="text-center pt-4 border-t border-white/5 space-y-3">
                 <p className="text-sm text-gray-400">
                     Already have an account?{' '}
                     <button onClick={onSwitchToLogin} className="text-white font-medium hover:underline">
                         Sign in
                     </button>
+                </p>
+                <p className="text-[10px] text-gray-500 leading-relaxed px-4">
+                    By joining, you agree to Blinx AI's{' '}
+                    <a href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</a> and{' '}
+                    <a href="/privacy-policy" className="text-gray-400 hover:text-white underline">Privacy Policy</a>.
                 </p>
             </div>
         </Motion.div>

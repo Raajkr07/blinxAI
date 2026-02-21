@@ -79,18 +79,17 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Welcome Back</h2>
-                <p className="text-gray-400">Sign in to continue to Blinx AI Assistant</p>
+                <p className="text-gray-400">Continue to Blinx Assistant</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 {step === 'phone' ? (
                     <div>
-                        <label className="block text-sm font-medium mb-2">Phone or Email</label>
                         <Input
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             disabled={requestOtpMutation.isPending}
-                            placeholder="Enter here please"
+                            placeholder="Email or Phone Number"
                         />
                         <Button
                             type="submit"
@@ -150,12 +149,17 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                 )
             }
 
-            <div className="text-center pt-4 border-t border-white/5">
+            <div className="text-center pt-4 border-t border-white/5 space-y-3">
                 <p className="text-sm text-gray-400">
                     Don't have an account?{' '}
                     <button onClick={onSwitchToSignup} className="text-white font-medium hover:underline">
                         Sign up
                     </button>
+                </p>
+                <p className="text-[10px] text-gray-500 leading-relaxed px-4">
+                    By continuing, you agree to Blinx AI's{' '}
+                    <a href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</a> and{' '}
+                    <a href="/privacy-policy" className="text-gray-400 hover:text-white underline">Privacy Policy</a>.
                 </p>
             </div>
         </Motion.div >

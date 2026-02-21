@@ -16,7 +16,7 @@ const Loading = () => (
   <div className="flex h-screen items-center justify-center bg-[var(--color-background)] text-[var(--color-foreground)]">
     <div className="flex flex-col items-center gap-4">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
-      <p className="text-gray-400 text-sm animate-pulse">Initializing session...</p>
+      <p className="text-gray-400 text-sm animate-pulse">just a sec...</p>
     </div>
   </div>
 );

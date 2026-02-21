@@ -1,142 +1,228 @@
-import React from 'react';
-import { motion as Motion } from 'framer-motion';
-import { BlinkingFace } from '../BlinkingFace';
-import { env } from '../../config/env';
+import { LegalLayout } from '../../components/layout';
 
-const PrivacyPolicy = () => {
-    return (
-        <div className="h-screen w-full bg-black flex flex-col items-center justify-start p-4 md:p-8 relative overflow-y-auto font-['Inter'] custom-scrollbar">
-            {/* Background Globs */}
-            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500/5 blur-3xl animate-pulse" />
-            </div>
-
-            <Motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-4xl relative z-10 py-12"
-            >
-                <div className="flex flex-col items-center mb-12 text-center">
-                    <BlinkingFace className="w-20 h-20 mb-6" />
-                    <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Privacy Policy</h1>
-                    <div className="h-1 w-24 bg-blue-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">{env.APP_NAME} - Educational Project</p>
-                    <p className="text-xs text-slate-600">Hosted at: <span className="text-blue-500/70">{env.APP_DOMAIN}</span></p>
-                </div>
-
-                <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
-
-                    {/* CRITICAL GOOGLE COMPLIANCE STATEMENT */}
-                    <div className="mb-12 p-6 rounded-3xl bg-blue-500/5 border border-blue-500/20">
-                        <h2 className="text-blue-400 font-bold mb-3 flex items-center gap-2 text-lg">
-                            <span className="text-xl">⚖️</span> Google API Disclosure
-                        </h2>
-                        <p className="text-sm text-slate-400 leading-relaxed">
-                            Blinx AI Assistant's use and transfer of information received from Google APIs to any other app will adhere to
-                            <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline mx-1">
-                                Google API Services User Data Policy
-                            </a>,
-                            including the <strong>Limited Use</strong> requirements. We do not use your Google data to display advertisements or for any other commercial purposes.
-                        </p>
-                    </div>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">01</span>
-                            <h2 className="text-2xl font-bold text-white">Introduction</h2>
-                        </div>
-                        <p className="text-lg opacity-90">
-                            <strong>Blinx AI Assistant</strong> is an AI-powered productivity tool developed as an educational project.
-                            We are committed to protecting your privacy and being transparent about our data practices. This policy details how we handle information accessed through Google OAuth 2.0.
-                        </p>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold">02</span>
-                            <h2 className="text-2xl font-bold text-white">Specific Data Access & Scopes</h2>
-                        </div>
-                        <p className="mb-8 opacity-90">
-                            To enable the <strong>Model Context Protocol (MCP)</strong> features, we require the following restricted scopes:
-                        </p>
-
-                        <div className="space-y-6">
-                            <div className="glass p-6 rounded-3xl border border-white/10">
-                                <h3 className="text-white font-bold mb-3 flex items-center gap-3">
-                                    <span className="text-xl">📧</span> Gmail API (https://www.googleapis.com/auth/gmail.modify)
-                                </h3>
-                                <p className="text-sm text-slate-400 mb-4">
-                                    <strong>Usage:</strong> Our AI assistant reads email headers and content only when you explicitly ask it to summarize your inbox or find information. It can draft replies which are only sent upon your final confirmation.
-                                </p>
-                            </div>
-
-                            <div className="glass p-6 rounded-3xl border border-white/10">
-                                <h3 className="text-white font-bold mb-3 flex items-center gap-3">
-                                    <span className="text-xl">📅</span> Calendar API (https://www.googleapis.com/auth/calendar)
-                                    )</h3>
-                                <p className="text-sm text-slate-400 mb-4">
-                                    <strong>Usage:</strong> The AI tool reads your availability to suggest meeting times and writes to your calendar to create events or reminders based on your chat instructions.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">03</span>
-                            <h2 className="text-2xl font-bold text-white">Data Storage & Security</h2>
-                        </div>
-                        <div className="space-y-4 opacity-90">
-                            <p>
-                                • <strong>Minimal Persistence:</strong> We do not store your Gmail or Calendar data on our permanent servers. Data is fetched on-the-fly and processed in temporary memory (RAM) during your session.
-                            </p>
-                            <p>
-                                • <strong>Encryption:</strong> All communication between Blinx AI Assistant, your browser, and Google servers is encrypted using Industry-standard TLS (Transport Layer Security).
-                            </p>
-                            <p>
-                                • <strong>No Selling:</strong> Your data is never sold to third parties, used for marketing, or leveraged by external AI models for training.
-                            </p>
-                        </div>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-bold">04</span>
-                            <h2 className="text-2xl font-bold text-white">Your Control</h2>
-                        </div>
-                        <p className="opacity-90 mb-6">
-                            You have absolute control over your data:
-                        </p>
-                        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <li className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm">
-                                <strong className="text-white block mb-1">Revoke Access</strong>
-                                Disconnect anytime via your Google Security portal.
-                            </li>
-                            <li className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm">
-                                <strong className="text-white block mb-1">Data Deletion</strong>
-                                Request account wipe via <span className="text-blue-400 font-mono">{env.CONTACT_EMAIL}</span>.
-                            </li>
-                        </ul>
-                    </section>
-
-                    <div className="mt-12 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-sm">
-                        <div className="text-slate-500">
-                            Last Updated: <span className="text-slate-400 font-medium">Feb 15, 2026</span>
-                        </div>
-                        <div className="flex gap-6">
-                            <a href="/data-deletion" className="text-blue-400 hover:text-blue-300 transition-colors">Data Deletion</a>
-                            <a href="/" className="px-6 py-2 rounded-full glass hover:bg-white/10 transition-all font-bold text-white">← App Home</a>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    {env.APP_NAME} is a student-led educational initiative • {env.CONTACT_EMAIL}
-                </p>
-            </Motion.div>
+const Section = ({ icon, title, children }) => (
+    <section>
+        <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--color-foreground)] mb-4 tracking-tight">
+            <span className="text-lg">{icon}</span>
+            {title}
+        </h2>
+        <div className="pl-1 space-y-3 text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+            {children}
         </div>
-    );
-};
+    </section>
+);
+
+const Highlight = ({ children }) => (
+    <span className="text-[var(--color-gray-300)] font-medium">{children}</span>
+);
+
+const PrivacyPolicy = () => (
+    <LegalLayout title="Privacy Policy" lastUpdated="21 February 2026">
+
+        {/* Intro */}
+        <section>
+            <p className="text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+                Hello and thank you for using <Highlight>Blinx AI Assistant</Highlight>. This application has been
+                built as part of a <Highlight>college academic project</Highlight> and is not intended for
+                any commercial use whatsoever. We genuinely respect your privacy and want to be upfront about
+                what information we collect, why we collect it, and how we handle it.
+            </p>
+            <p className="text-[15px] leading-[1.8] text-[var(--color-gray-400)] mt-3">
+                This Privacy Policy applies to all users who access Blinx AI Assistant via our
+                website at <Highlight>blinxAI.me</Highlight> or any associated services.
+            </p>
+        </section>
+
+        <Section icon="📋" title="Information We Collect">
+            <p>
+                To provide you a functional and seamless chat experience, we collect the following data
+                when you sign up or use our services:
+            </p>
+            <ul className="list-none space-y-2.5 mt-2">
+                {[
+                    ['Full Name', 'To personalise your profile and display it to other users in conversations.'],
+                    ['Email Address', 'For account creation, OTP-based login verification, and essential service-related communications.'],
+                    ['Phone Number (optional)', 'If provided, used as an alternate method for OTP verification during login.'],
+                    ['Google Account Information', 'When you choose "Sign in with Google", we receive your name, email, and profile picture from Google to set up your account quickly. We do not access your contacts, Drive, or any other Google data.'],
+                    ['Chat Messages', 'Your text messages within conversations are stored on our servers so that you can access your chat history when you log back in.'],
+                    ['Online/Presence Status', 'We track whether you are currently active so that other users can see your availability in real-time.'],
+                    ['Basic Device Info', 'Browser type and screen size — solely to optimise the layout and responsiveness of the application.'],
+                ].map(([label, desc], i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p><Highlight>{label}</Highlight> — {desc}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="🔐" title="Why We Need Google Account Access">
+            <p>
+                We understand that granting access to your Google account is a matter of trust. Here is
+                exactly why we request it and what we do (and do not do) with it:
+            </p>
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <ul className="space-y-3 text-[14px]">
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-green-400 mt-0.5">✓</span>
+                        <p>We use Google OAuth <Highlight>solely for authentication</Highlight> — to verify your identity and let you sign in without remembering yet another password.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-green-400 mt-0.5">✓</span>
+                        <p>We request <Highlight>email</Highlight> and <Highlight>calendar</Highlight> permissions from Google so you can use features like chat, account verification, and calendar integration. We do not access or store any other Google data.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-red-400 mt-0.5">✗</span>
+                        <p>We <Highlight>never</Highlight> read your Gmail, Google Drive, Contacts, or any other Google service data except email and calendar (for integration features only).</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-red-400 mt-0.5">✗</span>
+                        <p>We <Highlight>never</Highlight> post anything on your behalf or modify any Google account settings.</p>
+                    </li>
+                </ul>
+            </div>
+            <p className="mt-3">
+                Being a college project, we have no business interest in your data. This access is
+                purely functional — to make sign-in quick and hassle-free for you, and to enable calendar features if you wish to use them.
+            </p>
+        </Section>
+
+        <Section icon="🎯" title="How We Use Your Information">
+            <p>Your data is used strictly for the following purposes:</p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'To create and manage your user account on the platform.',
+                    'To authenticate you securely via OTP or Google Sign-In.',
+                    'To deliver core chat functionalities — sending/receiving messages, group chats, and real-time notifications.',
+                    'To enable audio/video calling features (WebRTC) between users.',
+                    'To power the AI assistant features like smart replies, conversation summaries, and task extraction.',
+                    'To show your online/offline status to your contacts.',
+                    'To improve the overall user experience and fix technical issues.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="🛡️" title="Data Protection & Security">
+            <p>
+                We take reasonable measures to protect the information stored on our servers. These include:
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'All data transmitted between your browser and our servers is encrypted using HTTPS/TLS.',
+                    'Authentication tokens are stored securely and expire after a set period.',
+                    'Passwords are never stored in plain text — OTP-based verification eliminates the need for stored passwords altogether.',
+                    'WebRTC calls are established via peer-to-peer connections, meaning call audio/video does not pass through our servers.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-3">
+                However, as this is an academic project and not a production-grade enterprise system,
+                we encourage you not to share any highly sensitive or confidential information through this platform.
+            </p>
+        </Section>
+
+        <Section icon="🤝" title="Data Sharing">
+            <p>
+                We want to be absolutely clear:
+            </p>
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[var(--color-gray-300)] font-medium text-[14px]">
+                    We do not sell, rent, trade, or share your personal data with any third party for
+                    commercial, advertising, or marketing purposes — period.
+                </p>
+            </div>
+            <p className="mt-3">
+                The only external service involved is <Highlight>Google OAuth</Highlight> for
+                authentication. No other third-party service receives your data.
+            </p>
+        </Section>
+
+        <Section icon="📦" title="Data Retention">
+            <p>
+                Your account data and chat history are retained on our servers for as long as your account
+                remains active. Since this is a college project, the services and all stored data may be
+                discontinued or deleted once the academic evaluation period concludes.
+            </p>
+            <p className="mt-2">
+                You may request deletion of your data at any time by visiting our{' '}
+                <a href="/data-deletion" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors font-medium">
+                    Data Deletion
+                </a>{' '}
+                page or writing to us at the email address provided below.
+            </p>
+        </Section>
+
+        <Section icon="⚖️" title="Your Rights">
+            <p>
+                As a user of Blinx AI Assistant, you have the right to:
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'Access the personal data we hold about you.',
+                    'Request correction of any inaccurate information.',
+                    'Request deletion of your account and all associated data.',
+                    'Revoke Google account access at any time from your Google Account settings.',
+                    'Withdraw your consent and stop using the platform at any point.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="👶" title="Children's Privacy">
+            <p>
+                Blinx AI Assistant is designed for use by college students and is not intended for
+                children under the age of 13. We do not knowingly collect information from minors.
+                If we become aware that we have inadvertently collected data from a child, we shall
+                promptly delete it.
+            </p>
+        </Section>
+
+        <Section icon="🔄" title="Changes to This Policy">
+            <p>
+                We may update this Privacy Policy from time to time as the project evolves. Any changes
+                will be reflected on this page with an updated "Last Updated" date. We encourage you to
+                review this page periodically to stay informed.
+            </p>
+        </Section>
+
+        <Section icon="📬" title="Contact Us">
+            <p>
+                If you have any questions, concerns, or requests regarding this Privacy Policy or your
+                personal data, please do not hesitate to reach out:
+            </p>
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[14px]">
+                    <Highlight>Project</Highlight> — Blinx AI Assistant (College Academic Project)
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Email</Highlight> —{' '}
+                    <a href="mailto:rk8210032@gmail.com" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        rk8210032@gmail.com
+                    </a>
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Website</Highlight> —{' '}
+                    <a href="https://blinxAI.me" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        blinxAI.me
+                    </a>
+                </p>
+            </div>
+        </Section>
+
+    </LegalLayout>
+);
 
 export default PrivacyPolicy;

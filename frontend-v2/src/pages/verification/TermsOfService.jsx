@@ -1,99 +1,260 @@
-import React from 'react';
-import { motion as Motion } from 'framer-motion';
-import { BlinkingFace } from '../BlinkingFace';
-import { env } from '../../config/env';
+import { LegalLayout } from '../../components/layout';
 
-const TermsOfService = () => {
-    return (
-        <div className="h-screen w-full bg-black flex flex-col items-center justify-start p-4 md:p-8 relative overflow-y-auto font-['Inter'] custom-scrollbar">
-            {/* Background Globs */}
-            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500/5 blur-3xl animate-pulse" />
-            </div>
-
-            <Motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-4xl relative z-10 py-12"
-            >
-                <div className="flex flex-col items-center mb-12 text-center">
-                    <BlinkingFace className="w-20 h-20 mb-6" />
-                    <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Terms of Service</h1>
-                    <div className="h-1 w-24 bg-purple-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">{env.APP_NAME} - Educational Project</p>
-                    <p className="text-xs text-slate-600">Site: <span className="text-purple-500/70">{env.APP_DOMAIN}</span></p>
-                </div>
-
-                <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold">01</span>
-                            <h2 className="text-2xl font-bold text-white">Project Nature</h2>
-                        </div>
-                        <p className="text-lg opacity-90">
-                            <strong>Blinx AI Assistant</strong> is an experimental, non-commercial application created solely for educational and academic evaluation. It is not a commercial product.
-                        </p>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold">02</span>
-                            <h2 className="text-2xl font-bold text-white">Google Integration</h2>
-                        </div>
-                        <p className="opacity-90 mb-4">
-                            By connecting your Google account, you grant Blinx AI Assistant access to your Gmail and Calendar data. This access is limited to the functionality of the AI MCP tools within the app.
-                        </p>
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm italic text-slate-400">
-                            "Blinx AI Assistant complies with the Google API Services User Data Policy, ensuring your restricted data is used according to the Limited Use requirements."
-                        </div>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">03</span>
-                            <h2 className="text-2xl font-bold text-white">Limitations of Use</h2>
-                        </div>
-                        <div className="glass p-8 rounded-3xl border border-white/10 space-y-4">
-                            <p className="text-sm text-slate-400">
-                                <strong className="text-white block mb-1">No Commercial Use:</strong> You may not use this application for any commercial or business operations.
-                            </p>
-                            <p className="text-sm text-slate-400">
-                                <strong className="text-white block mb-1">No Warranties:</strong> The service is provided "AS IS". We make no guarantees regarding security, uptime, or data accuracy.
-                            </p>
-                            <p className="text-sm text-slate-400">
-                                <strong className="text-white block mb-1">Assumption of Risk:</strong> Users acknowledge that this is a student project and use it at their own discretion and risk.
-                            </p>
-                        </div>
-                    </section>
-
-                    <section className="mb-12">
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-bold">04</span>
-                            <h2 className="text-2xl font-bold text-white">Termination</h2>
-                        </div>
-                        <p className="opacity-90">
-                            We reserve the right to terminate access to the application or its Google-integrated features at any time during this academic evaluation phase.
-                        </p>
-                    </section>
-
-                    <div className="mt-12 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-sm">
-                        <div className="text-slate-500 font-medium">
-                            Last Updated: <span className="text-slate-400">Feb 15, 2026</span>
-                        </div>
-                        <div className="flex gap-4">
-                            <a href="/privacy-policy" className="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
-                            <a href="/" className="px-6 py-2 rounded-full glass hover:bg-white/10 transition-all font-bold text-white">← App Index</a>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest">
-                    {env.APP_NAME} - Educational Project • {env.CONTACT_EMAIL}
-                </p>
-            </Motion.div>
+const Section = ({ icon, title, children }) => (
+    <section>
+        <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--color-foreground)] mb-4 tracking-tight">
+            <span className="text-lg">{icon}</span>
+            {title}
+        </h2>
+        <div className="pl-1 space-y-3 text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+            {children}
         </div>
-    );
-};
+    </section>
+);
+
+const Highlight = ({ children }) => (
+    <span className="text-[var(--color-gray-300)] font-medium">{children}</span>
+);
+
+const TermsOfService = () => (
+    <LegalLayout title="Terms of Service" lastUpdated="21 February 2026">
+
+        {/* Intro */}
+        <section>
+            <p className="text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+                Welcome to <Highlight>Blinx AI Assistant</Highlight>. Please read these Terms of Service
+                carefully before using the application. By accessing or using Blinx AI Assistant, you
+                agree to be bound by these terms. If you do not agree, kindly refrain from using the service.
+            </p>
+            <p className="text-[15px] leading-[1.8] text-[var(--color-gray-400)] mt-3">
+                Blinx AI Assistant is a <Highlight>college academic project</Highlight> developed for
+                educational and demonstration purposes. It is not a commercial product and is not operated
+                for profit in any manner.
+            </p>
+        </section>
+
+        <Section icon="📖" title="About the Service">
+            <p>
+                Blinx AI Assistant is a real-time web-based chat application built as part of an
+                academic curriculum. The platform offers the following features:
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'One-to-one and group text messaging with real-time delivery.',
+                    'Audio and video calling powered by WebRTC (peer-to-peer).',
+                    'AI-powered features such as smart reply suggestions, conversation summarisation, and task extraction.',
+                    'User presence indicators (online/offline status).',
+                    'Secure authentication via OTP verification or Google Sign-In.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="✅" title="Eligibility">
+            <p>
+                By using Blinx AI Assistant, you confirm that:
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'You are at least 13 years of age.',
+                    'You are capable of entering into a legally binding agreement.',
+                    'You will provide accurate and truthful information when creating your account.',
+                    'You understand that this is an academic project and not a commercially operated service.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="👤" title="User Accounts">
+            <p>
+                To access the features of Blinx AI Assistant, you need to create an account using either
+                your email/phone number with OTP verification, or via Google Sign-In.
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'You are responsible for maintaining the confidentiality of your account credentials and login sessions.',
+                    'You are responsible for all activities that occur under your account.',
+                    'You must notify us promptly if you suspect any unauthorised use of your account.',
+                    'We reserve the right to suspend or remove accounts that violate these terms.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="🚫" title="Acceptable Use">
+            <p>
+                Whilst using Blinx AI Assistant, you agree <Highlight>not to</Highlight>:
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'Send messages that are abusive, threatening, hateful, obscene, or otherwise objectionable.',
+                    'Impersonate another person or misrepresent your identity.',
+                    'Attempt to gain unauthorised access to other user accounts or the underlying systems.',
+                    'Upload or share malware, viruses, or any harmful code or files.',
+                    'Use the platform for spamming, phishing, or any form of fraud.',
+                    'Exploit the AI features to generate harmful, misleading, or inappropriate content.',
+                    'Use automated bots, scrapers, or similar tools to interact with the service without explicit permission.',
+                    'Interfere with or disrupt the normal functioning of the application or its infrastructure.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-3">
+                Violation of these guidelines may result in immediate suspension or permanent removal
+                of your account without prior notice.
+            </p>
+        </Section>
+
+        <Section icon="💬" title="Content & Messages">
+            <p>
+                You retain ownership of the messages and content you share on Blinx AI Assistant.
+                However, by using the service, you grant us a limited, non-exclusive licence to store
+                and transmit your content solely for the purpose of delivering the chat functionality.
+            </p>
+            <p className="mt-2">
+                We do not actively monitor or review the content of private conversations. However, we
+                reserve the right to remove content that is reported or found to be in violation of these
+                terms.
+            </p>
+        </Section>
+
+        <Section icon="🤖" title="AI Features">
+            <p>
+                The AI-powered features within Blinx AI Assistant (such as smart replies, summaries,
+                and task extraction) are provided on an <Highlight>"as-is" basis</Highlight>. These
+                features are experimental and developed for academic demonstration.
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'AI-generated responses may not always be accurate, relevant, or appropriate.',
+                    'You should not rely on AI suggestions for critical or sensitive decision-making.',
+                    'We are not liable for any consequences arising from the use of AI-generated content.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="📞" title="Audio & Video Calls">
+            <p>
+                The calling feature uses WebRTC technology for peer-to-peer connections between users.
+            </p>
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'Call quality depends on your internet connection and device capabilities.',
+                    'Call audio and video data travels directly between users and does not pass through our servers.',
+                    'We do not record or store any call data.',
+                    'You are responsible for ensuring you have consent from the other party before initiating a call.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+        </Section>
+
+        <Section icon="🔒" title="Privacy">
+            <p>
+                Your use of Blinx AI Assistant is also governed by our{' '}
+                <a href="/privacy-policy" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors font-medium">
+                    Privacy Policy
+                </a>, which explains how we collect, use, and protect your personal information.
+                Please review it carefully.
+            </p>
+        </Section>
+
+        <Section icon="⚠️" title="Disclaimers">
+            <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <ul className="space-y-3 text-[14px]">
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>Blinx AI Assistant is provided <Highlight>"as is"</Highlight> and <Highlight>"as available"</Highlight> without any warranties of any kind, whether express or implied.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>As a college project, we do not guarantee uninterrupted, secure, or error-free operation of the service.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>The service may be taken offline, modified, or discontinued at any time without prior notice, particularly after the academic evaluation period.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>We shall not be held liable for any direct, indirect, incidental, or consequential damages arising from your use of the application.</p>
+                    </li>
+                </ul>
+            </div>
+        </Section>
+
+        <Section icon="🏛️" title="Intellectual Property">
+            <p>
+                The design, code, branding, and all associated materials of Blinx AI Assistant are the
+                intellectual property of the project developer(s). You may not copy, reproduce,
+                distribute, or create derivative works from any part of this application without
+                explicit written consent.
+            </p>
+        </Section>
+
+        <Section icon="📝" title="Modifications to Terms">
+            <p>
+                We reserve the right to modify these Terms of Service at any time. Changes will be
+                posted on this page with the updated "Last Updated" date. Continued use of the
+                application after any modifications constitutes your acceptance of the revised terms.
+            </p>
+        </Section>
+
+        <Section icon="⚖️" title="Governing Law">
+            <p>
+                These Terms of Service shall be governed by and construed in accordance with the laws
+                of <Highlight>India</Highlight>. Any disputes arising from these terms shall be subject
+                to the exclusive jurisdiction of the courts in India.
+            </p>
+        </Section>
+
+        <Section icon="📬" title="Contact Us">
+            <p>
+                If you have any questions or concerns regarding these Terms of Service, we are happy
+                to help. Reach out to us at:
+            </p>
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[14px]">
+                    <Highlight>Project</Highlight> — Blinx AI Assistant (College Academic Project)
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Email</Highlight> —{' '}
+                    <a href="mailto:rk8210032@gmail.com" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        rk8210032@gmail.com
+                    </a>
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Website</Highlight> —{' '}
+                    <a href="https://blinxAI.me" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        blinxAI.me
+                    </a>
+                </p>
+            </div>
+        </Section>
+
+    </LegalLayout>
+);
 
 export default TermsOfService;

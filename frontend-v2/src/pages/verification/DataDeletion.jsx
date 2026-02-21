@@ -1,95 +1,246 @@
-import React from 'react';
-import { motion as Motion } from 'framer-motion';
-import { BlinkingFace } from '../BlinkingFace';
-import { env } from '../../config/env';
+import { LegalLayout } from '../../components/layout';
 
-const DataDeletion = () => {
-    return (
-        <div className="h-screen w-full bg-black flex flex-col items-center justify-start p-4 md:p-8 relative overflow-y-auto font-['Inter'] custom-scrollbar">
-            {/* Background Globs */}
-            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500/5 blur-3xl animate-pulse" />
+const Section = ({ icon, title, children }) => (
+    <section>
+        <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--color-foreground)] mb-4 tracking-tight">
+            <span className="text-lg">{icon}</span>
+            {title}
+        </h2>
+        <div className="pl-1 space-y-3 text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+            {children}
+        </div>
+    </section>
+);
+
+const Highlight = ({ children }) => (
+    <span className="text-[var(--color-gray-300)] font-medium">{children}</span>
+);
+
+const DataDeletion = () => (
+    <LegalLayout title="Data Deletion" lastUpdated="21 February 2026">
+
+        {/* Intro */}
+        <section>
+            <p className="text-[15px] leading-[1.8] text-[var(--color-gray-400)]">
+                At <Highlight>Blinx AI Assistant</Highlight>, we believe you should have full control
+                over your personal data at all times. Since this is a <Highlight>college academic
+                project</Highlight>, we have no reason to retain your data beyond what is needed to
+                provide the service. If you wish to have your data removed, we are more than happy to
+                assist.
+            </p>
+        </section>
+
+        <Section icon="📋" title="What Data Do We Store?">
+            <p>
+                When you use Blinx AI Assistant, the following data is stored on our servers:
+            </p>
+            <ul className="list-none space-y-2.5 mt-2">
+                {[
+                    ['Account Information', 'Your name, email address, phone number (if provided), and profile picture.'],
+                    ['Authentication Data', 'Login tokens and session identifiers used to keep you signed in securely.'],
+                    ['Chat Messages', 'Text messages you have sent and received in direct and group conversations.'],
+                    ['Group Memberships', 'Records of which chat groups you have created or joined.'],
+                    ['AI Interaction Logs', 'Your conversations with the AI assistant feature.'],
+                    ['Presence Data', 'Temporary records of your online/offline status (not permanently stored).'],
+                ].map(([label, desc], i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p><Highlight>{label}</Highlight> — {desc}</p>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-3">
+                We do <Highlight>not</Highlight> store any audio/video call recordings. Calls are
+                established via peer-to-peer WebRTC connections and no call data passes through or
+                is saved on our servers.
+            </p>
+        </Section>
+
+        <Section icon="🗑️" title="How to Request Data Deletion">
+            <p>
+                You can request complete deletion of your data through any of the following methods:
+            </p>
+
+            {/* Method 1 */}
+            <div className="mt-4 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[var(--color-gray-300)] font-semibold text-[14px] mb-2">
+                    Method 1 — Send Us an Email
+                </p>
+                <p className="text-[14px]">
+                    Write to us at{' '}
+                    <a href="mailto:rk8210032@gmail.com" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors font-medium">
+                        rk8210032@gmail.com
+                    </a>{' '}
+                    with the subject line <Highlight>"Data Deletion Request"</Highlight>. Please include
+                    the email address or phone number associated with your Blinx AI account so we can
+                    locate and remove your data.
+                </p>
             </div>
 
-            <Motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-4xl relative z-10 py-12"
-            >
-                <div className="flex flex-col items-center mb-12 text-center">
-                    <BlinkingFace className="w-20 h-20 mb-6" />
-                    <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Data Deletion</h1>
-                    <div className="h-1 w-24 bg-rose-500/50 rounded-full mt-6 mb-4" />
-                    <p className="text-slate-500 font-medium uppercase tracking-[0.2em] text-sm mb-2">Privacy & Security Control</p>
-                    <p className="text-xs text-slate-600">{env.APP_NAME} ({env.APP_DOMAIN})</p>
-                </div>
-
-                <div className="glass-strong rounded-[2.5rem] p-8 md:p-14 text-slate-300 leading-relaxed shadow-2xl border border-white/10">
-                    <p className="text-xl mb-12 text-center opacity-90 mx-auto max-w-2xl font-light italic">
-                        "At <span className="text-white font-bold">Blinx AI Assistant</span>, your privacy is a priority. We offer clear, actionable ways to revoke access and permanently remove your data."
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                        <section className="glass p-8 rounded-[2rem] border border-white/10 hover:border-blue-500/30 transition-all flex flex-col justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
-                                    <span className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm">01</span>
-                                    Google Access
-                                </h2>
-                                <p className="text-sm text-slate-400 mb-6">You can disconnect Blinx AI Assistant from your Google account at any time using Google's official security dashboard.</p>
-                            </div>
+            {/* Method 2 */}
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[var(--color-gray-300)] font-semibold text-[14px] mb-2">
+                    Method 2 — Revoke Google Access
+                </p>
+                <p className="text-[14px]">
+                    If you signed in using Google, you can revoke Blinx AI Assistant's access from your
+                    Google Account at any time:
+                </p>
+                <ol className="list-none space-y-1.5 mt-2 text-[14px]">
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-blue-400 font-semibold mt-0.5 shrink-0">1.</span>
+                        <p>
+                            Go to your Google Account → Security →
                             <a
-                                href="https://myaccount.google.com/permissions"
+                                href="https://myaccount.google.com/security?pli=1#thirdpartyapps"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 text-blue-400 font-bold hover:text-blue-300 transition-colors group"
+                                className="text-blue-400 underline underline-offset-4 hover:text-blue-300 transition-colors font-medium"
                             >
-                                Security Dashboard
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
-                            </a>
-                        </section>
+                                Third-party apps with account access
+                            </a>.
+                        </p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-blue-400 font-semibold mt-0.5 shrink-0">2.</span>
+                        <p>Find "Blinx AI Assistant" in the list of connected applications.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-blue-400 font-semibold mt-0.5 shrink-0">3.</span>
+                        <p>Click on it and select "Remove Access".</p>
+                    </li>
+                </ol>
+                <p className="text-[14px] mt-2">
+                    Once you revoke access, we will no longer be able to use your Google credentials.
+                    To also delete the data already stored on our servers, please send us an email as
+                    described above.
+                </p>
+            </div>
 
-                        <section className="glass p-8 rounded-[2rem] border border-white/10 hover:border-rose-500/30 transition-all">
-                            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
-                                <span className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 text-sm">02</span>
-                                Request Deletion
-                            </h2>
-                            <p className="text-sm text-slate-400 mb-6">To permanently delete your Blinx AI Assistant account and all associated temporary metadata, contact us.</p>
-                            <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 transition-colors">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Direct Support Email</p>
-                                <p className="text-sm font-mono text-white select-all">{env.CONTACT_EMAIL}</p>
-                            </div>
-                        </section>
-                    </div>
+            {/* Method 3 (Recommended) */}
+            <div className="mt-3 p-4 rounded-xl border border-blue-500/30 bg-[var(--color-background)]">
+                <p className="text-blue-400 font-semibold text-[14px] mb-2">
+                    Method 3 — Remove Access via Profile Settings <span className="ml-2 text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded">Recommended</span>
+                </p>
+                <p className="text-[14px]">
+                    For the easiest and fastest way, you can go to your <Highlight>Profile Settings</Highlight> inside Blinx AI Assistant and directly remove or revoke Google account access. This will disconnect your Google account and remove all associated permissions (including email and calendar). After revoking, you may also request full data deletion as described above.
+                </p>
+            </div>
+        </Section>
 
-                    <div className="space-y-6">
-                        <section className="glass p-8 rounded-[2rem] border border-white/10">
-                            <h2 className="text-xl font-bold text-white mb-2">Policy on Data Persistence</h2>
-                            <p className="text-slate-400 text-sm leading-relaxed">
-                                Because Blinx AI Assistant is an educational project, we follow a strict <strong>Minimal Storage Policy</strong>.
-                                Most Google user data is never stored on our database. When you disconnect your Google Account,
-                                the application automatically loses the ability to fetch new data, and any cached session tokens are invalidated instantly.
-                            </p>
-                        </section>
-
-                        <section className="glass p-8 rounded-[2rem] border border-white/10 text-center">
-                            <h2 className="text-xl font-bold text-white mb-2">SLA for Deletion Requests</h2>
-                            <p className="text-slate-400 text-sm">All email requests for data deletion are processed within <span className="text-white font-bold">7 business days</span>. We will send a final verification email once the wipe is complete.</p>
-                        </section>
-                    </div>
-
-                    <div className="pt-10 border-t border-white/5 flex justify-center mt-10">
-                        <a href="/" className="px-10 py-3 rounded-full glass hover:bg-white/10 transition-all font-bold text-white text-sm tracking-widest uppercase">Return to App</a>
-                    </div>
-                </div>
-            </Motion.div>
-
-            <p className="text-center mt-8 text-[10px] text-slate-600 uppercase tracking-widest pb-10">
-                Educational Project • Security & Privacy Compliance
+        <Section icon="⏱️" title="Deletion Timeline">
+            <p>
+                Upon receiving your deletion request, we aim to process it as follows:
             </p>
-        </div>
-    );
-};
+            <ul className="list-none space-y-2 mt-2">
+                {[
+                    'Acknowledgement of your request — within 24 hours.',
+                    'Complete deletion of your data from our active servers — within 7 working days.',
+                    'Any cached or backup data (if applicable) — within 30 days.',
+                ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500/60 shrink-0" />
+                        <p>{item}</p>
+                    </li>
+                ))}
+            </ul>
+            <p className="mt-3">
+                As this is an academic project with limited infrastructure, actual timelines may vary
+                slightly, but we shall make every reasonable effort to honour these commitments.
+            </p>
+        </Section>
+
+        <Section icon="📦" title="What Gets Deleted?">
+            <p>
+                When we process your deletion request, the following data will be permanently removed:
+            </p>
+            <div className="mt-3 grid gap-3">
+                {[
+                    { label: 'Account Profile', desc: 'Name, email, phone number, profile picture — all removed.', colour: 'bg-red-500/10 border-red-500/20 text-red-300' },
+                    { label: 'Chat History', desc: 'All your direct messages and group messages — permanently erased.', colour: 'bg-red-500/10 border-red-500/20 text-red-300' },
+                    { label: 'Group Memberships', desc: 'You will be removed from all groups. Groups you created will be reassigned or deleted.', colour: 'bg-amber-500/10 border-amber-500/20 text-amber-300' },
+                    { label: 'AI Conversations', desc: 'All interactions with the AI assistant — cleared completely.', colour: 'bg-red-500/10 border-red-500/20 text-red-300' },
+                    { label: 'Auth Tokens', desc: 'All active sessions and tokens — revoked and destroyed.', colour: 'bg-red-500/10 border-red-500/20 text-red-300' },
+                ].map((item, i) => (
+                    <div key={i} className={`p-3 rounded-lg border ${item.colour} text-[14px]`}>
+                        <p className="font-semibold">{item.label}</p>
+                        <p className="mt-0.5 opacity-80">{item.desc}</p>
+                    </div>
+                ))}
+            </div>
+        </Section>
+
+        <Section icon="ℹ️" title="Important Notes">
+            <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <ul className="space-y-3 text-[14px]">
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>Data deletion is <Highlight>permanent and irreversible</Highlight>. Once your data has been deleted, it cannot be recovered.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>Messages you sent to other users in group chats may still be visible to them after deletion, but your identity will be anonymised or removed.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>If you created an account using Google Sign-In, revoking access from Google does not automatically delete your data from our servers — you must also submit a deletion request.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5">!</span>
+                        <p>Since this project may be discontinued after the academic evaluation, all remaining data will be deleted when the servers are decommissioned.</p>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                        <span className="text-blue-400 mt-0.5">!</span>
+                        <p>Blinx AI Assistant requests <Highlight>email</Highlight> and <Highlight>calendar</Highlight> permissions from Google only so you can use features like chat, account verification, and calendar integration. We do not access or store any other Google data, and you can revoke these permissions at any time.</p>
+                    </li>
+                </ul>
+            </div>
+        </Section>
+
+        <Section icon="🔗" title="Related Policies">
+            <p>
+                For more information about how we handle your data, please refer to:
+            </p>
+            <div className="flex flex-wrap gap-3 mt-3">
+                <a
+                    href="/privacy-policy"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] text-[14px] font-medium text-[var(--color-gray-300)] hover:text-blue-400 hover:border-blue-500/30 transition-all"
+                >
+                    <span>🔐</span> Privacy Policy
+                </a>
+                <a
+                    href="/terms"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] text-[14px] font-medium text-[var(--color-gray-300)] hover:text-blue-400 hover:border-blue-500/30 transition-all"
+                >
+                    <span>📜</span> Terms of Service
+                </a>
+            </div>
+        </Section>
+
+        <Section icon="📬" title="Contact Us">
+            <p>
+                Have questions about data deletion or need assistance? We are here to help:
+            </p>
+            <div className="mt-3 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
+                <p className="text-[14px]">
+                    <Highlight>Project</Highlight> — Blinx AI Assistant (College Academic Project)
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Email</Highlight> —{' '}
+                    <a href="mailto:rk8210032@gmail.com" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        rk8210032@gmail.com
+                    </a>
+                </p>
+                <p className="text-[14px] mt-1">
+                    <Highlight>Website</Highlight> —{' '}
+                    <a href="https://blinxAI.me" className="text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors">
+                        blinxAI.me
+                    </a>
+                </p>
+            </div>
+        </Section>
+
+    </LegalLayout>
+);
 
 export default DataDeletion;
