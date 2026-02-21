@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
@@ -8,92 +9,104 @@
     <title>Information from {{appName}}</title>
 
     <style>
-        @media screen and (max-width:600px){
-          .container{width:100% !important;}
-          .px{padding-left:18px !important;padding-right:18px !important;}
+        @media screen and (max-width:600px) {
+            .container {
+                width: 100% !important;
+            }
+
+            .px {
+                padding-left: 18px !important;
+                padding-right: 18px !important;
+            }
         }
     </style>
 </head>
 
-<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
-<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-    Account information from {{appName}}. If you need help, reply to this email or contact support.
-</div>
+<body
+    style="margin:0;padding:0;background-color:#f4f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+    <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+        Account information from {{appName}}. If you need help, reply to this email or contact support.
+    </div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f6f8;">
-    <tr>
-        <td align="center" style="padding:40px 16px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+        style="background-color:#f4f6f8;">
+        <tr>
+            <td align="center" style="padding:40px 16px;">
 
-            <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0"
-                   class="container"
-                   style="width:520px;max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);">
-                <!-- Header  -->
-                <tr>
-                    <td class="px" style="padding:22px 32px;background-color:#0b5ed7;">
-                        <div style="font-size:18px;line-height:24px;font-weight:700;color:#ffffff;">
-                            {{appName}}
-                        </div>
-                        <div style="font-size:13px;line-height:18px;color:#dbeafe;margin-top:4px;">
-                            Account update
-                        </div>
-                    </td>
-                </tr>
+                <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0" class="container"
+                    style="width:520px;max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+                    <!-- Header  -->
+                    <tr>
+                        <td class="px" style="padding:22px 32px;background-color:#0b5ed7;">
+                            <div style="font-size:18px;line-height:24px;font-weight:700;color:#ffffff;">
+                                {{appName}}
+                            </div>
+                            <div style="font-size:13px;line-height:18px;color:#dbeafe;margin-top:4px;">
+                                Account update
+                            </div>
+                        </td>
+                    </tr>
 
-                <!-- Body -->
-                <tr>
-                    <td class="px" style="padding:28px 32px 10px 32px;">
-                        <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
-                            Dear {{userName}},
-                        </p>
-
-                        <p style="margin:0 0 18px 0;font-size:15px;line-height:1.6;">
-                            Please find the following information regarding your {{appName}} account:
-                        </p>
-
-                        <!-- Message block -->
-                        <div style="margin:0 0 18px 0;padding:14px 16px;background-color:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;">
-                            <p style="margin:0;font-size:15px;line-height:1.6;color:#111827;">
-                                {{messageContent}}
+                    <!-- Body -->
+                    <tr>
+                        <td class="px" style="padding:28px 32px 10px 32px;">
+                            <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                                Dear {{userName}},
                             </p>
-                        </div>
 
-                        <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#4b5563;">
-                            Should you require any clarification, please contact us. Thank you for your continued trust in {{appName}}.
-                        </p>
+                            <p style="margin:0 0 18px 0;font-size:15px;line-height:1.6;">
+                                Please find the following information regarding your {{appName}} account:
+                            </p>
 
-                        <p style="margin:20px 0 0 0;font-size:14px;line-height:1.6;">
-                            Sincerely,<br/>
-                            <strong>{{appName}} Team</strong>
-                        </p>
+                            <!-- Message block -->
+                            <div
+                                style="margin:0 0 18px 0;padding:14px 16px;background-color:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;">
+                                <p style="margin:0;font-size:15px;line-height:1.6;color:#111827;">
+                                    {{messageContent}}
+                                </p>
+                            </div>
 
-                        <p style="margin:18px 0 0 0;font-size:12px;line-height:1.6;color:#6b7280;">
-                            Need help? Contact support: <a href="mailto:{{supportEmail}}" style="color:#0b5ed7;text-decoration:underline;">{{supportEmail}}</a>
-                        </p>
-                    </td>
-                </tr>
+                            <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#4b5563;">
+                                Should you require any clarification, please contact us. Thank you for your continued
+                                trust in {{appName}}.
+                            </p>
 
-                <!-- Footer -->
-                <tr>
-                    <td align="center" class="px" style="padding:18px 32px;background-color:#f8fafc;">
-                        <p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">
-                            This is an automated message. If you reply, it may not be monitored.
-                        </p>
+                            <p style="margin:20px 0 0 0;font-size:14px;line-height:1.6;">
+                                Sincerely,<br />
+                                <strong>{{appName}} Team</strong>
+                            </p>
 
-                        <p style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
-                            © 2026 {{appName}}. All rights reserved.
-                        </p>
+                            <p style="margin:18px 0 0 0;font-size:12px;line-height:1.6;color:#6b7280;">
+                                Need help? Contact support: <a href="mailto:{{supportEmail}}"
+                                    style="color:#0b5ed7;text-decoration:underline;">{{supportEmail}}</a>
+                            </p>
+                        </td>
+                    </tr>
 
-                        <p style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
-                          blink.com
-                          &nbsp;·&nbsp;
-                            <a href="https://blink.com" style="color:#0b5ed7;text-decoration:underline;">Unsubscribe</a>
-                        </p>
-                    </td>
-                </tr>
-            </table>
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" class="px" style="padding:18px 32px;background-color:#f8fafc;">
+                            <p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280;">
+                                This is an automated message. If you reply, it may not be monitored.
+                            </p>
 
-        </td>
-    </tr>
-</table>
+                            <p style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
+                                © 2026 {{appName}}. All rights reserved.
+                            </p>
+
+                            <p style="margin:10px 0 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">
+                                blinxAI.me
+                                &nbsp;·&nbsp;
+                                <a href="https://blinxAI.me"
+                                    style="color:#0b5ed7;text-decoration:underline;">Unsubscribe</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+            </td>
+        </tr>
+    </table>
 </body>
+
 </html>

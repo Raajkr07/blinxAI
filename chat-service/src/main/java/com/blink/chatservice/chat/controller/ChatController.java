@@ -100,7 +100,7 @@ public class ChatController {
     public ResponseEntity<Object> sendEmail(Authentication auth, @RequestBody SendEmailRequest request) {
         if (request.to() == null || request.to().isBlank()) return ResponseEntity.badRequest().body("Recipient is required");
         
-        emailService.sendUserEmail(auth.getName(), request.to().trim(), request.subject() != null ? request.subject() : "Message from Blink", request.body() != null ? request.body() : "");
+        emailService.sendUserEmail(auth.getName(), request.to().trim(), request.subject() != null ? request.subject() : "Message from BlinxAI", request.body() != null ? request.body() : "");
         
         if (request.conversationId() != null && !request.conversationId().isBlank()) {
             try {

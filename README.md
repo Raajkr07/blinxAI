@@ -1,4 +1,4 @@
-# Blink Chat - AI-Powered Real-Time Chat Application
+# BlinxAI - AI-Powered Real-Time Chat Application
 
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -11,7 +11,7 @@
 [![WebSocket](https://img.shields.io/badge/WebSocket-STOMP-010101?style=for-the-badge&logo=websocket&logoColor=white)](https://stomp.github.io/)
 [![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
 
-Hey there! 👋 Welcome to **Blink Chat**, my personal project that I've been working on to explore the fascinating world of real-time communication combined with AI capabilities. This isn't just another chat app - it's a full-featured messaging platform with some really cool AI integration that makes conversations smarter and more interactive.
+Hey there! 👋 Welcome to **BlinxAI**, my personal project that I've been working on to explore the fascinating world of real-time communication combined with AI capabilities. This isn't just another chat app - it's a full-featured messaging platform with some really cool AI integration that makes conversations smarter and more interactive.
 
 ## ✨ What Makes This Special
 
@@ -69,15 +69,15 @@ flowchart TB
         ALB["AWS ALB / NLB (Ingress)"]
 
         subgraph EKS["EKS Cluster"]
-            subgraph NS["Namespace: blink-chat"]
+            subgraph NS["Namespace: blinx-chat"]
 
                 %% Application Layer
-                subgraph APP["Blink Chat App"]
+                subgraph APP["BlinxAI Chat App"]
                     SVC["Service"]
 
                     subgraph RS["ReplicaSet"]
-                        POD1["Blink Chat Pod"]
-                        POD2["Blink Chat Pod"]
+                        POD1["BlinxAI Pod"]
+                        POD2["BlinxAI Pod"]
                     end
                 end
 
@@ -128,7 +128,7 @@ flowchart TD
     Client["Client<br/>Web / Mobile"]
 
     ALB["AWS ALB Ingress"]
-    App["Blink Chat Pod"]
+    App["BlinxAI Pod"]
 
     %% Controller Layer
     subgraph Controller["Controller Layer"]

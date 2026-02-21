@@ -17,12 +17,12 @@ public class OpenApiConfig {
     private String serverUrl;
 
     @Bean
-    public OpenAPI blinkOpenAPI() {
+    public OpenAPI blinxOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Blink API")
+                        .title("BlinxAI API")
                         .version("1.0.0")
-                        .description("Blink Real-Time Messaging and AI Gateway"))
+                        .description("BlinxAI Real-Time Messaging and AI Gateway"))
                 .addServersItem(new Server().url(serverUrl))
                 .components(new Components()
                         .addSecuritySchemes("bearerToken", new SecurityScheme()

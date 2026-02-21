@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +25,9 @@ public class AuthController {
     private final UserService userService;
     private final NotificationService notificationService;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @Operation(summary = "Request OTP for signup/login", description = "Send OTP to phone/email. Creates/Signup user if new.")
     @PostMapping("/request-otp")
     public ResponseEntity<OtpResponse> requestOtp(@Valid @RequestBody OtpRequest request) {
@@ -33,7 +37,8 @@ public class AuthController {
         log.info("OTP requested for: {}", maskIdentifier(identifier));
 
         try {
-            boolean sent = notificationService.sendOtp(identifier, otp, "Blink", "http://localhost:5143");
+            String fullVerifyUrl = frontendUrl + "/verify?otp=" + otp + "&identifier=" + identifier;
+            boolean sent = notificationService.sendOtp(identifier, otp, "Blinx", fullVerifyUrl);
             if (!sent) {
                 log.warn("OTP generated but delivery failed for: {}", maskIdentifier(identifier));
             }

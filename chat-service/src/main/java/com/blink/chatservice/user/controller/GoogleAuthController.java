@@ -64,7 +64,7 @@ public class GoogleAuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> refresh(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = null;
         if (request.getCookies() != null) {
             refreshToken = Arrays.stream(request.getCookies())
@@ -93,14 +93,57 @@ public class GoogleAuthController {
         }
 
         String newAccessToken = jwtUtil.generateToken(user);
-        addCookie(response, "access_token", newAccessToken, (int) (jwtConfig.getExpiration() / 1000));
+        String newRefreshToken = jwtUtil.generateRefreshToken(userId); // Rotate
         
-        return ResponseEntity.ok().build();
+        addCookie(response, "access_token", newAccessToken, (int) (jwtConfig.getExpiration() / 1000));
+        addCookie(response, "refresh_token", newRefreshToken, (int) (jwtConfig.getRefreshExpiration() / 1000));
+        
+        return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }
 
     @GetMapping("/session")
-    public ResponseEntity<Map<String, Object>> getSession(Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getSession(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication) {
+        
+        // If not authenticated, try to recover session via refresh token cookie
         if (authentication == null || !authentication.isAuthenticated()) {
+            String refreshToken = null;
+            if (request.getCookies() != null) {
+                refreshToken = Arrays.stream(request.getCookies())
+                        .filter(c -> "refresh_token".equals(c.getName()))
+                        .findFirst()
+                        .map(Cookie::getValue)
+                        .orElse(null);
+            }
+
+            if (refreshToken != null && jwtUtil.validateToken(refreshToken) && jwtUtil.isRefreshToken(refreshToken)) {
+                String userId = jwtUtil.extractUserId(refreshToken);
+                Optional<User> userOptional = userRepository.findById(userId);
+                
+                if (userOptional.isPresent()) {
+                    User user = userOptional.get();
+                    log.info("Recovering session for user: {}", userId);
+                    
+                    try {
+                        oAuthService.refreshCredential(userId);
+                    } catch (Exception e) {
+                        log.warn("Google credential refresh failed during session recovery: {}", e.getMessage());
+                    }
+
+                    String newAccessToken = jwtUtil.generateToken(user);
+                    String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+                    
+                    addCookie(response, "access_token", newAccessToken, (int) (jwtConfig.getExpiration() / 1000));
+                    addCookie(response, "refresh_token", newRefreshToken, (int) (jwtConfig.getRefreshExpiration() / 1000));
+                    
+                    return ResponseEntity.ok(Map.of(
+                        "user", user,
+                        "accessToken", newAccessToken
+                    ));
+                }
+            }
             return ResponseEntity.status(401).build();
         }
 
