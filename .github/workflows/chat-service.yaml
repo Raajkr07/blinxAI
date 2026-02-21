@@ -6,17 +6,20 @@ on:
     paths:
       - "chat-service/**"
       - "Dockerfile.chat-service"
+      - "Dockerfile.chat-service.ci"
       - ".github/workflows/chat-service.yaml"
   pull_request:
     branches: [main]
     paths:
       - "chat-service/**"
       - "Dockerfile.chat-service"
+      - "Dockerfile.chat-service.ci"
       - ".github/workflows/chat-service.yaml"
 
 env:
   IMAGE_REPO: raajkr07
   IMAGE_NAME: blinx-chat-service
+  HEROKU_APP: ${{ secrets.HEROKU_APP_NAME }}
   JAVA_VERSION: "17"
 
 jobs:
@@ -86,3 +89,75 @@ jobs:
             ${{ env.IMAGE_REPO }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ══════════════════════════════════════════════════════════
+  # CD ─ Deploy to Heroku via Container Registry
+  # ══════════════════════════════════════════════════════════
+  deploy:
+    name: Deploy to Heroku
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: heroku-deploy
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Re-use the JAR already tested & built in the build job
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: chat-service/pom.xml
+
+      - name: Package (skip tests – already passed)
+        working-directory: chat-service
+        run: mvn -B -T 1C package -DskipTests
+
+      - name: Prepare Docker context
+        run: mkdir -p docker-ctx && cp chat-service/target/*.jar docker-ctx/app.jar
+
+      # ── Login to Heroku Container Registry ────────────────
+      - name: Login to Heroku Container Registry
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
+
+      # ── Build & Push to Heroku ────────────────────────────
+      - name: Build Heroku image
+        run: |
+          docker build -t registry.heroku.com/${{ env.HEROKU_APP }}/web \
+            -f Dockerfile.chat-service.ci docker-ctx
+
+      - name: Push to Heroku
+        run: docker push registry.heroku.com/${{ env.HEROKU_APP }}/web
+
+      # ── Release ───────────────────────────────────────────
+      - name: Release
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: heroku container:release web --app ${{ env.HEROKU_APP }}
+
+      # ── Smoke test ────────────────────────────────────────
+      - name: Wait for deploy & health check
+        run: |
+          echo "Waiting 30s for dyno to start..."
+          sleep 30
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.blinxai.me/actuator/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✓ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i: status=$STATUS, retrying in 15s..."
+            sleep 15
+          done
+          echo "✗ Health check failed after 5 attempts"
+          exit 1
