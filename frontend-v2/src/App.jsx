@@ -11,9 +11,10 @@ const PrivacyPolicy = lazy(() => import('./pages/verification/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/verification/TermsOfService'));
 const DataDeletion = lazy(() => import('./pages/verification/DataDeletion'));
 const VerifyPage = lazy(() => import('./pages/verification/VerifyPage'));
+const OAuthFallback = lazy(() => import('./pages/OAuthFallback'));
 
 const Loading = () => (
-  <div className="flex h-screen items-center justify-center bg-[var(--color-background)] text-[var(--color-foreground)]">
+  <div className="flex h-screen items-center justify-center bg-background text-foreground">
     <div className="flex flex-col items-center gap-4">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div>
       <p className="text-gray-400 text-sm animate-pulse">just a sec...</p>
@@ -32,11 +33,13 @@ const App = () => {
 
   // 2. Routing Logic
   const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();
+  const searchParams = new URLSearchParams(window.location.search);
   const isPrivacy = rawPath === '/privacy-policy';
   const isTerms = rawPath === '/terms';
   const isDeletion = rawPath === '/data-deletion';
   const isVerify = rawPath === '/verify';
-  const isPublicRoute = isPrivacy || isTerms || isDeletion || isVerify;
+  const isOAuthError = rawPath === '/auth' && searchParams.get('error') === 'true';
+  const isPublicRoute = isPrivacy || isTerms || isDeletion || isVerify || isOAuthError;
 
   // 3. Side Effects
   useEffect(() => {
@@ -94,16 +97,17 @@ const App = () => {
         isTerms ? <TermsOfService /> :
           isDeletion ? <DataDeletion /> :
             isVerify ? <VerifyPage /> :
-              isLoading ? <Loading /> :
-                !isAuthenticated ? <AuthPage /> :
-                  (
-                    <>
-                      <ConnectionStatus />
-                      {hasIncomingCall() && <IncomingCallDialog />}
-                      {hasActiveCall() && <ActiveCallInterface />}
-                      {!hasActiveCall() && <ChatPage />}
-                    </>
-                  )}
+              isOAuthError ? <OAuthFallback /> :
+                isLoading ? <Loading /> :
+                  !isAuthenticated ? <AuthPage /> :
+                    (
+                      <>
+                        <ConnectionStatus />
+                        {hasIncomingCall() && <IncomingCallDialog />}
+                        {hasActiveCall() && <ActiveCallInterface />}
+                        {!hasActiveCall() && <ChatPage />}
+                      </>
+                    )}
     </Suspense>
   );
 };

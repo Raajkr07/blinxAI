@@ -60,6 +60,14 @@ export const useAuthStore = create((set, get) => ({
             set({ accessToken: null, isAuthenticated: false });
         }
 
+        // Check for Google OAuth error in URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const oauthError = searchParams.get('error');
+        if (window.location.pathname === '/auth' && oauthError === 'access_denied') {
+            window.location.href = '/auth?error=true';
+            return false;
+        }
+
         // Initialize loading state based on whether we have a local profile
         set({ isLoading: !!localUser });
 
