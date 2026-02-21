@@ -46,6 +46,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/index.html",
+                                "/actuator/health",
+                                "/actuator/info",
                                 // Allowing public access to ws handshake, socket security is handled separately.
                                 "/ws/**"
                         ).permitAll()

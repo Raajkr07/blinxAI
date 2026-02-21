@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState, useLayoutEffect, useCallback } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect, useCallback, memo } from 'react';
 import { chatService, socketService, userService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
@@ -588,7 +588,7 @@ function renderMessageWithLinks(text, isOwn) {
 }
 
 // ─── Message bubble ──────────────────────────────────────────────────
-function MessageBubble({
+const MessageBubble = memo(({
     message,
     isOwn,
     showAvatar,
@@ -598,7 +598,7 @@ function MessageBubble({
     fallbackName,
     isGroup,
     isAI
-}) {
+}) => {
     const [isHovered, setIsHovered] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const queryClient = useQueryClient();
@@ -766,4 +766,4 @@ function MessageBubble({
             </div>
         </div>
     );
-}
+});
