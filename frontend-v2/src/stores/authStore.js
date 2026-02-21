@@ -60,11 +60,11 @@ export const useAuthStore = create((set, get) => ({
             set({ accessToken: null, isAuthenticated: false });
         }
 
-        // Check for Google OAuth error in URL
+        // Check for Google OAuth error in URL — redirect to dedicated error page
         const searchParams = new URLSearchParams(window.location.search);
         const oauthError = searchParams.get('error');
-        if (window.location.pathname === '/auth' && oauthError === 'access_denied') {
-            window.location.href = '/auth?error=true';
+        if (oauthError === 'access_denied') {
+            window.location.replace('/oauth-error');
             return false;
         }
 

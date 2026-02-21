@@ -206,11 +206,17 @@ public class UserServiceImpl implements UserService {
     public String resolveUserIdFromContact(String contact) {
         if (contact == null || contact.isBlank()) return null;
         String trimmed = contact.trim();
-        if (userRepository.existsById(trimmed)) return trimmed;
-        
+
+        // Try direct ID match first
+        if (trimmed.length() == 24 && trimmed.matches("[a-fA-F0-9]+")) {
+            if (userRepository.existsById(trimmed)) return trimmed;
+        }
+
+        // Try username
         Optional<User> u = userRepository.findByUsername(trimmed);
         if (u.isPresent()) return u.get().getId();
 
+        // Try phone variants
         String cleanPhone = trimmed.replaceAll("[\\s-()]", "");
         u = userRepository.findByPhone(cleanPhone);
         if (u.isPresent()) return u.get().getId();
@@ -223,6 +229,7 @@ public class UserServiceImpl implements UserService {
             if (u.isPresent()) return u.get().getId();
         }
 
+        // Try email last
         return userRepository.findFirstByEmail(trimmed.toLowerCase(Locale.ROOT)).map(User::getId).orElse(null);
     }
 

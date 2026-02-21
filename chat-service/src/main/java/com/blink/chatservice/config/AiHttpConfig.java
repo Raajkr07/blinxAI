@@ -16,8 +16,8 @@ public class AiHttpConfig {
     @Bean
     public RestTemplate aiRestTemplate(RestTemplateBuilder builder) {
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(50);
-        connectionManager.setDefaultMaxPerRoute(20);
+        connectionManager.setMaxTotal(20);
+        connectionManager.setDefaultMaxPerRoute(10);
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(Timeout.ofSeconds(10))

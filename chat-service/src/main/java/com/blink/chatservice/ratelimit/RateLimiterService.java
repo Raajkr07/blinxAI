@@ -1,6 +1,7 @@
 package com.blink.chatservice.ratelimit;
 
 
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -10,11 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class RateLimiterService {
 
-    // In-memory rate limiting. 
-    // WARNING: This is local to the instance. For distributed rate limiting, use Redis.
-    // Also, this map grows indefinitely. Needs a cleanup job or Guava cache with expiry.
+    // In-memory rate limiting (instance-local). For distributed rate limiting, use Redis.
     private final Map<String, UserWindow> windows = new ConcurrentHashMap<>();
-    private final int maxRequests = 50; 
+    private final int maxRequests = 50;
     private final long windowMs = 10_000;
 
     public boolean tryConsume(String userId) {
@@ -32,6 +31,13 @@ public class RateLimiterService {
             w.count++;
             return true;
         }
+    }
+
+    // Evict stale entries every 60s to prevent unbounded memory growth
+    @Scheduled(fixedRate = 60_000)
+    public void evictStaleWindows() {
+        long now = Instant.now().toEpochMilli();
+        windows.entrySet().removeIf(e -> now - e.getValue().windowStart > windowMs * 3);
     }
 
     private static class UserWindow {

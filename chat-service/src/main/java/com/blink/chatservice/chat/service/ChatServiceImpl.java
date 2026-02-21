@@ -73,7 +73,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public List<Conversation> listConversationsForUser(String userId) {
-        return conversationRepository.findByParticipantsContaining(userId);
+        return conversationRepository.findByParticipantsContainingOrderByUpdatedAtDesc(userId);
     }
 
     @Override

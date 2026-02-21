@@ -2,19 +2,26 @@ spring:
   application:
     name: blinx-chat-service
 
+  # Lazy-init beans to reduce startup memory and time
+  main:
+    lazy-initialization: false
+
   data:
     mongodb:
       uri: ${MONGODB_URI}
+      auto-index-creation: true
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD}
+      timeout: 3000ms
       lettuce:
         pool:
-          max-active: ${REDIS_POOL_MAX_ACTIVE:16}
-          max-idle: ${REDIS_POOL_MAX_IDLE:8}
-          min-idle: ${REDIS_POOL_MIN_IDLE:2}
+          max-active: ${REDIS_POOL_MAX_ACTIVE:8}
+          max-idle: ${REDIS_POOL_MAX_IDLE:4}
+          min-idle: ${REDIS_POOL_MIN_IDLE:1}
           max-wait: ${REDIS_POOL_MAX_WAIT:2000ms}
+        shutdown-timeout: 200ms
 
   mail:
     brevo:
@@ -28,21 +35,36 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: never
 
+# Disable Swagger in production to save ~30MB of memory
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    enabled: ${SPRINGDOC_ENABLED:false}
   swagger-ui:
-    path: /swagger-ui.html
+    enabled: ${SPRINGDOC_ENABLED:false}
 
 server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
+  # Tomcat tuned for low-memory environments
+  tomcat:
+    threads:
+      max: ${SERVER_TOMCAT_MAX_THREADS:50}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:5}
+    connection-timeout: 10000ms
+    max-connections: 200
+    accept-count: 50
+    keep-alive-timeout: 30000ms
+  # Enable response compression to reduce bandwidth and latency
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain,text/css,application/javascript
+    min-response-size: 1024
 
 jwt:
   secret: ${JWT_SECRET}
@@ -105,3 +127,10 @@ web:
         seconds: ${WEB_SEARCH_CACHE_TTL_SECONDS:300}
     timeout:
       seconds: ${WEB_SEARCH_TIMEOUT_SECONDS:10}
+
+logging:
+  level:
+    root: WARN
+    com.blink.chatservice: INFO
+    org.springframework.web: WARN
+    org.mongodb.driver: WARN

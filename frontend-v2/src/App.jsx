@@ -1,17 +1,17 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, Suspense } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { useAuthStore, useUIStore, useCallStore } from './stores';
 import { socketService } from './services';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
 import { usePresence } from './lib/usePresence';
 import { ConnectionStatus } from './components/ConnectionStatus';
-
-const AuthPage = lazy(() => import('./pages/AuthPage'));
-const ChatPage = lazy(() => import('./pages/ChatPage'));
-const PrivacyPolicy = lazy(() => import('./pages/verification/PrivacyPolicy'));
-const TermsOfService = lazy(() => import('./pages/verification/TermsOfService'));
-const DataDeletion = lazy(() => import('./pages/verification/DataDeletion'));
-const VerifyPage = lazy(() => import('./pages/verification/VerifyPage'));
-const OAuthFallback = lazy(() => import('./pages/OAuthFallback'));
+import {
+  publicRoutes,
+  protectedRoutes,
+  notFoundRoute,
+} from './config/routes';
+import { PUBLIC_PATHS, TITLE_MAP } from './config/routeHelpers';
 
 const Loading = () => (
   <div className="flex h-screen items-center justify-center bg-background text-foreground">
@@ -22,29 +22,52 @@ const Loading = () => (
   </div>
 );
 
-const App = () => {
-  // 1. Initialize all state hooks
-  const { isAuthenticated, user, checkSession, isLoading } = useAuthStore();
-  const { setIsMobile, theme } = useUIStore();
+// Page transition wrapper
+const PageTransition = ({ children }) => (
+  <Motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -8 }}
+    transition={{ duration: 0.2, ease: 'easeInOut' }}
+  >
+    {children}
+  </Motion.div>
+);
+
+// Guard: renders AuthPage for unauthenticated users
+const ProtectedRoute = ({ element: Component }) => {
+  const { isAuthenticated, isLoading } = useAuthStore();
   const { hasActiveCall, hasIncomingCall } = useCallStore();
 
-  // Subscribe to real-time presence updates
+  if (isLoading) return <Loading />;
+
+  if (!isAuthenticated) {
+    // Dynamically import AuthPage (already lazy via routes config)
+    const AuthPage = publicRoutes.find(r => r.path === '/auth').element;
+    return <AuthPage />;
+  }
+
+  return (
+    <>
+      <ConnectionStatus />
+      {hasIncomingCall() && <IncomingCallDialog />}
+      {hasActiveCall() && <ActiveCallInterface />}
+      {!hasActiveCall() && Component && <Component />}
+    </>
+  );
+};
+
+const App = () => {
+  const { user, isAuthenticated, checkSession } = useAuthStore();
+  const { setIsMobile, theme } = useUIStore();
+  const location = useLocation();
+
   usePresence();
 
-  // 2. Routing Logic
-  const rawPath = window.location.pathname.split('?')[0].replace(/\/$/, '').toLowerCase();
-  const searchParams = new URLSearchParams(window.location.search);
-  const isPrivacy = rawPath === '/privacy-policy';
-  const isTerms = rawPath === '/terms';
-  const isDeletion = rawPath === '/data-deletion';
-  const isVerify = rawPath === '/verify';
-  const isOAuthError = rawPath === '/auth' && searchParams.get('error') === 'true';
-  const isPublicRoute = isPrivacy || isTerms || isDeletion || isVerify || isOAuthError;
+  const isPublicRoute = PUBLIC_PATHS.some(p => location.pathname.toLowerCase().startsWith(p));
 
-  // 3. Side Effects
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+  // --- Side Effects ---
+  useEffect(() => { checkSession(); }, [checkSession]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -59,15 +82,12 @@ const App = () => {
       : document.documentElement.classList.remove('light');
   }, [theme]);
 
-  // Update document title for verification pages
+  // Dynamic document titles
   useEffect(() => {
-    if (isPrivacy) document.title = 'Privacy Policy | Blinx AI Assistant';
-    else if (isTerms) document.title = 'Terms of Service | Blinx AI Assistant';
-    else if (isDeletion) document.title = 'Data Deletion | Blinx AI Assistant';
-    else if (isVerify) document.title = 'Verifying Account | Blinx AI Assistant';
-    else document.title = 'Blinx AI Assistant | Chat';
-  }, [isPrivacy, isTerms, isDeletion, isVerify]);
+    document.title = TITLE_MAP[location.pathname.toLowerCase()] || 'Blinx AI Assistant | Chat';
+  }, [location.pathname]);
 
+  // WebRTC + Socket initialisation (only for authenticated non-public routes)
   useEffect(() => {
     if (isPublicRoute || !isAuthenticated || !user?.id) return;
 
@@ -83,31 +103,33 @@ const App = () => {
 
     return () => {
       isCancelled = true;
-      if (cleanup) {
-        cleanup();
-      }
+      if (cleanup) cleanup();
     };
   }, [isAuthenticated, user?.id, isPublicRoute]);
 
-  // 4. Render Hierarchy
+  // Routes
+  const NotFoundEl = notFoundRoute.element;
 
   return (
     <Suspense fallback={<Loading />}>
-      {isPrivacy ? <PrivacyPolicy /> :
-        isTerms ? <TermsOfService /> :
-          isDeletion ? <DataDeletion /> :
-            isVerify ? <VerifyPage /> :
-              isOAuthError ? <OAuthFallback /> :
-                isLoading ? <Loading /> :
-                  !isAuthenticated ? <AuthPage /> :
-                    (
-                      <>
-                        <ConnectionStatus />
-                        {hasIncomingCall() && <IncomingCallDialog />}
-                        {hasActiveCall() && <ActiveCallInterface />}
-                        {!hasActiveCall() && <ChatPage />}
-                      </>
-                    )}
+      <AnimatePresence mode="wait">
+        <PageTransition key={location.pathname}>
+          <Routes location={location}>
+            {/* Public routes */}
+            {publicRoutes.map(({ path, element: Element }) => (
+              <Route key={path} path={path} element={Element ? <Element /> : null} />
+            ))}
+
+            {/* Protected routes */}
+            {protectedRoutes.map(({ path, element }) => (
+              <Route key={path} path={path} element={<ProtectedRoute element={element} />} />
+            ))}
+
+            {/* 404 catch-all */}
+            <Route path="*" element={<NotFoundEl />} />
+          </Routes>
+        </PageTransition>
+      </AnimatePresence>
     </Suspense>
   );
 };

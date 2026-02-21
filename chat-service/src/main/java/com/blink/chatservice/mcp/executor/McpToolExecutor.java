@@ -23,7 +23,7 @@ public class McpToolExecutor {
     public McpToolExecutor(McpToolRegistry toolRegistry, ObjectMapper objectMapper) {
         this.toolRegistry = toolRegistry;
         this.objectMapper = objectMapper;
-        this.executorService = Executors.newFixedThreadPool(10, r -> {
+        this.executorService = Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "mcp-tool-executor");
             t.setDaemon(true);
             return t;

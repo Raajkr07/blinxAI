@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Login } from './Login';
 import { Signup } from './Signup';
 import { BlinkingFace } from './BlinkingFace';
@@ -118,9 +119,9 @@ const AuthPage = () => {
             </div>
 
             <div className="fixed bottom-8 left-0 right-0 flex justify-center gap-8 text-[10px] uppercase tracking-widest text-slate-500 font-bold z-50">
-                <a href="/privacy-policy" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Privacy</a>
-                <a href="/terms" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Terms</a>
-                <a href="/data-deletion" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Data Deletion</a>
+                <Link to="/privacy-policy" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Privacy</Link>
+                <Link to="/terms" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Terms</Link>
+                <Link to="/data-deletion" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Data Deletion</Link>
             </div>
         </div>
     );

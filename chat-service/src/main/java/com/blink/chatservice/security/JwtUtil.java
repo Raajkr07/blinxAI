@@ -21,13 +21,21 @@ public class JwtUtil {
 
     private final JwtConfig jwtConfig;
 
+    // Cache the signing key – it never changes at runtime, so no need to recompute on every request.
+    private volatile Key cachedKey;
+
     private Key getKey() {
-        try {
-            // Trying Base64 decode first, falling back to raw bytes. Flexible for dev/prod secrets.
-            byte[] keyBytes = java.util.Base64.getDecoder().decode(jwtConfig.getSecret());
-            return Keys.hmacShaKeyFor(keyBytes);
-        } catch (IllegalArgumentException e) {
-            return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
+        Key key = this.cachedKey;
+        if (key != null) return key;
+        synchronized (this) {
+            if (this.cachedKey != null) return this.cachedKey;
+            try {
+                byte[] keyBytes = java.util.Base64.getDecoder().decode(jwtConfig.getSecret());
+                this.cachedKey = Keys.hmacShaKeyFor(keyBytes);
+            } catch (IllegalArgumentException e) {
+                this.cachedKey = Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
+            }
+            return this.cachedKey;
         }
     }
 

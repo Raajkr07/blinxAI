@@ -1,18 +1,3 @@
-# Redirect blinx-app.netlify.app to blinxai.me (host-based)
-[[redirects]]
-  from = "/*"
-  to = "https://blinxai.me/:splat"
-  status = 301
-  force = true
-  [redirects.conditions]
-    Host = "blinx-app.netlify.app"
-
-# SPA fallback for all other requests (blinxai.me)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 [[headers]]
   for = "/*"
   [headers.values]

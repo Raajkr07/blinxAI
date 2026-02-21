@@ -20,7 +20,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByUsername(String username);
     List<User> findByUsernameContainingIgnoreCase(String username);
 
-    @Query("{ '$or': [ { 'username': { '$regex': ?0, '$options': 'i' } }, { 'phone': { '$regex': ?0, '$options': 'i' } }, { 'email': { '$regex': ?0, '$options': 'i' } }, { 'bio': { '$regex': ?0, '$options': 'i' } } ] }")
+    @Query("{ '$or': [ { 'username': { '$regex': ?0, '$options': 'i' } }, { 'phone': { '$regex': ?0, '$options': 'i' } }, { 'email': { '$regex': ?0, '$options': 'i' } } ] }")
     List<User> searchUsers(String query);
     
     List<User> findByOnlineTrue();

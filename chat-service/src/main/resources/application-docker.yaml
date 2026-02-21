@@ -5,18 +5,20 @@ spring:
   data:
     mongodb:
       # Connection pool tuned via URI parameters
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/blink_chat?minPoolSize=10&maxPoolSize=100}
-      auto-index-creation: false # Best practice for production
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/blink_chat?minPoolSize=5&maxPoolSize=50}
+      auto-index-creation: true
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: 3000ms
       lettuce:
         pool:
           max-active: ${SPRING_DATA_REDIS_POOL_MAX_ACTIVE:8}
-          max-idle: ${SPRING_DATA_REDIS_POOL_MAX_IDLE:8}
+          max-idle: ${SPRING_DATA_REDIS_POOL_MAX_IDLE:4}
           min-idle: ${SPRING_DATA_REDIS_POOL_MIN_IDLE:0}
-          max-wait: ${SPRING_DATA_REDIS_POOL_MAX_WAIT:-1ms}
+          max-wait: ${SPRING_DATA_REDIS_POOL_MAX_WAIT:2000ms}
+        shutdown-timeout: 200ms
 
   mail:
     brevo:
@@ -39,9 +41,16 @@ server:
   # Tomcat embedded server tuning
   tomcat:
     threads:
-      max: ${SERVER_TOMCAT_MAX_THREADS:200}
-      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:10}
-    connection-timeout: ${SERVER_TOMCAT_CONNECTION_TIMEOUT:20000ms}
+      max: ${SERVER_TOMCAT_MAX_THREADS:100}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:5}
+    connection-timeout: ${SERVER_TOMCAT_CONNECTION_TIMEOUT:10000ms}
+    max-connections: 400
+    accept-count: 100
+    keep-alive-timeout: 30000ms
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain,text/css,application/javascript
+    min-response-size: 1024
 
 jwt:
   secret: ${JWT_SECRET:2e804WBYw6Ke/fBUrvcmS9CHUeZK9uLzUw1A4qbh8vY=}

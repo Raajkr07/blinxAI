@@ -1,4 +1,5 @@
 import { motion as Motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { BlinkingFace } from '../../pages/BlinkingFace';
 import { toast } from 'react-hot-toast';
 
@@ -25,12 +26,12 @@ export const LegalLayout = ({ title, lastUpdated, children }) => {
                         <BlinkingFace className="w-8 h-8" />
                         <span className="font-bold text-xl tracking-tight">Blinx AI</span>
                     </div>
-                    <a
-                        href="/"
+                    <Link
+                        to="/"
                         className="text-sm font-medium text-[var(--color-gray-400)] hover:text-[var(--color-foreground)] transition-colors"
                     >
                         Back to Home
-                    </a>
+                    </Link>
                 </div>
             </header>
 
@@ -69,9 +70,9 @@ export const LegalLayout = ({ title, lastUpdated, children }) => {
                     </div>
 
                     <nav className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-xs font-semibold uppercase tracking-widest text-[var(--color-gray-500)]">
-                        <a href="/terms" className="hover:text-blue-500 transition-colors">Terms</a>
-                        <a href="/privacy-policy" className="hover:text-blue-500 transition-colors">Privacy</a>
-                        <a href="/data-deletion" className="hover:text-blue-500 transition-colors">Deletion</a>
+                        <Link to="/terms" className="hover:text-blue-500 transition-colors">Terms</Link>
+                        <Link to="/privacy-policy" className="hover:text-blue-500 transition-colors">Privacy</Link>
+                        <Link to="/data-deletion" className="hover:text-blue-500 transition-colors">Deletion</Link>
                         <a
                             href="mailto:rk8210032@gmail.com"
                             onClick={handleSupportClick}

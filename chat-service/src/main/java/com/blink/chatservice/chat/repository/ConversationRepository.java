@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ConversationRepository extends MongoRepository<Conversation, String> {
-    List<Conversation> findByParticipantsContaining(String userId);
+    List<Conversation> findByParticipantsContainingOrderByUpdatedAtDesc(String userId);
     List<Conversation> findByParticipantsContainingAndType(String userId, ConversationType type);
 
     @Query("{ 'type': ?0, 'participants': { $all: ?1, $size: 2 } }")
