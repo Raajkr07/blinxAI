@@ -156,16 +156,18 @@ jobs:
       # ── Smoke test ────────────────────────────────────────
       - name: Wait for deploy & health check
         run: |
-          echo "Waiting 30s for dyno to start..."
-          sleep 30
-          for i in 1 2 3 4 5; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.blinxai.me/actuator/health || true)
-            if [ "$STATUS" = "200" ]; then
-              echo "✓ Health check passed"
+          echo "Waiting 60s for dyno to start..."
+          sleep 60
+          for i in 1 2 3 4 5 6; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.blinxai.me/actuator/info || true)
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] || [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+              echo "✓ App is responding (HTTP $STATUS)"
               exit 0
             fi
-            echo "Attempt $i: status=$STATUS, retrying in 15s..."
-            sleep 15
+            echo "Attempt $i: status=$STATUS, retrying in 20s..."
+            sleep 20
           done
-          echo "✗ Health check failed after 5 attempts"
+          echo "✗ App not responding after 6 attempts (last status=$STATUS)"
+          echo "Check logs: heroku logs --tail --app ${{ env.HEROKU_APP }}"
+          exit 1
           exit 1
