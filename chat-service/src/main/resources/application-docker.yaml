@@ -62,8 +62,8 @@ app:
       from-number: ${TWILIO_FROM_NUMBER:+12052674639}
 
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://blinxAI.me,https://www.blinxAI.me,https://blinx-app.netlify.app,http://k8s-blinkcha-blinkcha-15ee8fd614-2137738643.ap-south-1.elb.amazonaws.com,http://localhost:8080,http://localhost:5173,http://localhost:5174}
-  frontend-url: ${APP_FRONTEND_URL:https://blinxAI.me}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://blinxai.me,https://www.blinxai.me,https://blinx-app.netlify.app,http://k8s-blinkcha-blinkcha-15ee8fd614-2137738643.ap-south-1.elb.amazonaws.com,http://localhost:8080,http://localhost:5173,http://localhost:5174}
+  frontend-url: ${APP_FRONTEND_URL:https://blinxai.me}
 
 api:
   server:

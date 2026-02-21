@@ -88,10 +88,12 @@ class SocketService {
 
                 onDisconnect: () => {
                     this.connected = false;
-                    useSocketStore.getState().setStatus('disconnected');
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
+                        useSocketStore.getState().setStatus('error');
                         this._scheduleReconnect();
+                    } else {
+                        useSocketStore.getState().setStatus('disconnected');
                     }
                 },
 
@@ -107,10 +109,17 @@ class SocketService {
 
                 onWebSocketClose: () => {
                     this.connected = false;
-                    useSocketStore.getState().setStatus('disconnected');
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
+                        // Keep 'error' or 'reconnecting' status instead of hiding/disconnected
+                        // If we are already in error or reconnecting, don't revert to disconnected
+                        const currentStatus = useSocketStore.getState().status;
+                        if (currentStatus !== 'reconnecting') {
+                            useSocketStore.getState().setStatus('error');
+                        }
                         this._scheduleReconnect();
+                    } else {
+                        useSocketStore.getState().setStatus('disconnected');
                     }
                 },
 

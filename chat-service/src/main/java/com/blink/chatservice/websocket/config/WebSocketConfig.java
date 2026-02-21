@@ -15,7 +15,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
 
-    @Value("${app.cors.allowed-origins:*}")
+    @Value("${app.cors.allowed-origins}")
     private String[] allowedOrigins;
 
     @Override
