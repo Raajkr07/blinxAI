@@ -54,7 +54,7 @@ export const publicRoutes = [
 // Unauthenticated users are shown AuthPage instead.
 export const protectedRoutes = [
     {
-        path: '/',
+        path: '/chat',
         element: ChatPage,
         title: 'Blinx AI Assistant | Chat',
     },
