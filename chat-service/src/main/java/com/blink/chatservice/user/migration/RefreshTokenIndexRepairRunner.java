@@ -82,9 +82,23 @@ public class RefreshTokenIndexRepairRunner implements ApplicationRunner {
     }
 
     private void ensureIndexes() {
-        mongoTemplate.indexOps(RefreshToken.class).ensureIndex(
-                new Index("userId", Sort.Direction.ASC)
-        );
+        // userId index (Check if already exists to avoid name conflict)
+        boolean userIdIndexExists = false;
+        for (Document index : mongoTemplate.getCollection(COLLECTION).listIndexes()) {
+            Document key = (Document) index.get("key");
+            if (key != null && key.containsKey("userId") && key.size() == 1) {
+                userIdIndexExists = true;
+                break;
+            }
+        }
+
+        if (!userIdIndexExists) {
+            mongoTemplate.indexOps(RefreshToken.class).ensureIndex(
+                    new Index("userId", Sort.Direction.ASC)
+            );
+        }
+
+        // token index (Unique)
         mongoTemplate.indexOps(RefreshToken.class).ensureIndex(
                 new Index("token", Sort.Direction.ASC).unique()
         );

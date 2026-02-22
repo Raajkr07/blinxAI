@@ -3,17 +3,17 @@ set -e
 
 # Default JVM options if JAVA_OPTS is not set externally
 : "${JAVA_OPTS:=-XX:+UseContainerSupport \
-  -XX:MaxRAMPercentage=50.0 \
-  -XX:InitialRAMPercentage=30.0 \
+  -XX:MaxRAMPercentage=40.0 \
+  -XX:InitialRAMPercentage=20.0 \
   -XX:+UseG1GC \
   -XX:MaxGCPauseMillis=50 \
   -XX:+UseStringDeduplication \
   -XX:+ParallelRefProcEnabled \
-  -XX:MaxDirectMemorySize=64m \
-  -XX:ReservedCodeCacheSize=64m \
+  -XX:MaxDirectMemorySize=32m \
+  -XX:ReservedCodeCacheSize=40m \
   -XX:+OptimizeStringConcat \
-  -Xss256k \
-  -XX:MaxMetaspaceSize=128m \
+  -Xss228k \
+  -XX:MaxMetaspaceSize=100m \
   -XX:+ExitOnOutOfMemoryError \
   -Djava.security.egd=file:/dev/./urandom}"
 

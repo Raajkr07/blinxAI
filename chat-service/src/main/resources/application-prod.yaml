@@ -4,7 +4,9 @@ spring:
 
   # Lazy-init beans to reduce startup memory and time
   main:
-    lazy-initialization: false
+    lazy-initialization: true
+  jmx:
+    enabled: false
 
   data:
     mongodb:
@@ -58,8 +60,10 @@ server:
   # Tomcat tuned for low-memory environments
   tomcat:
     threads:
-      max: ${SERVER_TOMCAT_MAX_THREADS:50}
-      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:5}
+      max: ${SERVER_TOMCAT_MAX_THREADS:25}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:3}
+    mbeanregistry:
+      enabled: false
     connection-timeout: 10000ms
     max-connections: 200
     accept-count: 50
