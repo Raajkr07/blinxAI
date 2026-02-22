@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -234,14 +235,24 @@ public class UserServiceImpl implements UserService {
     }
 
     private String createRefreshToken(String userId) {
-        String token = jwtUtil.generateRefreshToken(userId);
-        RefreshToken rt = new RefreshToken();
-        rt.setUserId(userId);
-        rt.setToken(token);
-        rt.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
-        rt.setExpiresAt(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis() + jwtConfig.getRefreshExpiration()), ZoneId.of("UTC")));
-        refreshTokenRepository.save(rt);
-        return token;
+        // In prod we enforce a unique index on token; if a collision occurs (should be extremely rare), retry.
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            String token = jwtUtil.generateRefreshToken(userId);
+            RefreshToken rt = new RefreshToken();
+            rt.setUserId(userId);
+            rt.setToken(token);
+            rt.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
+            rt.setExpiresAt(LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis() + jwtConfig.getRefreshExpiration()), ZoneId.of("UTC")));
+            try {
+                refreshTokenRepository.save(rt);
+                return token;
+            } catch (DuplicateKeyException ex) {
+                if (attempt == 3) throw ex;
+            }
+        }
+
+        // Unreachable, but keeps compiler happy.
+        throw new IllegalStateException("Failed to create refresh token");
     }
 
     private void validateSignup(String email, String phone) {

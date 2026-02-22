@@ -75,7 +75,10 @@ jobs:
       # Dockerfile.chat-service can skip the Maven build.
       - name: Prepare Docker context
         if: github.event_name == 'push'
-        run: mkdir -p docker-ctx && cp chat-service/target/*.jar docker-ctx/app.jar
+        run: |
+          mkdir -p docker-ctx
+          cp chat-service/target/*.jar docker-ctx/app.jar
+          cp entrypoint.sh docker-ctx/entrypoint.sh
 
       - name: Build & push image
         if: github.event_name == 'push'
@@ -121,7 +124,10 @@ jobs:
         run: mvn -B -T 1C package -DskipTests
 
       - name: Prepare Docker context
-        run: mkdir -p docker-ctx && cp chat-service/target/*.jar docker-ctx/app.jar
+        run: |
+          mkdir -p docker-ctx
+          cp chat-service/target/*.jar docker-ctx/app.jar
+          cp entrypoint.sh docker-ctx/entrypoint.sh
 
       # ── Login to Heroku Container Registry ────────────────
       - name: Login to Heroku Container Registry
@@ -169,5 +175,4 @@ jobs:
           done
           echo "✗ App not responding after 6 attempts (last status=$STATUS)"
           echo "Check logs: heroku logs --tail --app ${{ env.HEROKU_APP }}"
-          exit 1
           exit 1

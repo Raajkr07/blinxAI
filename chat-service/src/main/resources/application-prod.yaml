@@ -8,8 +8,10 @@ spring:
 
   data:
     mongodb:
-      uri: ${MONGODB_URI}
-      auto-index-creation: true
+      uri: ${SPRING_DATA_MONGODB_URI:${MONGODB_URI}}
+      # Prevent startup crashes when existing prod data violates new unique indexes.
+      # We repair/ensure indexes after startup in code.
+      auto-index-creation: false
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}

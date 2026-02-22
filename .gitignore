@@ -1,4 +1,6 @@
-R:\chat-service\k8s\backend\secret.yaml
+docker-ctx/
+k8s/backend/secret.yaml
+.vscode/
 frontend-v2/coverage/
 frontend-v2/node_modules/
 frontend-v2/dist/

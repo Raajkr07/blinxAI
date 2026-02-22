@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.UUID;
+import java.util.UUID; 
 import java.util.Map;
 import java.util.function.Function;
 
@@ -70,6 +72,8 @@ public class JwtUtil {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(subject)
+                // Prevent accidental token collisions under concurrency/retries.
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date(now))
                 .setExpiration(new Date(now + expirationMs))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
