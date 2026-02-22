@@ -20,8 +20,8 @@ public class AiAnalysisModels {
 
     @JsonInclude(NON_NULL)
     public record AutoReplySuggestions(
-            @JsonProperty("suggested_replies") List<String> suggestedReplies
-    ) {}
+            @JsonProperty("suggested_replies") List<String> suggestedReplies,
+            String s) {}
 
     @JsonInclude(NON_NULL)
     public record SearchCriteria(

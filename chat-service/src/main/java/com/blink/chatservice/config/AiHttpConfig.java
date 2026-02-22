@@ -13,11 +13,12 @@ import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class AiHttpConfig {
+
     @Bean
-    public RestTemplate aiRestTemplate(RestTemplateBuilder builder) {
+    public HttpComponentsClientHttpRequestFactory aiRequestFactory() {
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(20);
-        connectionManager.setDefaultMaxPerRoute(10);
+        connectionManager.setMaxTotal(50);
+        connectionManager.setDefaultMaxPerRoute(20);
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(Timeout.ofSeconds(10))
@@ -29,10 +30,11 @@ public class AiHttpConfig {
                 .setDefaultRequestConfig(requestConfig)
                 .build();
 
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
-        
-        return builder
-                .requestFactory(() -> factory)
-                .build();
+        return new HttpComponentsClientHttpRequestFactory(httpClient);
+    }
+
+    @Bean
+    public RestTemplate aiRestTemplate(HttpComponentsClientHttpRequestFactory factory) {
+        return new RestTemplate(factory);
     }
 }

@@ -93,6 +93,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-service-jar
+          path: chat-service/target/*.jar
+          retention-days: 1
+
   # ══════════════════════════════════════════════════════════
   # CD ─ Deploy to Heroku via Container Registry
   # ══════════════════════════════════════════════════════════
@@ -110,18 +117,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Re-use the JAR already tested & built in the build job
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-          cache: maven
-          cache-dependency-path: chat-service/pom.xml
-
-      - name: Package (skip tests – already passed)
-        working-directory: chat-service
-        run: mvn -B -T 1C package -DskipTests
+          name: chat-service-jar
+          path: chat-service/target/
 
       - name: Prepare Docker context
         run: |

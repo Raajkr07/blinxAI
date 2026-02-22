@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketService } from '../services';
 
-export function usePresence() {
+export function usePresence(enabled = true) {
     const queryClient = useQueryClient();
 
     useEffect(() => {
+        if (!enabled) return;
+
         let subscription = null;
         let isMounted = true;
 
@@ -51,5 +53,5 @@ export function usePresence() {
                 subscription.unsubscribe();
             }
         };
-    }, [queryClient]);
+    }, [queryClient, enabled]);
 }

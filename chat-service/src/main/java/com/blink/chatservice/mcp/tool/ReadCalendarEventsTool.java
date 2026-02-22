@@ -22,7 +22,7 @@ public class ReadCalendarEventsTool implements McpTool {
 
     private final OAuthService oAuthService;
     private final ObjectMapper objectMapper;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient aiRestClient;
 
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final DateTimeFormatter DD_MM_YYYY = DateTimeFormatter.ofPattern("dd-MM-yyyy");
@@ -212,7 +212,7 @@ public class ReadCalendarEventsTool implements McpTool {
             urlBuilder.append("&q=").append(URLEncoder.encode(query, StandardCharsets.UTF_8));
         }
 
-        String response = restClient.get()
+        String response = aiRestClient.get()
                 .uri(URI.create(urlBuilder.toString()))
                 .header("Authorization", "Bearer " + accessToken)
                 .accept(MediaType.APPLICATION_JSON)

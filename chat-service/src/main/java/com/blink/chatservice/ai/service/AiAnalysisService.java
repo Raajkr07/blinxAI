@@ -12,8 +12,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,7 @@ public class AiAnalysisService {
         this.objectMapper = objectMapper;
     }
 
+    @CircuitBreaker(name = "aiAnalysisService", fallbackMethod = "analyzeFallback")
     public ConversationAnalysis analyzeConversation(List<Message> messages) {
         String context = messages.stream()
                 .map(m -> String.format("[%s] %s: %s",
@@ -54,6 +57,7 @@ public class AiAnalysisService {
                 """);
     }
 
+    @CircuitBreaker(name = "aiAnalysisService", fallbackMethod = "suggestFallback")
     public AutoReplySuggestions suggestReplies(Message lastMessage) {
         String context = lastMessage.getSenderId() + ": " + lastMessage.getBody();
 
@@ -150,5 +154,15 @@ public class AiAnalysisService {
             log.error("AI analysis call failed: {}", e.getMessage());
             throw new RuntimeException("AI Analysis failed: " + e.getMessage(), e);
         }
+    }
+
+    public ConversationAnalysis analyzeFallback(List<Message> messages, Throwable t) {
+        log.error("AI analysis circuit breaker active: {}", t.getMessage());
+        return new ConversationAnalysis("Summary unreachable right now.", Collections.emptyList(), "Neutral", "Low", false);
+    }
+
+    public AutoReplySuggestions suggestFallback(Message lastMessage, Throwable t) {
+        log.error("AI suggest circuit breaker active: {}", t.getMessage());
+        return new AutoReplySuggestions(List.of("Okay", "Understood"), "Suggestions currently unavailable.");
     }
 }

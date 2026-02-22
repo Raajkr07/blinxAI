@@ -3,9 +3,11 @@ package com.blink.chatservice.user.controller;
 import com.blink.chatservice.config.GoogleOAuthConfig;
 import com.blink.chatservice.config.JwtConfig;
 import com.blink.chatservice.security.JwtUtil;
+import com.blink.chatservice.security.TokenDenylistService;
 import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
 import com.blink.chatservice.user.service.OAuthService;
+import com.blink.chatservice.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,7 +33,9 @@ public class GoogleAuthController {
     private final GoogleOAuthConfig googleConfig;
     private final JwtUtil jwtUtil;
     private final JwtConfig jwtConfig;
+    private final TokenDenylistService denylistService;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @PostMapping("/init")
     public ResponseEntity<Map<String, String>> initAuth(@RequestParam(required = false) String redirect_to) {
@@ -47,7 +51,7 @@ public class GoogleAuthController {
             String redirectUri = result.get("redirectUri");
             
             String userId = jwtUtil.extractUserId(accessToken);
-            String refreshToken = jwtUtil.generateRefreshToken(userId);
+            String refreshToken = userService.generateAndSaveRefreshToken(userId);
 
             addCookie(response, "access_token", accessToken, (int) (jwtConfig.getExpiration() / 1000));
             addCookie(response, "refresh_token", refreshToken, (int) (jwtConfig.getRefreshExpiration() / 1000));
@@ -93,7 +97,7 @@ public class GoogleAuthController {
         }
 
         String newAccessToken = jwtUtil.generateToken(user);
-        String newRefreshToken = jwtUtil.generateRefreshToken(userId); // Rotate
+        String newRefreshToken = userService.generateAndSaveRefreshToken(userId); // Rotate
         
         addCookie(response, "access_token", newAccessToken, (int) (jwtConfig.getExpiration() / 1000));
         addCookie(response, "refresh_token", newRefreshToken, (int) (jwtConfig.getRefreshExpiration() / 1000));
@@ -133,7 +137,7 @@ public class GoogleAuthController {
                     }
 
                     String newAccessToken = jwtUtil.generateToken(user);
-                    String newRefreshToken = jwtUtil.generateRefreshToken(userId);
+                    String newRefreshToken = userService.generateAndSaveRefreshToken(userId);
                     
                     addCookie(response, "access_token", newAccessToken, (int) (jwtConfig.getExpiration() / 1000));
                     addCookie(response, "refresh_token", newRefreshToken, (int) (jwtConfig.getRefreshExpiration() / 1000));
@@ -163,7 +167,48 @@ public class GoogleAuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
+        String jwt = null;
+        
+        // Try header first
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else if (request.getCookies() != null) {
+            // Then check cookies
+            jwt = Arrays.stream(request.getCookies())
+                    .filter(c -> "access_token".equals(c.getName()))
+                    .findFirst()
+                    .map(Cookie::getValue)
+                    .orElse(null);
+        }
+
+        if (jwt != null && jwtUtil.validateToken(jwt)) {
+            String userId = jwtUtil.extractUserId(jwt);
+            userRepository.findById(userId).ifPresent(u -> {
+                u.setOnline(false);
+                u.setLastSeen(java.time.LocalDateTime.now(java.time.ZoneId.of("UTC")));
+                userRepository.save(u);
+            });
+
+            String jti = jwtUtil.extractClaim(jwt, claims -> claims.getId());
+            java.util.Date expiration = jwtUtil.getExpirationDate(jwt);
+            if (jti != null && expiration != null) {
+                long ttl = expiration.getTime() - System.currentTimeMillis();
+                if (ttl > 0) {
+                    denylistService.denylistToken(jti, ttl);
+                }
+            }
+        }
+
+        // Also revoke refresh token from cookie if exists
+        if (request.getCookies() != null) {
+            Arrays.stream(request.getCookies())
+                    .filter(c -> "refresh_token".equals(c.getName()))
+                    .findFirst()
+                    .ifPresent(c -> userService.revokeRefreshToken(c.getValue()));
+        }
+
         clearCookie(response, "access_token");
         clearCookie(response, "refresh_token");
         return ResponseEntity.ok().build();

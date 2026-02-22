@@ -1,6 +1,7 @@
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useUIStore, useCallStore } from './stores';
 import { socketService } from './services';
 import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
@@ -61,13 +62,38 @@ const App = () => {
   const { user, isAuthenticated, checkSession } = useAuthStore();
   const { setIsMobile, theme } = useUIStore();
   const location = useLocation();
-
-  usePresence();
+  const queryClient = useQueryClient();
+  const prevAuthRef = useRef(isAuthenticated);
 
   const isPublicRoute = PUBLIC_PATHS.some(p => location.pathname.toLowerCase().startsWith(p));
 
+  // Presence only makes sense when authenticated and on app routes.
+  usePresence(!isPublicRoute && isAuthenticated);
+
   // --- Side Effects ---
   useEffect(() => { checkSession(); }, [checkSession]);
+
+  // When auth flips, ensure all required data is fetched immediately.
+  // This prevents the "login then refresh" issue caused by stale query caches and
+  // ensures mounted queries refetch with the new auth context.
+  useEffect(() => {
+    const wasAuthenticated = prevAuthRef.current;
+    prevAuthRef.current = isAuthenticated;
+
+    // Logout: drop app data and stop socket reconnect loops.
+    if (!isAuthenticated && wasAuthenticated) {
+      queryClient.clear();
+      socketService.disconnect();
+      return;
+    }
+
+    // Login: ensure we don't show stale/unauthorized cached results.
+    if (isAuthenticated && !wasAuthenticated) {
+      queryClient.clear();
+      // Refetch any queries that are currently mounted/active.
+      queryClient.refetchQueries({ type: 'active' });
+    }
+  }, [isAuthenticated, queryClient]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

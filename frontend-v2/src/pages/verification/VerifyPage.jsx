@@ -14,7 +14,7 @@ const VerifyPage = () => {
     const [message, setMessage] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         return !params.get('v')
-            ? 'Invalid verification link. Missing token.'
+            ? 'Invalid verification link.'
             : 'Verifying your credentials...';
     });
     const { setUser, setTokens } = useAuthStore();
@@ -56,11 +56,11 @@ const VerifyPage = () => {
                     setUser(userData);
 
                     setStatus('success');
-                    setMessage('Identity verified successfully! Redirecting to chat...');
+                    setMessage('Identity verified! Redirecting to chat...');
                     setTimeout(() => { window.location.href = '/chat'; }, 2000);
                 } else {
                     setStatus('error');
-                    setMessage('Verification failed. Use the code 000000 if testing locally.');
+                    setMessage('Verification failed.');
                 }
             } catch (err) {
                 console.error('Verification error:', err);
@@ -68,7 +68,7 @@ const VerifyPage = () => {
 
                 if (errorMessage === 'Profile incomplete') {
                     setStatus('success');
-                    setMessage('Identity verified! Redirecting to set up your profile...');
+                    setMessage('Redirecting to set up your profile...');
                     setTimeout(() => {
                         window.location.href = `/auth?mode=signup&v=${encodeURIComponent(token)}`;
                     }, 2000);

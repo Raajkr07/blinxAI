@@ -13,6 +13,7 @@ public interface UserService {
     Map<String, String> login(AuthDto.LoginRequest loginRequest);
     Map<String, String> refreshAccessToken(String refreshToken);
     void revokeRefreshToken(String refreshToken);
+    String generateAndSaveRefreshToken(String userId);
     
     User getProfile(String userId);
     User updateProfile(String userId, String username, String avatarUrl, String bio, String email, String phone);

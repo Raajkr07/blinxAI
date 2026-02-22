@@ -3,7 +3,6 @@ import com.blink.chatservice.notification.service.EmailService;
 import com.blink.chatservice.user.service.OAuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,8 +37,8 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.sender.name}")
     private String senderName;
 
-    public EmailServiceImpl(RestTemplateBuilder restTemplateBuilder, SpringTemplateEngine templateEngine, OAuthService oAuthService) {
-        this.restTemplate = restTemplateBuilder.build();
+    public EmailServiceImpl(RestTemplate aiRestTemplate, SpringTemplateEngine templateEngine, OAuthService oAuthService) {
+        this.restTemplate = aiRestTemplate;
         this.templateEngine = templateEngine;
         this.oAuthService = oAuthService;
     }

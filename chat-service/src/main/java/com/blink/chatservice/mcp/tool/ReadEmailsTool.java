@@ -21,7 +21,7 @@ public class ReadEmailsTool implements McpTool {
 
     private final OAuthService oAuthService;
     private final ObjectMapper objectMapper;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient aiRestClient;
 
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final int DEFAULT_MAX_RESULTS = 20;
@@ -95,7 +95,7 @@ public class ReadEmailsTool implements McpTool {
                 maxResults
             );
 
-            String listResponse = restClient.get()
+            String listResponse = aiRestClient.get()
                     .uri(listUrl)
                     .header("Authorization", "Bearer " + accessToken)
                     .accept(MediaType.APPLICATION_JSON)
@@ -216,7 +216,7 @@ public class ReadEmailsTool implements McpTool {
             messageId
         );
 
-        String response = restClient.get()
+        String response = aiRestClient.get()
                 .uri(url)
                 .header("Authorization", "Bearer " + accessToken)
                 .accept(MediaType.APPLICATION_JSON)

@@ -12,12 +12,7 @@ import java.time.Duration;
 public class AiConfig {
 
     @Bean
-    public RestClient aiRestClient(RestClient.Builder builder) {
-        // Configure specific timeout for AI calls
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10_000);
-        factory.setReadTimeout(60_000);
-
+    public RestClient aiRestClient(RestClient.Builder builder, ClientHttpRequestFactory factory) {
         return builder
                 .requestFactory(factory)
                 .build();

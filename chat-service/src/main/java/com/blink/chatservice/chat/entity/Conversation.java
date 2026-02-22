@@ -21,6 +21,7 @@ import java.util.Set;
 @Document(collection = "conversations")
 @CompoundIndexes({
     @CompoundIndex(name = "participants_type_idx", def = "{'participants': 1, 'type': 1}"),
+    @CompoundIndex(name = "participants_updated_idx", def = "{'participants': 1, 'updatedAt': -1}"),
     @CompoundIndex(name = "type_participants_size_idx", def = "{'type': 1, 'participants': 1}")
 })
 public class Conversation {

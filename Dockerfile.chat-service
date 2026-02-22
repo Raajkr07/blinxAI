@@ -17,7 +17,6 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Install curl for healthcheck
-# Install curl for healthcheck
 RUN apk add --no-cache curl
 
 # Create non-root user

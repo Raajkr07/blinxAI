@@ -72,7 +72,7 @@ public class AiChatController {
 
     private boolean isRateAllowed(String userId) {
         // Evict stale entries to prevent unbounded growth
-        if (rateLimiters.size() > 10000) {
+        if (rateLimiters.size() > 1000) {
             rateLimiters.clear();
         }
         return rateLimiters.computeIfAbsent(userId, k ->

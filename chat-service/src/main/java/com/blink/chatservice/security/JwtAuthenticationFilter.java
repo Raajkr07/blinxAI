@@ -20,6 +20,7 @@ import java.util.Arrays;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final TokenDenylistService denylistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -45,7 +46,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Validate cryptographically first
         if (!jwtUtil.validateToken(jwt)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // Check if token has been revoked (denylisted in Redis)
+        String jti = jwtUtil.extractClaim(jwt, claims -> claims.getId());
+        if (denylistService.isDenyListed(jti)) {
             chain.doFilter(request, response);
             return;
         }

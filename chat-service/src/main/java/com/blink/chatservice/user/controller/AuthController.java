@@ -1,6 +1,8 @@
 package com.blink.chatservice.user.controller;
 
 import com.blink.chatservice.notification.service.NotificationService;
+import com.blink.chatservice.security.JwtUtil;
+import com.blink.chatservice.security.TokenDenylistService;
 import com.blink.chatservice.user.dto.AuthDto.*;
 import com.blink.chatservice.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +27,8 @@ public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private final UserService userService;
     private final NotificationService notificationService;
+    private final TokenDenylistService denylistService;
+    private final JwtUtil jwtUtil;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -83,10 +87,29 @@ public class AuthController {
         return ResponseEntity.ok(new TokenResponse(tokens.get("accessToken"), tokens.get("refreshToken")));
     }
 
-    @Operation(summary = "Revoke refresh token", description = "Logout by removing/deleting refresh token")
+    @Operation(summary = "Revoke tokens", description = "Logout by removing refresh token and denylisting access token")
     @PostMapping("/logout")
-    public ResponseEntity<OtpResponse> logout(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<OtpResponse> logout(
+            @Valid @RequestBody RefreshTokenRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        // 1. Revoke refresh token
         userService.revokeRefreshToken(request.refreshToken());
+        
+        // 2. Denylist access token
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String accessToken = authHeader.substring(7);
+            String jti = jwtUtil.extractClaim(accessToken, claims -> claims.getId());
+            java.util.Date expiration = jwtUtil.getExpirationDate(accessToken);
+            
+            if (jti != null && expiration != null) {
+                long ttl = expiration.getTime() - System.currentTimeMillis();
+                if (ttl > 0) {
+                    denylistService.denylistToken(jti, ttl);
+                }
+            }
+        }
+        
         return ResponseEntity.ok(new OtpResponse("Logged out successfully"));
     }
 

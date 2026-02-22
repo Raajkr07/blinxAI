@@ -139,10 +139,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public String generateAndSaveRefreshToken(String userId) {
+        return createRefreshToken(userId);
+    }
+
+    @Override
+    @Transactional
     public void revokeRefreshToken(String token) {
         refreshTokenRepository.findByToken(token).ifPresent(rt -> {
             rt.setRevoked(true);
             refreshTokenRepository.save(rt);
+            userRepository.findById(rt.getUserId()).ifPresent(user -> {
+                user.setOnline(false);
+                user.setLastSeen(LocalDateTime.now(ZoneId.of("UTC")));
+                userRepository.save(user);
+            });
         });
     }
 

@@ -11,7 +11,7 @@ import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PreDestroy;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,9 +26,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @Service
@@ -43,7 +41,7 @@ public class AiService {
     private final McpToolRegistry toolRegistry;
     private final McpToolExecutor toolExecutor;
     private final ObjectMapper objectMapper;
-    private final ExecutorService toolExecutorService;
+    private final Executor aiToolExecutor;
 
     @Value("${ai.api-key:}")
     private String apiKey;
@@ -60,7 +58,8 @@ public class AiService {
                      @Qualifier("aiRestTemplate") RestTemplate restTemplate,
                      McpToolRegistry toolRegistry,
                      McpToolExecutor toolExecutor,
-                     ObjectMapper objectMapper) {
+                     ObjectMapper objectMapper,
+                     @Qualifier("aiToolExecutor") Executor aiToolExecutor) {
         this.chatService = chatService;
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
@@ -68,24 +67,7 @@ public class AiService {
         this.toolRegistry = toolRegistry;
         this.toolExecutor = toolExecutor;
         this.objectMapper = objectMapper;
-        this.toolExecutorService = Executors.newFixedThreadPool(10, r -> {
-            Thread t = new Thread(r, "ai-tool-exec");
-            t.setDaemon(true);
-            return t;
-        });
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        toolExecutorService.shutdown();
-        try {
-            if (!toolExecutorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                toolExecutorService.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            toolExecutorService.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        this.aiToolExecutor = aiToolExecutor;
     }
 
     public Message processAiMessage(String userId, String conversationId, String userMessage, boolean shouldSave) {
@@ -107,6 +89,7 @@ public class AiService {
         return saveMessage(AiConstants.AI_USER_ID, conversationId, response);
     }
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "executeReasoningFallback")
     private String executeReasoning(String userId, List<Map<String, Object>> messages) {
         int iterations = 0;
         while (iterations++ < AiConstants.MAX_TOOL_ITERATIONS) {
@@ -150,7 +133,7 @@ public class AiService {
                                 "content", "{\"error\":\"Tool execution failed\"}"
                             );
                         }
-                    }, toolExecutorService))
+                    }, aiToolExecutor))
                     .toList();
 
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -269,4 +252,8 @@ public class AiService {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ToolFunction(String name, String arguments) {}
+    public String executeReasoningFallback(String userId, List<Map<String, Object>> messages, Throwable t) {
+        log.error("AI reasoning circuit breaker active for user {}: {}", userId, t.getMessage());
+        return AiConstants.ERROR_AI_API_FAILED;
+    }
 }

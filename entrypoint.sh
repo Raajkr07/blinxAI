@@ -3,11 +3,13 @@ set -e
 
 # Default JVM options if JAVA_OPTS is not set externally
 : "${JAVA_OPTS:=-XX:+UseContainerSupport \
-  -XX:MaxRAMPercentage=70.0 \
+  -XX:MaxRAMPercentage=60.0 \
   -XX:InitialRAMPercentage=40.0 \
   -XX:+UseG1GC \
-  -XX:MaxGCPauseMillis=100 \
+  -XX:MaxGCPauseMillis=50 \
   -XX:+UseStringDeduplication \
+  -XX:+ParallelRefProcEnabled \
+  -XX:MaxDirectMemorySize=64m \
   -XX:+OptimizeStringConcat \
   -Xss256k \
   -XX:MaxMetaspaceSize=128m \

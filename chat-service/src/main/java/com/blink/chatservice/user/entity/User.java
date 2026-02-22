@@ -38,5 +38,6 @@ public class User implements Serializable {
     private boolean online = false;
     private LocalDateTime lastSeen;
     private Set<String> devices = new HashSet<>();
+    @Indexed
     private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
 }
