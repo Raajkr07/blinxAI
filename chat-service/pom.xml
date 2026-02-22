@@ -154,7 +154,7 @@
             <artifactId>httpclient5</artifactId>
         </dependency>
 
-        <!-- Commons Pool2 for Redis Connection Pooling -->
+        <!-- Commons Pool2 for Redis Connection Pooling-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
