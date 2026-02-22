@@ -57,7 +57,7 @@ const VerifyPage = () => {
 
                     setStatus('success');
                     setMessage('Identity verified successfully! Redirecting to chat...');
-                    setTimeout(() => { window.location.href = '/'; }, 2000);
+                    setTimeout(() => { window.location.href = '/chat'; }, 2000);
                 } else {
                     setStatus('error');
                     setMessage('Verification failed. Use the code 000000 if testing locally.');

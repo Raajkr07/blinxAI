@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { motion as Motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
@@ -31,6 +32,7 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
     });
     const [profile, setProfile] = useState({ username: '', bio: '' });
     const { setUser, setTokens } = useAuthStore();
+    const navigate = useNavigate();
 
     const requestOtpMutation = useMutation({
         mutationFn: () => {
@@ -67,6 +69,7 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
                 const userData = await userService.getMe();
                 setUser(userData);
                 toast.success('Account created');
+                navigate('/chat', { replace: true });
             }
         },
         onError: () => toast.error('Signup failed')

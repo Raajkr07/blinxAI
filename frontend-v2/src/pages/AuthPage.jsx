@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Login } from './Login';
 import { Signup } from './Signup';
 import { BlinkingFace } from './BlinkingFace';
 import { cn } from '../lib/utils';
+import { useAuthStore } from '../stores';
 
 const AuthPage = () => {
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuthStore();
+
     const [mode, setMode] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         const urlMode = params.get('mode');
@@ -21,6 +25,12 @@ const AuthPage = () => {
         return params.get('identifier') || '';
     });
     const [isHovered, setIsHovered] = useState(false);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/chat', { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
 
     return (
         <div className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">

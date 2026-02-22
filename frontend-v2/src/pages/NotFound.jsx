@@ -19,7 +19,7 @@ const DEV_QUOTES = [
 ];
 
 const SUGGESTED_PAGES = [
-    { path: '/', label: 'Chat', icon: '💬', desc: 'Jump into conversations' },
+    { path: '/chat', label: 'Chat', icon: '💬', desc: 'Jump into conversations' },
     { path: '/auth', label: 'Login', icon: '🔐', desc: 'Sign in to your account' },
     { path: '/privacy-policy', label: 'Privacy', icon: '🛡️', desc: 'How we handle your data' },
     { path: '/terms', label: 'Terms', icon: '📜', desc: 'Service agreement' },

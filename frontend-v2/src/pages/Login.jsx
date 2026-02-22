@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { motion as Motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
@@ -11,6 +12,7 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
     const [identifier, setIdentifier] = useState(initialIdentifier || '');
     const [otp, setOtp] = useState('');
     const { setUser, setTokens } = useAuthStore();
+    const navigate = useNavigate();
 
     const requestOtpMutation = useMutation({
         mutationFn: () => {
@@ -44,6 +46,7 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                     const userData = await userService.getMe();
                     setUser(userData);
                     toast.success('Welcome back');
+                    navigate('/chat', { replace: true });
                 } else if (loginData.error === 'USER_NOT_FOUND') {
                     toast.error('Account not found');
                     onSwitchToSignup?.();

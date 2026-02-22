@@ -13,6 +13,7 @@ const TermsOfService = lazy(() => import('../pages/verification/TermsOfService')
 const DataDeletion = lazy(() => import('../pages/verification/DataDeletion'));
 const VerifyPage = lazy(() => import('../pages/verification/VerifyPage'));
 const OAuthFallback = lazy(() => import('../pages/OAuthFallback'));
+const RedirectToChat = lazy(() => import('../pages/RedirectToChat'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
 // Public routes — no authentication required.
@@ -56,6 +57,11 @@ export const protectedRoutes = [
     {
         path: '/chat',
         element: ChatPage,
+        title: 'Blinx AI Assistant | Chat',
+    },
+    {
+        path: '/',
+        element: RedirectToChat,
         title: 'Blinx AI Assistant | Chat',
     },
 ];
