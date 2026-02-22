@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoCo
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -69,6 +70,9 @@ class ChatServiceApplicationTests {
 	// relies on it, but Mongo auto-configuration is excluded in this test slice.
 	@MockBean
 	private MongoTemplate mongoTemplate;
+
+	@MockBean
+	private MongoDatabaseFactory mongoDatabaseFactory;
 
 	@Test
 	void contextLoads() {
