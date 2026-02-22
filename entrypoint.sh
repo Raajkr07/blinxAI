@@ -10,7 +10,7 @@ set -e
   -XX:+UseStringDeduplication \
   -XX:+ParallelRefProcEnabled \
   -XX:MaxDirectMemorySize=64m \
-  -XX:MaxCodeCacheSize=64m \
+  -XX:ReservedCodeCacheSize=64m \
   -XX:+OptimizeStringConcat \
   -Xss256k \
   -XX:MaxMetaspaceSize=128m \
