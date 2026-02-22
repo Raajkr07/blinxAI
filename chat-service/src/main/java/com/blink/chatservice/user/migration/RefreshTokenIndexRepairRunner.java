@@ -14,6 +14,8 @@ import org.bson.conversions.Bson;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
@@ -80,17 +82,11 @@ public class RefreshTokenIndexRepairRunner implements ApplicationRunner {
     }
 
     private void ensureIndexes() {
-        MongoCollection<Document> collection = mongoTemplate.getCollection(COLLECTION);
-
-        // Ensure supporting index on userId (non-unique) and unique token index.
-        collection.createIndex(Indexes.ascending("userId"));
-        collection.createIndex(
-                Indexes.ascending("token"),
-                new IndexOptions().unique(true)
+        mongoTemplate.indexOps(RefreshToken.class).ensureIndex(
+                new Index("userId", Sort.Direction.ASC)
         );
-
-        // Keep entity reference to avoid accidental package removal.
-        @SuppressWarnings("unused")
-        Class<?> entity = RefreshToken.class;
+        mongoTemplate.indexOps(RefreshToken.class).ensureIndex(
+                new Index("token", Sort.Direction.ASC).unique()
+        );
     }
 }
