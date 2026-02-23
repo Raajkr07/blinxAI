@@ -16,24 +16,24 @@ spring:
       auto-index-creation: false
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
+      port: ${SPRING_DATA_REDIS_PORT}
       password: ${SPRING_DATA_REDIS_PASSWORD}
       timeout: 3000ms
       lettuce:
         pool:
-          max-active: ${REDIS_POOL_MAX_ACTIVE:8}
-          max-idle: ${REDIS_POOL_MAX_IDLE:4}
-          min-idle: ${REDIS_POOL_MIN_IDLE:1}
-          max-wait: ${REDIS_POOL_MAX_WAIT:2000ms}
+          max-active: ${REDIS_POOL_MAX_ACTIVE}
+          max-idle: ${REDIS_POOL_MAX_IDLE}
+          min-idle: ${REDIS_POOL_MIN_IDLE}
+          max-wait: ${REDIS_POOL_MAX_WAIT}
         shutdown-timeout: 200ms
 
   mail:
     brevo:
       api-key: ${BREVO_API_KEY}
-      api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
+      api-url: ${BREVO_API_URL}
     sender:
       email: ${BREVO_SENDER_EMAIL}
-      name: ${BREVO_SENDER_NAME:BlinxAI}
+      name: ${BREVO_SENDER_NAME}
 
 management:
   endpoints:
@@ -49,19 +49,19 @@ management:
 # Disable Swagger in production to save ~30MB of memory
 springdoc:
   api-docs:
-    enabled: ${SPRINGDOC_ENABLED:false}
+    enabled: ${SPRINGDOC_ENABLED}
   swagger-ui:
-    enabled: ${SPRINGDOC_ENABLED:false}
+    enabled: ${SPRINGDOC_ENABLED}
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT}
   servlet:
     context-path: /
   # Tomcat tuned for low-memory environments
   tomcat:
     threads:
-      max: ${SERVER_TOMCAT_MAX_THREADS:25}
-      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:3}
+      max: ${SERVER_TOMCAT_MAX_THREADS}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS}
     mbeanregistry:
       enabled: false
     connection-timeout: 10000ms
@@ -76,17 +76,17 @@ server:
 
 jwt:
   secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION:86400000}          # 24 hours
-  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}  # 30 days
+  expiration: ${JWT_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
 
 app:
   otp:
-    length: ${APP_OTP_LENGTH:6}
-    expiration: ${APP_OTP_EXPIRATION:300000}
-  phone-prefix: ${APP_PHONE_PREFIX:+91}
+    length: ${APP_OTP_LENGTH}
+    expiration: ${APP_OTP_EXPIRATION}
+  phone-prefix: ${APP_PHONE_PREFIX}
   sms:
-    enabled: ${APP_SMS_ENABLED:true}
-    provider: ${APP_SMS_PROVIDER:twilio}
+    enabled: ${APP_SMS_ENABLED}
+    provider: ${APP_SMS_PROVIDER}
     twilio:
       account-sid: ${TWILIO_ACCOUNT_SID}
       auth-token: ${TWILIO_AUTH_TOKEN}
@@ -109,32 +109,32 @@ app:
         - https://www.googleapis.com/auth/gmail.send
       allowed-frontend-origins:
         - https://blinx-app.netlify.app
-        - https://blinxAI.me
-        - https://www.blinxAI.me
+        - https://blinxai.me
+        - https://www.blinxai.me
 
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:https://blinxai.me,https://www.blinxai.me,https://blinx-app.netlify.app,http://localhost:8080,http://localhost:5173,http://localhost:5174,http://localhost:4173}
-  frontend-url: ${APP_FRONTEND_URL:https://blinxai.me}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  frontend-url: ${APP_FRONTEND_URL}
 
 api:
   server:
     # Here I have to use service DNS or public URL instead of localhost
-    url: ${API_SERVER_URL:http://localhost:8080}
+    url: ${API_SERVER_URL}
 
 ai:
-  provider: ${AI_PROVIDER:openai}
-  api-key: ${AI_API_KEY:}
-  base-url: ${AI_BASE_URL:https://api.openai.com}
-  model: ${AI_MODEL:gpt-4o-mini}
+  provider: ${AI_PROVIDER}
+  api-key: ${AI_API_KEY}
+  base-url: ${AI_BASE_URL}
+  model: ${AI_MODEL}
 
 web:
   search:
-    api-key: ${WEB_SEARCH_API_KEY:}
+    api-key: ${WEB_SEARCH_API_KEY}
     cache:
       ttl:
-        seconds: ${WEB_SEARCH_CACHE_TTL_SECONDS:300}
+        seconds: ${WEB_SEARCH_CACHE_TTL_SECONDS}
     timeout:
-      seconds: ${WEB_SEARCH_TIMEOUT_SECONDS:10}
+      seconds: ${WEB_SEARCH_TIMEOUT_SECONDS}
 
 logging:
   pattern:
