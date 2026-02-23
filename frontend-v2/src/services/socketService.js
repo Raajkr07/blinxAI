@@ -2,7 +2,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { reportErrorOnce } from '../lib/reportError';
+import { clearReportedError, reportErrorOnce } from '../lib/reportError';
 import { useSocketStore } from '../stores/socketStore';
 
 class SocketService {
@@ -84,6 +84,9 @@ class SocketService {
                     useSocketStore.getState().setStatus('connected');
                     this._reconnectAttempts = 0;
                     this._clearReconnectTimer();
+
+                    // Clear any previously shown connection-failure toast so a future outage can surface again.
+                    clearReportedError('realtime-connection');
 
                     // Re-subscribe all pending topics
                     this._resubscribeAll();
@@ -275,7 +278,7 @@ class SocketService {
                 }
                 useSocketStore.getState().setStatus('reconnecting');
                 this.connect().catch((error) => {
-                    reportErrorOnce('socket-connect', error, 'Real-time connection failed');
+                    reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
                 });
             }
         }, delay);
@@ -296,7 +299,7 @@ class SocketService {
                 this._clearReconnectTimer();
                 this._reconnectAttempts = 0; // reset back-off since user is back
                 this.connect().catch((error) => {
-                    reportErrorOnce('socket-connect', error, 'Real-time connection failed');
+                    reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
                 });
             }
         }
@@ -308,7 +311,7 @@ class SocketService {
             this._clearReconnectTimer();
             this._reconnectAttempts = 0;
             this.connect().catch((error) => {
-                reportErrorOnce('socket-connect', error, 'Real-time connection failed');
+                reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
             });
         }
     }

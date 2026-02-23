@@ -2,6 +2,11 @@ import toast from 'react-hot-toast';
 
 const shown = new Set();
 
+export function clearReportedError(id) {
+    shown.delete(id);
+    toast.dismiss(id);
+}
+
 export function reportErrorOnce(id, error, message) {
     void error;
 

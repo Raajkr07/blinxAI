@@ -129,7 +129,7 @@ const App = () => {
       })
       .catch((error) => {
         // If auth is gone mid-flight, do not start reconnect loops here.
-        reportErrorOnce('socket-init', error, 'Real-time connection failed');
+        reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
       });
 
     return () => {

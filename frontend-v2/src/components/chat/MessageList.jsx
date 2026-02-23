@@ -218,7 +218,7 @@ export function MessageList({ conversationId }) {
                 }
             } catch (error) {
                 if (isMounted) {
-                    reportErrorOnce('message-realtime', error, 'Real-time connection failed');
+                    reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
                 }
             }
         };
