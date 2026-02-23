@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
     ONLINE_PANEL_OPEN: 'blink_online_panel_open',
     SIDEBAR_COLLAPSED: 'blink_sidebar_collapsed',
 };
+import { reportErrorOnce } from './reportError';
 
 class Storage {
     get(key) {
@@ -25,10 +26,7 @@ class Storage {
             localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
             // Storage failures affect persistence; surface once without leaking details.
-            // Lazy import avoids pulling toast into initial bundles unnecessarily.
-            import('./reportError').then(({ reportErrorOnce }) => {
-                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
-            });
+            reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
         }
     }
 
@@ -36,9 +34,7 @@ class Storage {
         try {
             localStorage.removeItem(key);
         } catch (error) {
-            import('./reportError').then(({ reportErrorOnce }) => {
-                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
-            });
+            reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
         }
     }
 
@@ -46,9 +42,7 @@ class Storage {
         try {
             localStorage.clear();
         } catch (error) {
-            import('./reportError').then(({ reportErrorOnce }) => {
-                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
-            });
+            reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
         }
     }
 }

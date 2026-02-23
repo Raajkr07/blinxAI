@@ -95,6 +95,11 @@ class SocketService {
                     this.connected = false;
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
+                        const stillAuthed = !!storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+                        if (!stillAuthed) {
+                            useSocketStore.getState().setStatus('disconnected');
+                            return;
+                        }
                         useSocketStore.getState().setStatus('error');
                         this._scheduleReconnect();
                     } else {
@@ -104,11 +109,14 @@ class SocketService {
 
                 onStompError: (frame) => {
                     this.connected = false;
-                    useSocketStore.getState().setStatus('error');
+                    const stillAuthed = !!storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+                    useSocketStore.getState().setStatus(stillAuthed ? 'error' : 'disconnected');
                     this.connectionPromise = null;
                     reject(frame);
                     if (!this._intentionalDisconnect) {
-                        this._scheduleReconnect();
+                        if (stillAuthed) {
+                            this._scheduleReconnect();
+                        }
                     }
                 },
 
@@ -116,6 +124,11 @@ class SocketService {
                     this.connected = false;
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
+                        const stillAuthed = !!storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+                        if (!stillAuthed) {
+                            useSocketStore.getState().setStatus('disconnected');
+                            return;
+                        }
                         // Keep 'error' or 'reconnecting' status instead of hiding/disconnected
                         // If we are already in error or reconnecting, don't revert to disconnected
                         const currentStatus = useSocketStore.getState().status;
@@ -240,6 +253,12 @@ class SocketService {
         if (this._intentionalDisconnect) return;
         if (this._reconnectTimer) return; // already scheduled
 
+        // If we no longer have a token, do not keep retrying.
+        if (!storage.get(STORAGE_KEYS.ACCESS_TOKEN)) {
+            useSocketStore.getState().setStatus('disconnected');
+            return;
+        }
+
         this._reconnectAttempts++;
         // Exponential back-off with jitter, capped at _maxDelay
         const delay = Math.min(
@@ -250,6 +269,10 @@ class SocketService {
         this._reconnectTimer = setTimeout(() => {
             this._reconnectTimer = null;
             if (!this._intentionalDisconnect && !this.connected) {
+                if (!storage.get(STORAGE_KEYS.ACCESS_TOKEN)) {
+                    useSocketStore.getState().setStatus('disconnected');
+                    return;
+                }
                 useSocketStore.getState().setStatus('reconnecting');
                 this.connect().catch((error) => {
                     reportErrorOnce('socket-connect', error, 'Real-time connection failed');

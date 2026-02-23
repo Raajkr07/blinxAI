@@ -9,6 +9,7 @@ export const useAuthStore = create((set, get) => ({
     refreshToken: storage.get(STORAGE_KEYS.REFRESH_TOKEN),
     isAuthenticated: !!storage.get(STORAGE_KEYS.ACCESS_TOKEN),
     isLoading: !storage.get(STORAGE_KEYS.ACCESS_TOKEN) && !!storage.get(STORAGE_KEYS.USER),
+    hasCheckedSession: false,
     error: null,
 
     setUser: (user) => {
@@ -68,25 +69,39 @@ export const useAuthStore = create((set, get) => ({
     checkSession: async () => {
         // If we're already authenticated with a valid user, nothing to do.
         const already = get();
-        if (already.isAuthenticated && already.user?.id) return true;
+        if (already.isAuthenticated && already.user?.id) {
+            set({ hasCheckedSession: true });
+            return true;
+        }
+
+        // If we have no tokens and no cached user, do not probe protected endpoints.
+        // This avoids unnecessary 401s for anonymous visitors.
+        const storedAccess = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
+        const storedRefresh = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+        const storedUser = storage.get(STORAGE_KEYS.USER);
+        if (!storedAccess && !storedRefresh && !(storedUser && storedUser.id)) {
+            set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null, error: null, hasCheckedSession: true, isLoading: false });
+            return false;
+        }
 
         // Check for Google OAuth error in URL — redirect to dedicated error page
         const searchParams = new URLSearchParams(window.location.search);
         const oauthError = searchParams.get('error');
         if (oauthError === 'access_denied') {
             window.location.replace('/oauth-error');
+            set({ hasCheckedSession: true });
             return false;
         }
 
         // Start session init. Important: this can overlap with a user logging in,
         // so we must not clobber newly-authenticated state on failure.
-        set({ isLoading: true });
+        set({ isLoading: true, hasCheckedSession: false });
 
         try {
             // 1) If we have an access token but no profile, fetch `/me`.
             // This fixes a common state where login sets tokens first then user later.
-            const tokenInStorage = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
-            const userInStorage = storage.get(STORAGE_KEYS.USER);
+            const tokenInStorage = storedAccess;
+            const userInStorage = storedUser;
 
             if (tokenInStorage && !(userInStorage && userInStorage.id)) {
                 try {
@@ -97,8 +112,27 @@ export const useAuthStore = create((set, get) => ({
                         return true;
                     }
                 } catch (error) {
-                    set({ error });
-                    reportErrorOnce('session-check', error, 'Session check failed');
+                    // If token is expired/invalid, try refresh token and retry.
+                    const localRT = storedRefresh || get().refreshToken;
+                    if (localRT && (error?.status === 401 || error?.status === 403)) {
+                        try {
+                            const data = await authService.refreshToken(localRT);
+                            if (data?.accessToken) {
+                                get().setTokens(data.accessToken, data.refreshToken);
+                                const me = await userService.getMe();
+                                if (me && me.id) {
+                                    get().setUser(me);
+                                    return true;
+                                }
+                            }
+                        } catch (refreshErr) {
+                            set({ error: refreshErr });
+                            reportErrorOnce('session-refresh', refreshErr, 'Session expired. Please sign in again.');
+                        }
+                    } else {
+                        set({ error });
+                        reportErrorOnce('session-check', error, 'Session check failed');
+                    }
                 }
             }
 
@@ -148,7 +182,7 @@ export const useAuthStore = create((set, get) => ({
                 set({ isAuthenticated: false, user: null, accessToken: null });
             }
         } finally {
-            set({ isLoading: false });
+            set({ isLoading: false, hasCheckedSession: true });
         }
         return false;
     },

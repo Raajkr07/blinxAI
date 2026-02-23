@@ -1,6 +1,6 @@
 spring:
   application:
-    name: blinx-chat-service
+    name: blinx-ai-chat-service
 
   # Lazy-init beans to reduce startup memory and time
   main:

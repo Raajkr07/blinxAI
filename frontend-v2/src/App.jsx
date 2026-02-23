@@ -13,6 +13,7 @@ import {
   notFoundRoute,
 } from './config/routes';
 import { PUBLIC_PATHS, TITLE_MAP } from './config/routeHelpers';
+import { reportErrorOnce } from './lib/reportError';
 
 const Loading = () => (
   <div className="flex h-screen items-center justify-center bg-background text-foreground">
@@ -37,10 +38,10 @@ const PageTransition = ({ children }) => (
 
 // Guard: renders AuthPage for unauthenticated users
 const ProtectedRoute = ({ element: Component }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, hasCheckedSession } = useAuthStore();
   const { hasActiveCall, hasIncomingCall } = useCallStore();
 
-  if (isLoading) return <Loading />;
+  if (isLoading || !hasCheckedSession) return <Loading />;
 
   if (!isAuthenticated) {
     // Dynamically import AuthPage (already lazy via routes config)
@@ -125,6 +126,10 @@ const App = () => {
       .then(() => {
         if (isCancelled) return;
         cleanup = initializeWebRTC(user.id);
+      })
+      .catch((error) => {
+        // If auth is gone mid-flight, do not start reconnect loops here.
+        reportErrorOnce('socket-init', error, 'Real-time connection failed');
       });
 
     return () => {

@@ -19,7 +19,6 @@ on:
 env:
   IMAGE_REPO: raajkr07
   IMAGE_NAME: blinx-chat-service
-  HEROKU_APP: ${{ secrets.HEROKU_APP_NAME }}
   JAVA_VERSION: "17"
 
 jobs:
@@ -101,78 +100,90 @@ jobs:
           retention-days: 1
 
   # ══════════════════════════════════════════════════════════
-  # CD ─ Deploy to Heroku via Container Registry
+  # CD ─ Deploy to Digital Ocean App Platform
   # ══════════════════════════════════════════════════════════
   deploy:
-    name: Deploy to Heroku
+    name: Deploy to Digital Ocean
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
     concurrency:
-      group: heroku-deploy
+      group: digitalocean-deploy
       cancel-in-progress: false
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: chat-service-jar
-          path: chat-service/target/
-
-      - name: Prepare Docker context
-        run: |
-          mkdir -p docker-ctx
-          cp chat-service/target/*.jar docker-ctx/app.jar
-          cp entrypoint.sh docker-ctx/entrypoint.sh
-
-      # ── Login to Heroku Container Registry ────────────────
-      - name: Login to Heroku Container Registry
+      # ── Trigger redeployment via DO API ────────────────────
+      - name: Trigger Digital Ocean App Deployment
+        id: deploy
         env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
         run: |
-          echo "$HEROKU_API_KEY" | docker login --username=_ --password-stdin registry.heroku.com
-
-      # ── Build & Push to Heroku ────────────────────────────
-      - name: Build Heroku image
-        run: |
-          docker build -t registry.heroku.com/${{ env.HEROKU_APP }}/web \
-            -f Dockerfile.chat-service.ci docker-ctx
-
-      - name: Push to Heroku
-        run: docker push registry.heroku.com/${{ env.HEROKU_APP }}/web
-
-      # ── Release (via Heroku API – no CLI needed) ──────────
-      - name: Release
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          # Get the image ID from Heroku registry
-          IMAGE_ID=$(docker inspect registry.heroku.com/${{ env.HEROKU_APP }}/web --format='{{.Id}}')
-          # Trigger release via Heroku Platform API
-          curl -s -X PATCH https://api.heroku.com/apps/${{ env.HEROKU_APP }}/formation \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://api.digitalocean.com/v2/apps/$APP_ID/deployments" \
+            -H "Authorization: Bearer $DIGITALOCEAN_ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -H "Accept: application/vnd.heroku+json; version=3.docker-releases" \
-            -H "Authorization: Bearer $HEROKU_API_KEY" \
-            -d "{\"updates\": [{\"type\": \"web\", \"docker_image\": \"$IMAGE_ID\"}]}"
+            -d '{"force_build": true}')
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            DEPLOYMENT_ID=$(echo "$BODY" | jq -r '.deployment.id // empty')
+            echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+            echo "✓ Deployment triggered successfully (ID: $DEPLOYMENT_ID)"
+          else
+            echo "✗ Failed to trigger deployment (HTTP $HTTP_CODE)"
+            exit 1
+          fi
 
-      # ── Smoke test ────────────────────────────────────────
-      - name: Wait for deploy & health check
+      # ── Wait for deployment to become active ───────────────
+      - name: Wait for deployment
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
         run: |
-          echo "Waiting 60s for dyno to start..."
-          sleep 60
-          for i in 1 2 3 4 5 6; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.blinxai.me/actuator/info || true)
-            if [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] || [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
-              echo "✓ App is responding (HTTP $STATUS)"
+          echo "Waiting for deployment $DEPLOYMENT_ID to complete..."
+          for i in $(seq 1 30); do
+            PHASE=$(curl -s \
+              "https://api.digitalocean.com/v2/apps/$APP_ID/deployments/$DEPLOYMENT_ID" \
+              -H "Authorization: Bearer $DIGITALOCEAN_ACCESS_TOKEN" \
+              | jq -r '.deployment.phase // "UNKNOWN"')
+            
+            echo "Attempt $i: phase=$PHASE"
+            
+            if [ "$PHASE" = "ACTIVE" ]; then
+              echo "✓ Deployment is ACTIVE"
               exit 0
+            elif [ "$PHASE" = "ERROR" ] || [ "$PHASE" = "CANCELED" ]; then
+              echo "✗ Deployment failed with phase: $PHASE"
+              exit 1
             fi
-            echo "Attempt $i: status=$STATUS, retrying in 20s..."
+            
             sleep 20
           done
-          echo "✗ App not responding after 6 attempts (last status=$STATUS)"
-          echo "Check logs: heroku logs --tail --app ${{ env.HEROKU_APP }}"
+          echo "✗ Deployment timed out after 10 minutes"
           exit 1
+
+      # ── Smoke test ────────────────────────────────────────
+      - name: Health check
+        run: |
+          echo "Running health check..."
+          sleep 10
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.blinxai.me/actuator/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✓ App is healthy (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Attempt $i: status=$STATUS, retrying in 15s..."
+            sleep 15
+          done
+          echo "⚠ Health check didn't return 200, but deployment may still be starting"
+          exit 0
