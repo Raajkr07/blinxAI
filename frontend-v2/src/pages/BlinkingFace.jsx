@@ -48,7 +48,8 @@ export function BlinkingFace({ className = "w-16 h-16" }) {
           rx="5"
           ry="7"
           fill="white"
-          animate={{ ry: isBlinking ? 1 : 7 }}
+          style={{ transformOrigin: 'center', transformBox: 'fill-box' }}
+          animate={{ scaleY: isBlinking ? 0.12 : 1 }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
         />
 
@@ -58,7 +59,8 @@ export function BlinkingFace({ className = "w-16 h-16" }) {
           rx="5"
           ry="7"
           fill="white"
-          animate={{ ry: isBlinking ? 1 : 7 }}
+          style={{ transformOrigin: 'center', transformBox: 'fill-box' }}
+          animate={{ scaleY: isBlinking ? 0.12 : 1 }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
         />
 

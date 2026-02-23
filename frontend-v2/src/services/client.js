@@ -46,6 +46,7 @@ apiClient.interceptors.response.use(
     },
     async (error) => {
         const originalRequest = error.config;
+
         const isAuthError = error.response?.status === 401 || error.response?.status === 403;
 
         const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);

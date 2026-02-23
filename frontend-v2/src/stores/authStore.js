@@ -117,7 +117,9 @@ export const useAuthStore = create((set, get) => ({
                 return true;
             }
         } catch (error) {
-            console.warn('Session initialization fallback:', error.message);
+            if (import.meta.env.DEV) {
+                console.warn('Session initialization fallback:', error.message);
+            }
 
             // If OAuth session check failed, try using standard refresh token if we have one
             // (Prefer storage as the in-memory state could be mid-update.)
@@ -133,7 +135,9 @@ export const useAuthStore = create((set, get) => ({
                         return true;
                     }
                 } catch (refreshErr) {
-                    console.error('Local refresh fallback failed:', refreshErr);
+                    if (import.meta.env.DEV) {
+                        console.error('Local refresh fallback failed:', refreshErr);
+                    }
                 }
             }
 
