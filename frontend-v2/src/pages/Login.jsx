@@ -4,7 +4,8 @@ import { motion as Motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
-import { useAuthStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
+import { reportSuccess } from '../lib/reportError';
 import { Button, Input, GoogleButton } from '../components/ui';
 
 export function Login({ onSwitchToSignup, initialIdentifier }) {
@@ -46,7 +47,7 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                     setTokens(loginData.accessToken, loginData.refreshToken);
                     const userData = await userService.getMe();
                     setUser(userData);
-                    toast.success('Welcome back');
+                    reportSuccess('login-success', 'Welcome back');
                     navigate('/chat', { replace: true });
                 } else if (loginData.error === 'USER_NOT_FOUND') {
                     toast.error('Account not found');
@@ -83,13 +84,16 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Welcome Back</h2>
-                <p className="text-gray-400">Continue to Blinx Assistant</p>
+                <p className="text-gray-300">Continue to Blinx Assistant</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 {step === 'phone' ? (
                     <div>
                         <Input
+                            id="auth-identifier"
+                            name="identifier"
+                            autoComplete="username"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             disabled={requestOtpMutation.isPending}
@@ -107,9 +111,12 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                     <div className="space-y-4">
                         <div className="text-center space-y-1">
                             <label className="block text-sm font-medium">Verification Code</label>
-                            <p className="text-xs text-gray-400">Sent to <span className="text-white">{identifier}</span></p>
+                            <p className="text-xs text-gray-300">Sent to <span className="text-white">{identifier}</span></p>
                         </div>
                         <Input
+                            id="auth-otp"
+                            name="otp"
+                            autoComplete="one-time-code"
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
                             maxLength={6}
@@ -144,7 +151,7 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                                 <span className="w-full border-t border-white/10" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-[#1a1a1a] px-2 text-gray-500">Or continue with</span>
+                                <span className="bg-[#1a1a1a] px-2 text-gray-300">Or continue with</span>
                             </div>
                         </div>
 
@@ -154,16 +161,16 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
             }
 
             <div className="text-center pt-4 border-t border-white/5 space-y-3">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-300">
                     Don't have an account?{' '}
                     <button onClick={onSwitchToSignup} className="text-white font-medium hover:underline">
                         Sign up
                     </button>
                 </p>
-                <p className="text-[10px] text-gray-500 leading-relaxed px-4">
+                <p className="text-[10px] text-gray-300 leading-relaxed px-4">
                     By continuing, you agree to Blinx AI's{' '}
-                    <a href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</a> and{' '}
-                    <a href="/privacy-policy" className="text-gray-400 hover:text-white underline">Privacy Policy</a>.
+                    <a href="/terms" className="text-gray-300 hover:text-white underline">Terms of Service</a> and{' '}
+                    <a href="/privacy-policy" className="text-gray-300 hover:text-white underline">Privacy Policy</a>.
                 </p>
             </div>
         </Motion.div >

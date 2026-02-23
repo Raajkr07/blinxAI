@@ -10,6 +10,15 @@ export function GoogleButton({ className, children = 'Continue with Google', ...
         setLoading(true);
         try {
             const { url } = await authService.initGoogleAuth(window.location.origin + '/chat');
+
+            // After redirect back from Google, we won't have a local component to show a toast.
+            // Set a one-time flag so App can show a login success toast once authenticated.
+            try {
+                sessionStorage.setItem('post-login-toast', 'google');
+            } catch {
+                // ignore storage failures
+            }
+
             window.location.href = url;
         } catch (error) {
             reportErrorOnce('google-init', error, 'Failed to initialize Google Login');

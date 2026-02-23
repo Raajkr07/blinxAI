@@ -84,7 +84,7 @@ const VerifyPage = () => {
     }, [setUser, setTokens]);
 
     return (
-        <div className="min-h-screen w-full bg-[var(--color-background)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
+        <main className="min-h-screen w-full bg-[var(--color-background)] flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
             <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none opacity-20 transition-opacity duration-300">
                 <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500 blur-3xl animate-pulse" />
                 <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500 blur-3xl animate-pulse" />
@@ -143,7 +143,7 @@ const VerifyPage = () => {
                     )}
                 </div>
             </Motion.div>
-        </div>
+        </main>
     );
 };
 

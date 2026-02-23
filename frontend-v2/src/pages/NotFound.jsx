@@ -353,12 +353,12 @@ const QuoteRotator = () => {
                         transition={{ duration: 0.3 }}
                     >
                         <p className="text-[13px] text-gray-400 italic leading-relaxed">{quote.text}</p>
-                        <p className="text-[10px] text-gray-600 mt-2 font-mono">— {quote.author}</p>
+                        <p className="text-[10px] text-gray-500 mt-2 font-mono">— {quote.author}</p>
                     </Motion.div>
                 </AnimatePresence>
                 <span className="absolute -bottom-2 right-4 text-green-500/40 text-lg font-serif">&rdquo;</span>
             </div>
-            <p className="text-[9px] text-gray-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <p className="text-[9px] text-gray-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 click for more dev wisdom
             </p>
         </Motion.button>
@@ -374,7 +374,7 @@ const QuickNav = () => (
         transition={{ delay: 1.2, duration: 0.5 }}
         className="w-full max-w-md mx-auto"
     >
-        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-600 font-bold mb-3 text-center">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-3 text-center">
             Maybe you were looking for
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -387,7 +387,7 @@ const QuickNav = () => (
                     <span className="text-lg mt-0.5 group-hover:scale-110 transition-transform">{icon}</span>
                     <div className="min-w-0">
                         <p className="text-[13px] font-semibold text-gray-300 group-hover:text-white transition-colors truncate">{label}</p>
-                        <p className="text-[10px] text-gray-600 leading-snug mt-0.5">{desc}</p>
+                        <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{desc}</p>
                     </div>
                 </Link>
             ))}
@@ -431,7 +431,7 @@ const NotFound = () => {
     };
 
     return (
-        <div className="h-screen w-full bg-black flex flex-col items-center relative overflow-y-auto overflow-x-hidden">
+        <main className="h-screen w-full bg-black flex flex-col items-center relative overflow-y-auto overflow-x-hidden">
           <div className="w-full flex flex-col items-center justify-start py-10 px-5">
             {/* Background */}
             <FloatingParticles />
@@ -477,7 +477,7 @@ const NotFound = () => {
                     </p>
                     {/* Path badge */}
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                        <span className="text-[11px] text-gray-600 font-mono">→</span>
+                        <span className="text-[11px] text-gray-500 font-mono">→</span>
                         <code className="text-[11px] text-red-400/80 font-mono">{pathname}</code>
                     </div>
                 </Motion.div>
@@ -515,12 +515,12 @@ const NotFound = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 2 }}
-                    className="text-[10px] text-gray-700 font-mono text-center"
+                    className="text-[10px] text-gray-500 font-mono text-center"
                 >
                     Time spent on this 404 page: <span className="text-green-500/60">{formatTime(elapsed)}</span>
-                    {elapsed >= 10 && <span className="ml-1 text-gray-600">— you could be coding right now 👀</span>}
-                    {elapsed >= 30 && <span className="ml-1 text-gray-600">…seriously</span>}
-                    {elapsed >= 60 && <span className="ml-1 text-gray-600">🦎 even the lizard left</span>}
+                    {elapsed >= 10 && <span className="ml-1 text-gray-500">— you could be coding right now 👀</span>}
+                    {elapsed >= 30 && <span className="ml-1 text-gray-500">…seriously</span>}
+                    {elapsed >= 60 && <span className="ml-1 text-gray-500">🦎 even the lizard left</span>}
                 </Motion.p>
 
                 {/* Footer links */}
@@ -528,7 +528,7 @@ const NotFound = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.6 }}
-                    className="flex justify-center gap-6 mt-4 pb-6 text-[10px] uppercase tracking-widest text-slate-700 font-bold"
+                    className="flex justify-center gap-6 mt-4 pb-6 text-[10px] uppercase tracking-widest text-slate-400 font-bold"
                 >
                     <Link to="/privacy-policy" className="hover:text-green-400 transition-colors">Privacy</Link>
                     <Link to="/terms" className="hover:text-green-400 transition-colors">Terms</Link>
@@ -536,7 +536,7 @@ const NotFound = () => {
                 </Motion.div>
             </div>
           </div>
-        </div>
+        </main>
     );
 };
 

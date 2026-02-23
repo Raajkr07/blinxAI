@@ -4,7 +4,7 @@ import { motion as Motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
-import { useAuthStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
 import { Button, Input, GoogleButton } from '../components/ui';
 import { reportErrorOnce } from '../lib/reportError';
 
@@ -115,13 +115,16 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
         >
             <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold">Create Account</h2>
-                <p className="text-gray-400">Join Blinx Assistant</p>
+                <p className="text-gray-300">Join Blinx Assistant</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 {step === 'phone' && (
                     <div className="space-y-4">
                         <Input
+                            id="signup-identifier"
+                            name="identifier"
+                            autoComplete="username"
                             value={identifier}
                             onChange={(e) => setIdentifier(e.target.value)}
                             placeholder="Email or Phone Number"
@@ -136,9 +139,12 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
                     <div className="space-y-4">
                         <div className="text-center space-y-1">
                             <label className="block text-sm font-medium">Verification Code</label>
-                            <p className="text-xs text-gray-400">Sent to <span className="text-white">{identifier}</span></p>
+                            <p className="text-xs text-gray-300">Sent to <span className="text-white">{identifier}</span></p>
                         </div>
                         <Input
+                            id="signup-otp"
+                            name="otp"
+                            autoComplete="one-time-code"
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
                             maxLength={6}
@@ -154,11 +160,17 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
                 {step === 'profile' && (
                     <div className="space-y-4">
                         <Input
+                            id="signup-username"
+                            name="username"
+                            autoComplete="nickname"
                             value={profile.username}
                             onChange={(e) => setProfile({ ...profile, username: e.target.value })}
                             placeholder="Name"
                         />
                         <Input
+                            id="signup-bio"
+                            name="bio"
+                            autoComplete="off"
                             value={profile.bio}
                             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                             placeholder="Bio (Optional)"
@@ -178,7 +190,7 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
                             <span className="w-full border-t border-white/10" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-[#1a1a1a] px-2 text-gray-500">Or continue with</span>
+                            <span className="bg-[#1a1a1a] px-2 text-gray-300">Or continue with</span>
                         </div>
                     </div>
 
@@ -187,16 +199,16 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
             )}
 
             <div className="text-center pt-4 border-t border-white/5 space-y-3">
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-300">
                     Already have an account?{' '}
                     <button onClick={onSwitchToLogin} className="text-white font-medium hover:underline">
                         Sign in
                     </button>
                 </p>
-                <p className="text-[10px] text-gray-500 leading-relaxed px-4">
+                <p className="text-[10px] text-gray-300 leading-relaxed px-4">
                     By joining, you agree to Blinx AI's{' '}
-                    <a href="/terms" className="text-gray-400 hover:text-white underline">Terms of Service</a> and{' '}
-                    <a href="/privacy-policy" className="text-gray-400 hover:text-white underline">Privacy Policy</a>.
+                    <a href="/terms" className="text-gray-300 hover:text-white underline">Terms of Service</a> and{' '}
+                    <a href="/privacy-policy" className="text-gray-300 hover:text-white underline">Privacy Policy</a>.
                 </p>
             </div>
         </Motion.div>

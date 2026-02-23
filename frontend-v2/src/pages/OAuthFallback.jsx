@@ -3,7 +3,7 @@ import { BlinkingFace } from './BlinkingFace';
 import { Button } from '../components/ui/Button';
 
 const OAuthFallback = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-6">
+  <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-6">
     <div className="flex flex-col items-center gap-6">
       <BlinkingFace className="w-24 h-24" />
       <h1 className="text-3xl font-bold tracking-tight">Google Login Failed</h1>
@@ -26,7 +26,7 @@ const OAuthFallback = () => (
         <Link to="/data-deletion" className="hover:text-blue-400 underline">Data Deletion</Link>
       </div>
     </div>
-  </div>
+  </main>
 );
 
 export default OAuthFallback;

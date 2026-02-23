@@ -79,7 +79,20 @@ export const useAuthStore = create((set, get) => ({
         const storedAccess = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
         const storedRefresh = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
         const storedUser = storage.get(STORAGE_KEYS.USER);
-        if (!storedAccess && !storedRefresh && !(storedUser && storedUser.id)) {
+        // If we have no tokens and no cached user, avoid probing protected endpoints for
+        // normal anonymous visitors. However, Google OAuth uses cookies: after redirecting
+        // back to `/chat`, local storage can be empty while a valid cookie session exists.
+        // In that case, we *must* probe the Google session endpoint.
+        const path = (window.location?.pathname || '').toLowerCase();
+        let shouldProbeGoogleSession = path.startsWith('/chat');
+        try {
+            shouldProbeGoogleSession =
+                shouldProbeGoogleSession || sessionStorage.getItem('post-login-toast') === 'google';
+        } catch {
+            // ignore storage failures
+        }
+
+        if (!storedAccess && !storedRefresh && !(storedUser && storedUser.id) && !shouldProbeGoogleSession) {
             set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null, error: null, hasCheckedSession: true, isLoading: false });
             return false;
         }

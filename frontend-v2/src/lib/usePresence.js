@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { socketService } from '../services';
+import { socketService } from '../services/socketService';
 import { reportErrorOnce } from './reportError';
 
 export function usePresence(enabled = true) {

@@ -5,7 +5,7 @@ import { Login } from './Login';
 import { Signup } from './Signup';
 import { BlinkingFace } from './BlinkingFace';
 import { cn } from '../lib/utils';
-import { useAuthStore } from '../stores';
+import { useAuthStore } from '../stores/authStore';
 import { reportErrorOnce } from '../lib/reportError';
 
 const AuthPage = () => {
@@ -39,7 +39,7 @@ const AuthPage = () => {
     }, [isAuthenticated, navigate]);
 
     return (
-        <div className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">
+        <main className="min-h-screen w-full bg-black flex items-center justify-center p-4 relative overflow-hidden">
             <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-500/5 blur-3xl animate-pulse" />
                 <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-500/5 blur-3xl animate-pulse" />
@@ -48,6 +48,8 @@ const AuthPage = () => {
             {/* Google Features Info Icon - Top Right */}
             <div className="fixed right-6 top-6 z-50 flex flex-col items-end gap-3">
                 <Motion.button
+                    type="button"
+                    aria-label="Show Google features information"
                     onHoverStart={() => setIsHovered(true)}
                     onHoverEnd={() => setIsHovered(false)}
                     whileHover={{ scale: 1.1 }}
@@ -78,13 +80,13 @@ const AuthPage = () => {
                                 <BlinkingFace className="w-6 h-6" />
                                 <span>Unlock Features</span>
                             </h3>
-                            <p className="text-xs text-slate-500 mb-2 italic">
+                            <p className="text-xs text-slate-400 mb-2 italic">
                                 Blinx AI Assistant is a next-gen, AI-powered chat application.</p>
                             <p className="text-sm text-slate-400 leading-relaxed">
                                 To use our <span className="text-blue-400 font-semibold">AI Tools</span> for sending emails and managing your calendar, please
                                 <span className="text-white font-medium"> Login or Signup with Google</span>.
                             </p>
-                            <p className="text-xs text-slate-500 m-2 italic">
+                            <p className="text-xs text-slate-400 m-2 italic">
                                 Note: For better visibility change window size to 90%. "CTRL" + "-"
                             </p>
                             <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
@@ -92,7 +94,7 @@ const AuthPage = () => {
                                     <div className="w-6 h-6 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-[10px]">📧</div>
                                     <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[10px]">📅</div>
                                 </div>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Ready for Action</span>
+                                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Ready for Action</span>
                             </div>
                         </Motion.div>
                     )}
@@ -134,12 +136,12 @@ const AuthPage = () => {
                 </AnimatePresence>
             </div>
 
-            <div className="fixed bottom-8 left-0 right-0 flex justify-center gap-8 text-[10px] uppercase tracking-widest text-slate-500 font-bold z-50">
+            <div className="fixed bottom-8 left-0 right-0 flex justify-center gap-8 text-[10px] uppercase tracking-widest text-slate-400 font-bold z-50">
                 <Link to="/privacy-policy" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Privacy</Link>
                 <Link to="/terms" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Terms</Link>
                 <Link to="/data-deletion" className="hover:text-blue-400 transition-all duration-300 glass px-4 py-2 rounded-full border border-white/5 hover:border-blue-500/30">Data Deletion</Link>
             </div>
-        </div>
+        </main>
     );
 };
 

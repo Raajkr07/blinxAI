@@ -1,8 +1,7 @@
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
-import { clearReportedError, reportErrorOnce } from '../lib/reportError';
+import { hasReportedError, reportErrorOnce, reportSuccess, resetReportedError } from '../lib/reportError';
 import { useSocketStore } from '../stores/socketStore';
 
 class SocketService {
@@ -18,6 +17,7 @@ class SocketService {
         this._baseDelay = 1000;       // 1 s
         this._maxDelay = 30000;       // 30 s cap
         this._intentionalDisconnect = false;
+        this._pausedByPageLifecycle = false;
 
         // Pending subscriptions — re-subscribed automatically on reconnect
         this._subscriptions = new Map();  // topic -> { callback, stompSub }
@@ -36,6 +36,15 @@ class SocketService {
         this._onOnline = this._handleOnline.bind(this);
         if (typeof window !== 'undefined') {
             window.addEventListener('online', this._onOnline);
+        }
+
+        // Page lifecycle (BFCache): pause sockets on pagehide so the page can be cached,
+        // and restore on pageshow.
+        this._onPageHide = this._handlePageHide.bind(this);
+        this._onPageShow = this._handlePageShow.bind(this);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('pagehide', this._onPageHide);
+            window.addEventListener('pageshow', this._onPageShow);
         }
     }
 
@@ -56,11 +65,11 @@ class SocketService {
                 return reject(new Error('No auth token'));
             }
 
-            let socketUrl = env.WS_URL.replace(/^ws(s)?:\/\//, 'http$1://');
-            if (typeof window !== 'undefined' &&
-                window.location.protocol === 'https:' &&
-                socketUrl.startsWith('http:')) {
-                socketUrl = socketUrl.replace('http:', 'https:');
+            // Prefer native WebSocket transport (avoids SockJS attaching deprecated `unload` listeners).
+            // env.WS_URL is expected to be ws(s)://.../ws by default.
+            let socketUrl = env.WS_URL.replace(/^http(s)?:\/\//, 'ws$1://');
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && socketUrl.startsWith('ws:')) {
+                socketUrl = socketUrl.replace('ws:', 'wss:');
             }
 
             // Tear down any stale client
@@ -73,7 +82,7 @@ class SocketService {
             }
 
             this.client = new Client({
-                webSocketFactory: () => new SockJS(socketUrl),
+                webSocketFactory: () => new WebSocket(socketUrl),
                 connectHeaders: { Authorization: `Bearer ${token}` },
 
                 heartbeatOutgoing: this._heartbeatOutgoing,
@@ -85,8 +94,12 @@ class SocketService {
                     this._reconnectAttempts = 0;
                     this._clearReconnectTimer();
 
-                    // Clear any previously shown connection-failure toast so a future outage can surface again.
-                    clearReportedError('realtime-connection');
+                    // If we previously surfaced a real-time failure, convert it into a success toast.
+                    // Use the same toast id so it updates in-place, then reset the flag so future outages can toast again.
+                    if (hasReportedError('realtime-connection')) {
+                        reportSuccess('realtime-connection', 'Real-time connection restored');
+                        resetReportedError('realtime-connection');
+                    }
 
                     // Re-subscribe all pending topics
                     this._resubscribeAll();
@@ -313,6 +326,43 @@ class SocketService {
             this.connect().catch((error) => {
                 reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
             });
+        }
+    }
+
+    _handlePageHide() {
+        // If we keep an active WebSocket, Chrome may refuse BFCache on back/forward.
+        // Pause the connection without clearing subscriptions.
+        this._pausedByPageLifecycle = true;
+        this._intentionalDisconnect = true;
+        this._clearReconnectTimer();
+        this.connected = false;
+        this.connectionPromise = null;
+
+        if (this.client) {
+            try {
+                // Deactivate closes the underlying WebSocket.
+                void this.client.deactivate();
+            } catch (error) {
+                reportErrorOnce('socket-teardown', error, 'Real-time connection error');
+            }
+        }
+    }
+
+    _handlePageShow() {
+        if (!this._pausedByPageLifecycle) return;
+        this._pausedByPageLifecycle = false;
+
+        // Allow reconnects again.
+        this._intentionalDisconnect = false;
+        this._reconnectAttempts = 0;
+
+        // Only reconnect if still authenticated.
+        if (storage.get(STORAGE_KEYS.ACCESS_TOKEN)) {
+            this.connect().catch((error) => {
+                reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
+            });
+        } else {
+            useSocketStore.getState().setStatus('disconnected');
         }
     }
 }

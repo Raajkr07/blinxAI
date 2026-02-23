@@ -1,19 +1,18 @@
-import { useEffect, Suspense, useRef } from 'react';
+import { useEffect, Suspense, useRef, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthStore, useUIStore, useCallStore } from './stores';
-import { socketService } from './services';
-import { IncomingCallDialog, ActiveCallInterface } from './components/calls';
-import { usePresence } from './lib/usePresence';
-import { ConnectionStatus } from './components/ConnectionStatus';
+import { useAuthStore } from './stores/authStore';
+import { useUIStore } from './stores/uiStore';
 import {
   publicRoutes,
   protectedRoutes,
   notFoundRoute,
 } from './config/routes';
 import { PUBLIC_PATHS, TITLE_MAP } from './config/routeHelpers';
-import { reportErrorOnce } from './lib/reportError';
+import { clearReportedError, reportSuccess } from './lib/reportError';
+
+const AuthenticatedShell = lazy(() => import('./components/AuthenticatedShell').then(m => ({ default: m.AuthenticatedShell })));
+const AnimatedAppRoutes = lazy(() => import('./components/AnimatedAppRoutes').then(m => ({ default: m.AnimatedAppRoutes })));
 
 const Loading = () => (
   <div className="flex h-screen items-center justify-center bg-background text-foreground">
@@ -24,22 +23,9 @@ const Loading = () => (
   </div>
 );
 
-// Page transition wrapper
-const PageTransition = ({ children }) => (
-  <Motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{ duration: 0.2, ease: 'easeInOut' }}
-  >
-    {children}
-  </Motion.div>
-);
-
 // Guard: renders AuthPage for unauthenticated users
 const ProtectedRoute = ({ element: Component }) => {
   const { isAuthenticated, isLoading, hasCheckedSession } = useAuthStore();
-  const { hasActiveCall, hasIncomingCall } = useCallStore();
 
   if (isLoading || !hasCheckedSession) return <Loading />;
 
@@ -50,26 +36,20 @@ const ProtectedRoute = ({ element: Component }) => {
   }
 
   return (
-    <>
-      <ConnectionStatus />
-      {hasIncomingCall() && <IncomingCallDialog />}
-      {hasActiveCall() && <ActiveCallInterface />}
-      {!hasActiveCall() && Component && <Component />}
-    </>
+    <Suspense fallback={<Loading />}>
+      <AuthenticatedShell Component={Component} />
+    </Suspense>
   );
 };
 
 const App = () => {
-  const { user, isAuthenticated, checkSession } = useAuthStore();
+  const { isAuthenticated, checkSession } = useAuthStore();
   const { setIsMobile, theme } = useUIStore();
   const location = useLocation();
   const queryClient = useQueryClient();
   const prevAuthRef = useRef(isAuthenticated);
 
   const isPublicRoute = PUBLIC_PATHS.some(p => location.pathname.toLowerCase().startsWith(p));
-
-  // Presence only makes sense when authenticated and on app routes.
-  usePresence(!isPublicRoute && isAuthenticated);
 
   // --- Side Effects ---
   useEffect(() => { checkSession(); }, [checkSession]);
@@ -84,7 +64,9 @@ const App = () => {
     // Logout: drop app data and stop socket reconnect loops.
     if (!isAuthenticated && wasAuthenticated) {
       queryClient.clear();
-      socketService.disconnect();
+      import('./services/socketService')
+        .then((m) => m.socketService.disconnect())
+        .catch(() => {});
       return;
     }
 
@@ -93,8 +75,20 @@ const App = () => {
       queryClient.clear();
       // Refetch any queries that are currently mounted/active.
       queryClient.refetchQueries({ type: 'active' });
+
+      // Google login redirects back into the app without a component-level success toast.
+      // Show it once here when auth becomes true.
+      try {
+        const flag = sessionStorage.getItem('post-login-toast');
+        if (flag === 'google' && !isPublicRoute) {
+          reportSuccess('login-success', 'Welcome back');
+        }
+        sessionStorage.removeItem('post-login-toast');
+      } catch {
+        // ignore storage failures
+      }
     }
-  }, [isAuthenticated, queryClient]);
+  }, [isAuthenticated, queryClient, isPublicRoute]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -114,53 +108,44 @@ const App = () => {
     document.title = TITLE_MAP[location.pathname.toLowerCase()] || 'Blinx AI Assistant | Chat';
   }, [location.pathname]);
 
-  // WebRTC + Socket initialisation (only for authenticated non-public routes)
+  // Auth page should not show real-time failure toasts or keep reconnect loops alive.
   useEffect(() => {
-    if (isPublicRoute || !isAuthenticated || !user?.id) return;
-
-    let isCancelled = false;
-    let cleanup;
-    const { initializeWebRTC } = useCallStore.getState();
-
-    socketService.connect()
-      .then(() => {
-        if (isCancelled) return;
-        cleanup = initializeWebRTC(user.id);
-      })
-      .catch((error) => {
-        // If auth is gone mid-flight, do not start reconnect loops here.
-        reportErrorOnce('realtime-connection', error, 'Real-time connection failed');
-      });
-
-    return () => {
-      isCancelled = true;
-      if (cleanup) cleanup();
-    };
-  }, [isAuthenticated, user?.id, isPublicRoute]);
+    if (location.pathname.toLowerCase().startsWith('/auth')) {
+      clearReportedError('realtime-connection');
+      if (!isAuthenticated) {
+        import('./services/socketService')
+          .then((m) => m.socketService.disconnect())
+          .catch(() => {});
+      }
+    }
+  }, [location.pathname, isAuthenticated]);
 
   // Routes
   const NotFoundEl = notFoundRoute.element;
 
   return (
     <Suspense fallback={<Loading />}>
-      <AnimatePresence mode="wait">
-        <PageTransition key={location.pathname}>
-          <Routes location={location}>
-            {/* Public routes */}
-            {publicRoutes.map(({ path, element: Element }) => (
-              <Route key={path} path={path} element={Element ? <Element /> : null} />
-            ))}
-
-            {/* Protected routes */}
-            {protectedRoutes.map(({ path, element }) => (
-              <Route key={path} path={path} element={<ProtectedRoute element={element} />} />
-            ))}
-
-            {/* 404 catch-all */}
-            <Route path="*" element={<NotFoundEl />} />
-          </Routes>
-        </PageTransition>
-      </AnimatePresence>
+      {isPublicRoute ? (
+        <Routes location={location}>
+          {publicRoutes.map(({ path, element: Element }) => (
+            <Route key={path} path={path} element={Element ? <Element /> : null} />
+          ))}
+          {protectedRoutes.map(({ path, element }) => (
+            <Route key={path} path={path} element={<ProtectedRoute element={element} />} />
+          ))}
+          <Route path="*" element={<NotFoundEl />} />
+        </Routes>
+      ) : (
+        <Suspense fallback={<Loading />}>
+          <AnimatedAppRoutes
+            location={location}
+            publicRoutes={publicRoutes}
+            protectedRoutes={protectedRoutes}
+            NotFoundEl={NotFoundEl}
+            ProtectedRoute={ProtectedRoute}
+          />
+        </Suspense>
+      )}
     </Suspense>
   );
 };

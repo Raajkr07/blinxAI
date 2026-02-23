@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { chatService, socketService, aiService } from '../../services';
+import { chatService, aiService } from '../../services';
+import { socketService } from '../../services/socketService';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore, useUIStore } from '../../stores';
 import { Button, Textarea } from '../ui';

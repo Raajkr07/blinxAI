@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { callService } from '../services';
-import { socketService } from '../services';
+import { socketService } from '../services/socketService';
 import { getWebRTCService, resetWebRTCService } from '../services/webrtc';
 import toast from 'react-hot-toast';
 import { reportErrorOnce } from '../lib/reportError';

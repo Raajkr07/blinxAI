@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState, useLayoutEffect, useCallback } from 'react';
-import { chatService, socketService, userService } from '../../services';
+import { chatService, userService } from '../../services';
+import { socketService } from '../../services/socketService';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore, useChatStore } from '../../stores';
 import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon, AILogo } from '../ui';

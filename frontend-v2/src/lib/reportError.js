@@ -7,6 +7,18 @@ export function clearReportedError(id) {
     toast.dismiss(id);
 }
 
+export function resetReportedError(id) {
+    shown.delete(id);
+}
+
+export function hasReportedError(id) {
+    return shown.has(id);
+}
+
+export function reportSuccess(id, message) {
+    toast.success(message, { id });
+}
+
 export function reportErrorOnce(id, error, message) {
     void error;
 

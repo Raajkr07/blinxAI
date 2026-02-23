@@ -2,7 +2,7 @@ import { useState, lazy, Suspense, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { reportErrorOnce } from '../lib/reportError';
 import { useAuthStore, useChatStore, useTabsStore, useUIStore } from '../stores';
-import { socketService } from '../services';
+import { socketService } from '../services/socketService';
 import { cn } from '../lib/utils';
 import { Avatar, Button, SimpleDropdown, SimpleDropdownItem } from '../components/ui';
 import {

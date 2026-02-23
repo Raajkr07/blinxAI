@@ -42,7 +42,7 @@ function ChatWindowEmpty() {
             <div className="glass-strong rounded-2xl p-12 max-w-md">
                 <div className="mb-6">
                     <svg
-                        className="h-20 w-20 mx-auto text-gray-600"
+                        className="h-20 w-20 mx-auto text-gray-400"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
