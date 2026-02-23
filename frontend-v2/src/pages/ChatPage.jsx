@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../lib/reportError';
 import { useAuthStore, useChatStore, useTabsStore, useUIStore } from '../stores';
 import { socketService } from '../services';
 import { cn } from '../lib/utils';
@@ -64,14 +65,14 @@ const ChatPage = () => {
                         openModal('filePermission', payload);
                     } else if (message.type === 'SEND_EMAIL_REQUEST') {
                         if (payload.error) {
-                            toast.error(`Email failed: ${payload.error}`);
+                            toast.error('Email failed');
                         } else {
                             toast.success('Email sent successfully! 📧');
                         }
                         openModal('emailPreview', payload);
                     } else if (message.type === 'ADD_TO_CALENDAR_REQUEST') {
                         if (payload.error) {
-                            toast.error(`Calendar sync failed: ${payload.error}`);
+                            toast.error('Calendar sync failed');
                         } else {
                             toast.success('Event added to calendar! 📅');
                         }
@@ -82,9 +83,9 @@ const ChatPage = () => {
                         }
                     }
                 });
-            } catch {
+            } catch (error) {
                 if (!isCancelled) {
-                    toast.error('Please wait we are connecting to server');
+                    reportErrorOnce('chat-connect', error, 'Connecting to server failed');
                 }
             }
         };

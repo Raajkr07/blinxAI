@@ -2,6 +2,7 @@ import { useEffect, useCallback, useMemo } from 'react';
 import { useCallStore } from '../../stores';
 import { Button, Avatar } from '../ui';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export function IncomingCallDialog() {
     const { incomingCall, acceptCall, rejectCall } = useCallStore();
@@ -18,7 +19,8 @@ export function IncomingCallDialog() {
         try {
             await acceptCall();
         } catch (error) {
-            console.error('Failed to accept call:', error);
+            void error;
+            toast.error('Failed to accept call');
         }
     }, [incomingCallId, acceptCall]);
 

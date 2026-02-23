@@ -2,6 +2,7 @@ import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
+import { reportErrorOnce } from '../lib/reportError';
 import { useSocketStore } from '../stores/socketStore';
 
 class SocketService {
@@ -64,7 +65,11 @@ class SocketService {
 
             // Tear down any stale client
             if (this.client) {
-                try { this.client.deactivate(); } catch { /* ignore */ }
+                try {
+                    this.client.deactivate();
+                } catch (error) {
+                    reportErrorOnce('socket-teardown', error, 'Real-time connection error');
+                }
             }
 
             this.client = new Client({
@@ -139,7 +144,11 @@ class SocketService {
         this._clearReconnectTimer();
         this._subscriptions.clear();
         if (this.client) {
-            try { this.client.deactivate(); } catch { /* ignore */ }
+            try {
+                this.client.deactivate();
+            } catch (error) {
+                reportErrorOnce('socket-teardown', error, 'Real-time connection error');
+            }
             this.client = null;
         }
         this.connected = false;
@@ -163,7 +172,11 @@ class SocketService {
         return {
             unsubscribe: () => {
                 if (entry.stompSub) {
-                    try { entry.stompSub.unsubscribe(); } catch { /* ignore */ }
+                    try {
+                        entry.stompSub.unsubscribe();
+                    } catch (error) {
+                        reportErrorOnce('socket-unsubscribe', error, 'Real-time connection error');
+                    }
                 }
                 this._subscriptions.delete(topic);
             }
@@ -181,7 +194,8 @@ class SocketService {
         if (!token) return null;
         try {
             return JSON.parse(atob(token.split('.')[1])).sub;
-        } catch {
+        } catch (error) {
+            reportErrorOnce('auth-token-invalid', error, 'Authentication data is invalid. Please sign in again.');
             return null;
         }
     }
@@ -191,11 +205,20 @@ class SocketService {
     _doSubscribe(topic, callback) {
         if (!this.client?.connected) return null;
         return this.client.subscribe(topic, (message) => {
-            try {
-                callback(message.body ? JSON.parse(message.body) : null);
-            } catch {
-                // silently ignore parse errors
+            if (!message?.body) {
+                callback(null);
+                return;
             }
+
+            let parsed = null;
+            try {
+                parsed = JSON.parse(message.body);
+            } catch (error) {
+                reportErrorOnce('socket-parse', error, 'Received an invalid real-time message');
+                return;
+            }
+
+            callback(parsed);
         });
     }
 
@@ -203,7 +226,11 @@ class SocketService {
         for (const [topic, entry] of this._subscriptions) {
             // Unsubscribe stale handle if any
             if (entry.stompSub) {
-                try { entry.stompSub.unsubscribe(); } catch { /* ignore */ }
+                try {
+                    entry.stompSub.unsubscribe();
+                } catch (error) {
+                    reportErrorOnce('socket-unsubscribe', error, 'Real-time connection error');
+                }
             }
             entry.stompSub = this._doSubscribe(topic, entry.callback);
         }
@@ -224,9 +251,8 @@ class SocketService {
             this._reconnectTimer = null;
             if (!this._intentionalDisconnect && !this.connected) {
                 useSocketStore.getState().setStatus('reconnecting');
-                this.connect().catch(() => {
-                    // connect() rejection triggers onStompError/onWebSocketClose
-                    // which will schedule another reconnect
+                this.connect().catch((error) => {
+                    reportErrorOnce('socket-connect', error, 'Real-time connection failed');
                 });
             }
         }, delay);
@@ -246,7 +272,9 @@ class SocketService {
             if (!this.connected || !this.client?.connected) {
                 this._clearReconnectTimer();
                 this._reconnectAttempts = 0; // reset back-off since user is back
-                this.connect().catch(() => { });
+                this.connect().catch((error) => {
+                    reportErrorOnce('socket-connect', error, 'Real-time connection failed');
+                });
             }
         }
     }
@@ -256,7 +284,9 @@ class SocketService {
         if (!this.connected || !this.client?.connected) {
             this._clearReconnectTimer();
             this._reconnectAttempts = 0;
-            this.connect().catch(() => { });
+            this.connect().catch((error) => {
+                reportErrorOnce('socket-connect', error, 'Real-time connection failed');
+            });
         }
     }
 }

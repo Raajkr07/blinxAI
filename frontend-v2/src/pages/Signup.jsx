@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
 import { useAuthStore } from '../stores';
 import { Button, Input, GoogleButton } from '../components/ui';
+import { reportErrorOnce } from '../lib/reportError';
 
 export function Signup({ onSwitchToLogin, initialIdentifier }) {
     const [step, setStep] = useState(() => {
@@ -18,7 +19,12 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('v');
         if (token) {
-            try { return atob(token).split(':')[1] || ''; } catch { return ''; }
+            try {
+                return atob(token).split(':')[1] || '';
+            } catch (error) {
+                reportErrorOnce('verify-token-invalid', error, 'Invalid verification link');
+                return '';
+            }
         }
         return '';
     });
@@ -26,7 +32,12 @@ export function Signup({ onSwitchToLogin, initialIdentifier }) {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('v');
         if (token) {
-            try { return atob(token).split(':')[0] || ''; } catch { return ''; }
+            try {
+                return atob(token).split(':')[0] || '';
+            } catch (error) {
+                reportErrorOnce('verify-token-invalid', error, 'Invalid verification link');
+                return '';
+            }
         }
         return params.get('otp') || '';
     });

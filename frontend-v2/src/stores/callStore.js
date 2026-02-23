@@ -3,6 +3,7 @@ import { callService } from '../services';
 import { socketService } from '../services';
 import { getWebRTCService, resetWebRTCService } from '../services/webrtc';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../lib/reportError';
 
 export const useCallStore = create((set, get) => ({
 
@@ -23,7 +24,6 @@ export const useCallStore = create((set, get) => ({
     // Initialize WebRTC listeners when store is created
     initializeWebRTC: (userId) => {
         if (!userId) {
-            console.error('Cannot initialize WebRTC: User ID is missing');
             return () => { };
         }
 
@@ -41,8 +41,8 @@ export const useCallStore = create((set, get) => ({
 
         // Listen for errors
         subs.push(socketService.subscribe(`/topic/video/${userId}/error`, (error) => {
-            if (error?.error) {
-                toast.error(error.error);
+            if (error) {
+                reportErrorOnce('call-error-topic', error, 'Call error');
             }
         }));
 
@@ -53,13 +53,10 @@ export const useCallStore = create((set, get) => ({
 
     // Receive incoming call notification
     receiveIncomingCall: (notification) => {
-        console.log('[CallStore] Incoming call notification:', notification);
-
         const { activeCall, callStatus } = get();
 
         // Don't accept new calls if already in a call
         if (activeCall || callStatus !== 'idle') {
-            console.log('[CallStore] Rejecting incoming call - already in call');
             return;
         }
 
@@ -83,7 +80,6 @@ export const useCallStore = create((set, get) => ({
         const { orphanedSignals } = get();
         const orphans = orphanedSignals[notification.callId];
         if (orphans && orphans.length > 0) {
-            console.log('[CallStore] Processing orphaned signals:', orphans.length);
             orphans.forEach(signal => get().handleWebRTCSignal(signal));
             const newOrphans = { ...orphanedSignals };
             delete newOrphans[notification.callId];
@@ -102,7 +98,6 @@ export const useCallStore = create((set, get) => ({
             const { orphanedSignals } = get();
 
             if (['OFFER', 'ICE_CANDIDATE'].includes(signal.type)) {
-                console.log('Buffering orphaned signal:', signal.type, signal.callId);
                 const currentOrphans = orphanedSignals[signal.callId] || [];
                 set({
                     orphanedSignals: {
@@ -117,21 +112,16 @@ export const useCallStore = create((set, get) => ({
         try {
             switch (signal.type) {
                 case 'OFFER': {
-                    console.log('[CallStore] Received OFFER signal, callStatus:', callStatus);
                     // If call is still ringing, queue the offer
                     if (callStatus === 'ringing') {
-                        console.log('[CallStore] Call is ringing, queuing OFFER as pendingOffer');
                         set({ pendingOffer: signal });
                         return;
                     }
 
                     // Skip if we already processed an offer
                     if (webrtc.peerConnection?.remoteDescription) {
-                        console.log('[CallStore] Ignoring duplicate OFFER');
                         break;
                     }
-
-                    console.log('[CallStore] Processing OFFER - creating peer connection');
 
                     // Create peer connection WITHOUT calling closePeerConnection
                     // (which would kill local stream tracks)
@@ -144,28 +134,19 @@ export const useCallStore = create((set, get) => ({
                     // Add local stream tracks to the peer connection
                     const currentLocalStream = get().localStream;
                     if (currentLocalStream) {
-                        console.log('[CallStore] Adding local stream to peer connection');
                         webrtc.addLocalStream(currentLocalStream);
-                    } else {
-                        console.warn('[CallStore] No local stream available when processing OFFER');
                     }
-
-                    console.log('[CallStore] Creating ANSWER');
                     const answer = await webrtc.createAnswer(JSON.parse(signal.data));
-
-                    console.log('[CallStore] Sending ANSWER to caller:', currentCall.callerId);
                     await socketService.send('/app/video/signal', {
                         callId: currentCall.id,
                         type: 'ANSWER',
                         data: JSON.stringify(answer),
                         targetUserId: currentCall.callerId,
                     });
-                    console.log('[CallStore] ANSWER sent successfully');
                     break;
                 }
 
                 case 'ANSWER':
-                    console.log('[CallStore] Received ANSWER, call is now active');
                     await webrtc.setRemoteDescription(JSON.parse(signal.data));
                     set({ callStatus: 'active' });
                     toast.success('Call connected');
@@ -179,8 +160,8 @@ export const useCallStore = create((set, get) => ({
                     if (signal.data) {
                         try {
                             await webrtc.addIceCandidate(JSON.parse(signal.data));
-                        } catch (e) {
-                            console.error('[CallStore] Error adding ICE candidate:', e);
+                        } catch (error) {
+                            reportErrorOnce('call-ice-candidate', error, 'Call connection issue');
                         }
                     }
                     break;
@@ -191,7 +172,6 @@ export const useCallStore = create((set, get) => ({
                     break;
 
                 case 'CALL_ENDED':
-                    console.log('[CallStore] Received CALL_ENDED signal, current callStatus:', callStatus);
                     if (callStatus === 'calling') {
                         toast.error('Call was declined');
                     } else if (callStatus === 'active') {
@@ -201,10 +181,10 @@ export const useCallStore = create((set, get) => ({
                     break;
 
                 default:
-                    console.warn('Unknown signal type:', signal.type);
+                    break;
             }
         } catch (error) {
-            console.error('Error handling WebRTC signal:', error);
+            reportErrorOnce('call-signal', error, 'Call connection issue');
         }
     },
 
@@ -227,15 +207,12 @@ export const useCallStore = create((set, get) => ({
                 targetUserId,
             });
         } catch (error) {
-            console.error('Failed to send ICE candidate:', error);
+            reportErrorOnce('call-ice-send', error, 'Call connection issue');
         }
     },
 
     // Start a new call
     initiateCall: async (receiverId, callType) => {
-        const startTime = Date.now();
-        console.log(`[CallStore] Initiating ${callType} call to ${receiverId}...`);
-
         try {
             const isVideo = callType.toUpperCase() === 'VIDEO';
 
@@ -250,20 +227,13 @@ export const useCallStore = create((set, get) => ({
             const webrtc = getWebRTCService();
 
             // 1. Start media access in background
-            console.log('[CallStore] Requesting local media stream...');
-            const mediaPromise = webrtc.startLocalStream(isVideo, true).catch(err => {
-                console.error('[CallStore] Media request failed:', err);
-                return null;
-            });
+            const mediaPromise = webrtc.startLocalStream(isVideo, true).catch(() => null);
 
             // 2. Request server verification (busy check, persistence)
-            console.log('[CallStore] Requesting server verification...');
             const response = await callService.initiateCall({
                 receiverId,
                 type: callType.toUpperCase(),
             });
-
-            console.log(`[CallStore] Server verified after ${Date.now() - startTime}ms`);
 
             // 3. Show calling UI immediately
             set({
@@ -303,11 +273,8 @@ export const useCallStore = create((set, get) => ({
                 data: JSON.stringify(offer),
                 targetUserId: receiverId,
             });
-
-            console.log(`[CallStore] Call fully established after ${Date.now() - startTime}ms`);
             return response;
         } catch (error) {
-            console.error('[CallStore] Failed to initiate call:', error);
             set({ callStatus: 'idle' });
 
             const { localStream } = get();
@@ -316,8 +283,7 @@ export const useCallStore = create((set, get) => ({
                 set({ localStream: null });
             }
 
-            const errMsg = error.response?.data?.message || error.message || 'Failed to start call';
-            toast.error(errMsg);
+            toast.error('Failed to start call');
             resetWebRTCService();
             throw error;
         }
@@ -327,8 +293,6 @@ export const useCallStore = create((set, get) => ({
     acceptCall: async () => {
         const { incomingCall } = get();
         if (!incomingCall) return;
-
-        console.log('[CallStore] Accepting call:', incomingCall.id);
 
         try {
             // Clean up any existing streams
@@ -350,7 +314,6 @@ export const useCallStore = create((set, get) => ({
 
             // 3. Store the stream and transition to active state FIRST
             //    so OFFER handler won't re-queue the signal
-            console.log('[CallStore] Setting state to active before processing OFFER');
             set({
                 activeCall: incomingCall,
                 incomingCall: null,
@@ -361,41 +324,32 @@ export const useCallStore = create((set, get) => ({
 
             // 4. Process pending offer (won't be re-queued since status is 'active')
             const { pendingOffer, orphanedSignals } = get();
-            console.log('[CallStore] Checking for pendingOffer:', !!pendingOffer);
 
             if (pendingOffer) {
-                console.log('[CallStore] Processing pending OFFER');
                 try {
                     await get().handleWebRTCSignal(pendingOffer);
                     set({ pendingOffer: null });
-                } catch (e) {
-                    console.error('[CallStore] Error processing pending offer:', e);
+                } catch (error) {
+                    reportErrorOnce('call-pending-offer', error, 'Call connection issue');
                 }
-            } else {
-                console.warn('[CallStore] No pendingOffer found! Waiting for OFFER from caller.');
             }
 
             // 5. Process orphaned signals for this call
             const orphans = orphanedSignals[incomingCall.id];
             if (orphans && orphans.length > 0) {
-                console.log('[CallStore] Processing orphaned signals on accept:', orphans.length);
                 for (const signal of orphans) {
                     try {
                         await get().handleWebRTCSignal(signal);
-                    } catch (e) {
-                        console.error('[CallStore] Error processing orphaned signal:', e);
+                    } catch (error) {
+                        reportErrorOnce('call-orphan-signal', error, 'Call connection issue');
                     }
                 }
                 const newOrphans = { ...orphanedSignals };
                 delete newOrphans[incomingCall.id];
                 set({ orphanedSignals: newOrphans });
             }
-
-            console.log('[CallStore] Call accepted successfully');
             toast.success('Call connected');
         } catch (error) {
-            console.error('[CallStore] Failed to accept call:', error);
-
             const { localStream } = get();
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
@@ -412,7 +366,7 @@ export const useCallStore = create((set, get) => ({
                 pendingOffer: null,
             });
 
-            toast.error('Failed to accept call: ' + (error.message || 'Unknown error'));
+            toast.error('Failed to accept call');
             throw error;
         }
     },
@@ -424,7 +378,7 @@ export const useCallStore = create((set, get) => ({
             try {
                 await callService.rejectCall(incomingCall.id);
             } catch (error) {
-                console.error('Failed to reject call:', error);
+                reportErrorOnce('call-reject', error, 'Failed to reject call');
             }
         }
         set({
@@ -438,25 +392,20 @@ export const useCallStore = create((set, get) => ({
     // End active call
     endCall: async (outcome = 'ended') => {
         const { activeCall, localStream } = get();
-        console.log('[CallStore] Ending call, outcome:', outcome, 'activeCall:', activeCall?.id);
 
         if (activeCall?.id) {
             try {
                 if (outcome === 'ended') {
-                    console.log('[CallStore] Calling endCall API');
                     await callService.endCall(activeCall.id);
                 }
             } catch (error) {
-                console.error('[CallStore] Failed to end call:', error);
+                reportErrorOnce('call-end', error, 'Failed to end call');
             }
         }
 
         if (localStream) {
-            console.log('[CallStore] Stopping local media tracks');
             localStream.getTracks().forEach(track => track.stop());
         }
-
-        console.log('[CallStore] Resetting WebRTC service');
         resetWebRTCService();
 
         set({
@@ -510,7 +459,7 @@ export const useCallStore = create((set, get) => ({
                 set({ isScreenSharing: true });
             }
         } catch (error) {
-            console.error('Failed to toggle screen share:', error);
+            reportErrorOnce('call-screenshare', error, 'Failed to share screen');
         }
     },
 

@@ -57,6 +57,11 @@ jobs:
       # ── Production build ──────────────────────────────────
       - name: Build
         working-directory: frontend-v2
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://api.blinxai.me' }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL || 'wss://api.blinxai.me/ws' }}
+          VITE_APP_DOMAIN: blinxai.me
+          VITE_ENV: production
         run: npm run build
 
       # ── Docker (only on push to main) ─────────────────────

@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 COPY frontend-v2/dist /usr/share/nginx/html
-COPY nginxv2.conf /etc/nginx/nginxv2.conf
+COPY nginxv2.conf /etc/nginx/nginx.conf
 
 EXPOSE 9091
 

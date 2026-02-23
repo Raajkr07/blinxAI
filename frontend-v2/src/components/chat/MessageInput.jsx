@@ -7,6 +7,7 @@ import { Button, Textarea } from '../ui';
 import { AutoReplySuggestions } from './AutoReplySuggestions';
 import { generateId } from '../../lib/utils';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../../lib/reportError';
 
 export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
@@ -85,8 +86,8 @@ export function MessageInput({ conversationId }) {
                     setTimeout(() => {
                         removeTypingUser(conversationId, 'ai-assistant');
                     }, Math.min(durationMs, 15000)); // cap at 15s
-                } catch {
-                    // Fallback: show typing for 2 seconds if the endpoint fails
+                } catch (error) {
+                    reportErrorOnce('ai-typing', error, 'Some features are temporarily unavailable');
                     addTypingUser(conversationId, 'ai-assistant');
                     setTimeout(() => {
                         removeTypingUser(conversationId, 'ai-assistant');

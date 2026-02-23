@@ -31,7 +31,8 @@ export function NewGroupModal({ open, onOpenChange }) {
             resetModal();
         },
         onError: (error) => {
-            toast.error(error.response?.data?.message || 'Failed to create group');
+            void error;
+            toast.error('Failed to create group');
         },
     });
 

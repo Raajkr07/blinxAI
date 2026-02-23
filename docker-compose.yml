@@ -37,6 +37,17 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - JAVA_OPTS=-XX:MaxRAMPercentage=60.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=50
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+      - APP_CORS_ALLOWED_ORIGINS=${APP_CORS_ALLOWED_ORIGINS:-https://blinxai.me,https://www.blinxai.me,https://blinx-app.netlify.app,http://localhost:8080,http://localhost:5173,http://localhost:5174}
+      - APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://blinxai.me}
+      - APP_COOKIE_DOMAIN=${APP_COOKIE_DOMAIN:-}
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://api.blinxai.me/api/v1/auth/google/callback}
+      - GOOGLE_OAUTH_ENCRYPTION_PASSWORD=${GOOGLE_OAUTH_ENCRYPTION_PASSWORD}
+      - GOOGLE_OAUTH_ENCRYPTION_SALT=${GOOGLE_OAUTH_ENCRYPTION_SALT}
+      - GOOGLE_OAUTH_DEFAULT_REDIRECT_URI=${GOOGLE_OAUTH_DEFAULT_REDIRECT_URI:-https://blinxai.me/chat}
+      - GOOGLE_OAUTH_ERROR_REDIRECT_URI=${GOOGLE_OAUTH_ERROR_REDIRECT_URI:-https://blinxai.me/auth?error=true}
       # Add your actual API keys here or in a .env file
       - JWT_SECRET=${JWT_SECRET}
       - AI_API_KEY=${AI_API_KEY}

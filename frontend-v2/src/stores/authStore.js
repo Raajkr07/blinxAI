@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { authService, userService } from '../services';
+import { reportErrorOnce } from '../lib/reportError';
 
 export const useAuthStore = create((set, get) => ({
     user: storage.get(STORAGE_KEYS.USER),
@@ -38,7 +39,7 @@ export const useAuthStore = create((set, get) => ({
                 await authService.logoutGoogle();
             }
         } catch (error) {
-            console.warn('Logout API call failed, proceeding with local cleanup:', error.message);
+            reportErrorOnce('logout-failed', error, 'Logout failed');
         } finally {
             // 2. Disconnect socket immediately
             socketService.disconnect();
@@ -95,8 +96,9 @@ export const useAuthStore = create((set, get) => ({
                         set({ user: me, accessToken: tokenInStorage, isAuthenticated: true, error: null });
                         return true;
                     }
-                } catch {
-                    // Fall through to other session strategies
+                } catch (error) {
+                    set({ error });
+                    reportErrorOnce('session-check', error, 'Session check failed');
                 }
             }
 
@@ -117,14 +119,12 @@ export const useAuthStore = create((set, get) => ({
                 return true;
             }
         } catch (error) {
-            if (import.meta.env.DEV) {
-                console.warn('Session initialization fallback:', error.message);
-            }
+            set({ error });
 
             // If OAuth session check failed, try using standard refresh token if we have one
             // (Prefer storage as the in-memory state could be mid-update.)
             const localRT = storage.get(STORAGE_KEYS.REFRESH_TOKEN) || get().refreshToken;
-            if (localRT) {
+            if (localRT && (error?.status === 401 || error?.status === 403)) {
                 try {
                     const data = await authService.refreshToken(localRT);
                     if (data.accessToken) {
@@ -135,9 +135,7 @@ export const useAuthStore = create((set, get) => ({
                         return true;
                     }
                 } catch (refreshErr) {
-                    if (import.meta.env.DEV) {
-                        console.error('Local refresh fallback failed:', refreshErr);
-                    }
+                    set({ error: refreshErr });
                 }
             }
 

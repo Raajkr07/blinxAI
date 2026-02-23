@@ -1,7 +1,7 @@
 import { Button } from './Button';
 import { useState } from 'react';
 import { authService } from '../../services';
-import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../../lib/reportError';
 
 export function GoogleButton({ className, children = 'Continue with Google', ...props }) {
     const [loading, setLoading] = useState(false);
@@ -11,8 +11,8 @@ export function GoogleButton({ className, children = 'Continue with Google', ...
         try {
             const { url } = await authService.initGoogleAuth(window.location.origin + '/chat');
             window.location.href = url;
-        } catch {
-            toast.error('Failed to initialize Google Login');
+        } catch (error) {
+            reportErrorOnce('google-init', error, 'Failed to initialize Google Login');
             setLoading(false);
         }
     };

@@ -36,7 +36,6 @@ export class WebRTCService {
 
         // Handle remote stream
         this.peerConnection.ontrack = (event) => {
-            console.log('[WebRTC] ontrack fired, streams:', event.streams?.length);
             if (event.streams && event.streams[0]) {
                 this.remoteStream = event.streams[0];
                 if (onTrack) {
@@ -48,15 +47,9 @@ export class WebRTCService {
         // Handle connection state changes
         this.peerConnection.onconnectionstatechange = () => {
             const state = this.peerConnection?.connectionState;
-            console.log('[WebRTC] Connection state:', state);
             if (onConnectionStateChange && state) {
                 onConnectionStateChange(state);
             }
-        };
-
-        // Log ICE connection state for debugging
-        this.peerConnection.oniceconnectionstatechange = () => {
-            console.log('[WebRTC] ICE state:', this.peerConnection?.iceConnectionState);
         };
 
     }
@@ -65,7 +58,6 @@ export class WebRTCService {
     async processIceQueue() {
         if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
 
-        console.log('Processing queued ICE candidates:', this.iceCandidatesQueue.length);
         // Copy queue to avoid concurrent modification issues if addIceCandidate pushes back
         const queue = [...this.iceCandidatesQueue];
         this.iceCandidatesQueue = [];
@@ -94,7 +86,6 @@ export class WebRTCService {
             this.localStream = stream;
             return stream;
         } catch (error) {
-            console.error('Error accessing media devices:', error);
             if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
                 throw new Error('Camera/Microphone permission denied. Please allow access.');
             }
@@ -175,7 +166,8 @@ export class WebRTCService {
         try {
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (error) {
-            console.error('Error adding ICE candidate:', error);
+            void error;
+            throw new Error('Call connection issue');
         }
     }
 
@@ -203,29 +195,24 @@ export class WebRTCService {
             throw new Error('Peer connection not initialized');
         }
 
-        try {
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: 'always' },
-                audio: false,
-            });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: 'always' },
+            audio: false,
+        });
 
-            const screenTrack = screenStream.getVideoTracks()[0];
-            const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        const screenTrack = screenStream.getVideoTracks()[0];
+        const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
 
-            if (sender) {
-                await sender.replaceTrack(screenTrack);
-            }
-
-            // Stop screen share when user clicks browser's stop button
-            screenTrack.onended = () => {
-                this.stopScreenShare();
-            };
-
-            return screenStream;
-        } catch (error) {
-            console.error('Error starting screen share:', error);
-            throw error;
+        if (sender) {
+            await sender.replaceTrack(screenTrack);
         }
+
+        // Stop screen share when user clicks browser's stop button
+        screenTrack.onended = () => {
+            this.stopScreenShare();
+        };
+
+        return screenStream;
     }
 
     // Stop screen share and restore camera

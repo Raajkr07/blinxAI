@@ -70,7 +70,6 @@ export function OnlineUsersPanel() {
     const { data: onlineUserIds, isLoading: isLoadingIds } = useQuery({
         queryKey: queryKeys.onlineUsers,
         queryFn: userService.listOnlineUsers,
-        refetchInterval: 30000, // poll every 30s as fallback
         staleTime: 10000,
     });
 
@@ -90,12 +89,12 @@ export function OnlineUsersPanel() {
             openTab(conversation);
             setActiveConversation(conversation.id);
         } catch (err) {
-            if (err.response?.data?.id) {
-                openTab(err.response.data);
-                setActiveConversation(err.response.data.id);
-            } else {
-                toast.error('Failed to start chat');
+            if (err?.status === 409 && err?.data?.id) {
+                openTab(err.data);
+                setActiveConversation(err.data.id);
+                return;
             }
+            toast.error('Failed to start chat');
         }
     };
 

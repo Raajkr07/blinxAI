@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketService } from '../services';
+import { reportErrorOnce } from './reportError';
 
 export function usePresence(enabled = true) {
     const queryClient = useQueryClient();
@@ -39,9 +40,8 @@ export function usePresence(enabled = true) {
                         }
                     );
                 });
-            } catch {
-                // Socket not ready yet — the subscription will be
-                // established on reconnect via socketService internals
+            } catch (error) {
+                reportErrorOnce('presence-realtime', error, 'Real-time updates unavailable');
             }
         };
 

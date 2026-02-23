@@ -4,6 +4,7 @@ import { chatService, userService } from '../../services';
 import { useChatStore, useTabsStore } from '../../stores';
 import { Modal, ModalFooter, Button, Input, Avatar } from '../ui';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../../lib/reportError';
 
 export function NewChatModal({ open, onOpenChange }) {
     const [searchQuery, setSearchQuery] = useState('');
@@ -25,7 +26,8 @@ export function NewChatModal({ open, onOpenChange }) {
             const results = await userService.searchUsers(query);
             setSearchResults(results);
         } catch (error) {
-            console.error(error);
+            reportErrorOnce('user-search', error, 'Search failed');
+            setSearchResults([]);
         } finally {
             setIsSearching(false);
         }

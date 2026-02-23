@@ -11,6 +11,28 @@ const apiClient = axios.create({
     withCredentials: true,
 });
 
+const normalizeApiError = (error) => {
+    const status = error?.response?.status ?? null;
+    const data = error?.response?.data ?? null;
+
+    let code = null;
+    if (data && typeof data === 'object') {
+        if (typeof data.code === 'string') code = data.code;
+        else if (typeof data.errorCode === 'string') code = data.errorCode;
+    }
+
+    let message = 'Unexpected error';
+    if (data && typeof data === 'object' && typeof data.message === 'string' && data.message.trim()) {
+        message = data.message;
+    } else if (typeof data === 'string' && data.trim()) {
+        message = data;
+    } else if (typeof error?.message === 'string' && error.message.trim()) {
+        message = error.message;
+    }
+
+    return { status, code, message, data };
+};
+
 const cleanResponseData = (data) => {
     if (!data || typeof data !== 'object') return data;
 
@@ -36,7 +58,7 @@ apiClient.interceptors.request.use(
         if (token) config.headers.Authorization = `Bearer ${token}`;
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => Promise.reject(normalizeApiError(error))
 );
 
 apiClient.interceptors.response.use(
@@ -45,15 +67,15 @@ apiClient.interceptors.response.use(
         return response;
     },
     async (error) => {
-        const originalRequest = error.config;
-
-        const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+        const originalRequest = error?.config;
+        const status = error?.response?.status;
+        const isAuthError = status === 401 || status === 403;
 
         const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);
         const hasSession = !!storage.get(STORAGE_KEYS.USER);
 
         // Try to refresh if we have a refresh token OR if we have a session (might be cookie-based OAuth)
-        if (isAuthError && !originalRequest._retry && (refreshToken || hasSession)) {
+        if (isAuthError && originalRequest && !originalRequest._retry && (refreshToken || hasSession)) {
             originalRequest._retry = true;
             try {
                 let data;
@@ -95,10 +117,10 @@ apiClient.interceptors.response.use(
                 if (currentPath !== '' && !currentPath.includes('/auth') && !publicRoutes.includes(currentPath)) {
                     window.location.href = '/';
                 }
-                return Promise.reject(err);
+                return Promise.reject(normalizeApiError(err));
             }
         }
-        return Promise.reject(error);
+        return Promise.reject(normalizeApiError(error));
     }
 );
 

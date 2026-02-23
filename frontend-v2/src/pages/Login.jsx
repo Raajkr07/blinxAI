@@ -24,7 +24,8 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
             setStep('otp');
         },
         onError: (error) => {
-            toast.error(error.response?.data?.message || 'Failed to send OTP');
+            void error;
+            toast.error('Failed to send OTP');
         }
     });
 
@@ -52,7 +53,7 @@ export function Login({ onSwitchToSignup, initialIdentifier }) {
                     onSwitchToSignup?.();
                 }
             } catch (err) {
-                const message = err.response?.data?.message || err.message;
+                const message = err?.message;
                 if (message === 'Profile incomplete') {
                     toast.error('Profile incomplete. Redirecting...');
                     onSwitchToSignup?.();

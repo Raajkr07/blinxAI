@@ -4,6 +4,7 @@ import { Button, Avatar } from '../ui';
 import { motion as Motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../../lib/reportError';
 
 export function ActiveCallInterface() {
     const { user } = useAuthStore();
@@ -39,21 +40,31 @@ export function ActiveCallInterface() {
     useEffect(() => {
         if (mainVideoRef.current) {
             mainVideoRef.current.srcObject = mainStream;
-            if (mainStream) mainVideoRef.current.play().catch(() => { });
+            if (mainStream) {
+                mainVideoRef.current.play().catch((error) => {
+                    reportErrorOnce('media-playback', error, 'Audio/video playback failed');
+                });
+            }
         }
     }, [mainStream, isSwapped]);
 
     useEffect(() => {
         if (pipVideoRef.current) {
             pipVideoRef.current.srcObject = pipStream;
-            if (pipStream) pipVideoRef.current.play().catch(() => { });
+            if (pipStream) {
+                pipVideoRef.current.play().catch((error) => {
+                    reportErrorOnce('media-playback', error, 'Audio/video playback failed');
+                });
+            }
         }
     }, [pipStream, isSwapped]);
 
     useEffect(() => {
         if (!isVideo && remoteStream && hiddenAudioRef.current) {
             hiddenAudioRef.current.srcObject = remoteStream;
-            hiddenAudioRef.current.play().catch(() => { });
+            hiddenAudioRef.current.play().catch((error) => {
+                reportErrorOnce('media-playback', error, 'Audio/video playback failed');
+            });
         }
     }, [isVideo, remoteStream]);
 

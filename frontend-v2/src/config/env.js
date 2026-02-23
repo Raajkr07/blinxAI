@@ -5,10 +5,9 @@ const normalizeUrl = (value) => {
 
 // Keep this intentionally simple:
 // - In Netlify prod you set VITE_API_BASE_URL and (optionally) VITE_WS_URL
-// - In dev, fall back to localhost
 const apiBaseUrl = normalizeUrl(
     import.meta.env.VITE_API_BASE_URL ||
-    (import.meta.env.DEV ? 'http://localhost:8080' : (typeof window !== 'undefined' ? window.location.origin : ''))
+    (typeof window !== 'undefined' ? window.location.origin : '')
 );
 
 const wsUrl = normalizeUrl(
@@ -21,8 +20,6 @@ export const env = {
     API_VERSION: import.meta.env.VITE_API_VERSION || 'v1',
     WS_URL: wsUrl,
     ENV: import.meta.env.MODE || 'development',
-    IS_DEV: import.meta.env.DEV,
-    IS_PROD: import.meta.env.PROD,
 
     // App Identity
     APP_NAME: 'Blinx AI Assistant',

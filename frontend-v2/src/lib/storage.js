@@ -15,7 +15,7 @@ class Storage {
             const item = localStorage.getItem(key);
             return item ? JSON.parse(item) : null;
         } catch (error) {
-            console.error(`Error reading from localStorage (${key}):`, error);
+            void error;
             return null;
         }
     }
@@ -24,7 +24,11 @@ class Storage {
         try {
             localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
-            console.error(`Error writing to localStorage (${key}):`, error);
+            // Storage failures affect persistence; surface once without leaking details.
+            // Lazy import avoids pulling toast into initial bundles unnecessarily.
+            import('./reportError').then(({ reportErrorOnce }) => {
+                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
+            });
         }
     }
 
@@ -32,7 +36,9 @@ class Storage {
         try {
             localStorage.removeItem(key);
         } catch (error) {
-            console.error(`Error removing from localStorage (${key}):`, error);
+            import('./reportError').then(({ reportErrorOnce }) => {
+                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
+            });
         }
     }
 
@@ -40,7 +46,9 @@ class Storage {
         try {
             localStorage.clear();
         } catch (error) {
-            console.error('Error clearing localStorage:', error);
+            import('./reportError').then(({ reportErrorOnce }) => {
+                reportErrorOnce('storage-unavailable', error, 'Storage is unavailable. Changes may not be saved.');
+            });
         }
     }
 }

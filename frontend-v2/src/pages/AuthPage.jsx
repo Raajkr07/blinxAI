@@ -6,6 +6,7 @@ import { Signup } from './Signup';
 import { BlinkingFace } from './BlinkingFace';
 import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores';
+import { reportErrorOnce } from '../lib/reportError';
 
 const AuthPage = () => {
     const navigate = useNavigate();
@@ -20,7 +21,12 @@ const AuthPage = () => {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('v');
         if (token) {
-            try { return atob(token).split(':')[1] || ''; } catch { return ''; }
+            try {
+                return atob(token).split(':')[1] || '';
+            } catch (error) {
+                reportErrorOnce('verify-token-invalid', error, 'Invalid verification link');
+                return '';
+            }
         }
         return params.get('identifier') || '';
     });

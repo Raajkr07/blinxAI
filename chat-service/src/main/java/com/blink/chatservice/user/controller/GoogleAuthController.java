@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +37,9 @@ public class GoogleAuthController {
     private final TokenDenylistService denylistService;
     private final UserRepository userRepository;
     private final UserService userService;
+
+    @Value("${app.cookie.domain:#{null}}")
+    private String cookieDomain;
 
     @PostMapping("/init")
     public ResponseEntity<Map<String, String>> initAuth(@RequestParam(required = false) String redirect_to) {
@@ -227,6 +231,9 @@ public class GoogleAuthController {
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setAttribute("SameSite", "None");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         cookie.setMaxAge(maxAge);
         response.addCookie(cookie);
     }
@@ -237,6 +244,9 @@ public class GoogleAuthController {
         cookie.setHttpOnly(true);
         cookie.setSecure(true);
         cookie.setAttribute("SameSite", "None");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }

@@ -35,8 +35,9 @@ const VerifyPage = () => {
                 let decoded;
                 try {
                     decoded = atob(token);
-                } catch {
-                    throw new Error('Invalid verification token format');
+                } catch (error) {
+                    void error;
+                    throw new Error('Invalid verification link.');
                 }
 
                 const [otp, identifier] = decoded.split(':');
@@ -63,8 +64,7 @@ const VerifyPage = () => {
                     setMessage('Verification failed.');
                 }
             } catch (err) {
-                console.error('Verification error:', err);
-                const errorMessage = err.response?.data?.message || err.message;
+                const errorMessage = err?.message;
 
                 if (errorMessage === 'Profile incomplete') {
                     setStatus('success');
@@ -76,7 +76,7 @@ const VerifyPage = () => {
                 }
 
                 setStatus('error');
-                setMessage(errorMessage || 'An error occurred during verification. Please try again.');
+                setMessage('Verification failed. Please try again.');
             }
         };
 

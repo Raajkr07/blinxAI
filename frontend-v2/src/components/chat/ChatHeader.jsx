@@ -52,18 +52,10 @@ export function ChatHeader() {
         queryFn: () => userService.getUserById(otherUserId),
         enabled: !!otherUserId,
         staleTime: 1000 * 60 * 5,
-        refetchInterval: 1000 * 30,
         placeholderData: () => queryClient.getQueryData(['user', otherUserId]),
     });
 
-    // Live online presence check for 1:1 chats
-    const { data: isPartnerOnline } = useQuery({
-        queryKey: ['userOnline', otherUserId],
-        queryFn: () => userService.isUserOnline(otherUserId),
-        enabled: !!otherUserId && !isGroup && !isAI,
-        refetchInterval: 30000,
-        staleTime: 15000,
-    });
+    const isPartnerOnline = otherUser?.online;
 
 
     const initiateCallMutation = useMutation({
@@ -103,7 +95,7 @@ export function ChatHeader() {
             toast.success('Left group');
         },
         onError: (error) => {
-            const message = error.response?.data?.message || 'Failed to leave group. Note: Last member cannot leave, try deleting the chat instead.';
+            const message = error?.message || 'Failed to leave group. Note: Last member cannot leave, try deleting the chat instead.';
             toast.error(message, { duration: 5000 });
         },
     });

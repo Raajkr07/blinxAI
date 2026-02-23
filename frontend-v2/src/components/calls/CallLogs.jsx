@@ -79,7 +79,6 @@ export function CallLogs() {
     const { data: historyData, isLoading, error, refetch } = useQuery({
         queryKey: queryKeys.callHistory(queryParams),
         queryFn: () => callService.getCallHistory(queryParams),
-        refetchInterval: 30000,
     });
 
     const callLogs = historyData?.calls || [];
@@ -91,7 +90,6 @@ export function CallLogs() {
     const { data: activeCalls } = useQuery({
         queryKey: ['activeCalls'],
         queryFn: callService.getActiveCalls,
-        refetchInterval: 10000,
     });
 
     const handleVideoCall = (userId) => {

@@ -27,7 +27,8 @@ export function SettingsModal({ open, onOpenChange }) {
             onOpenChange(false);
         },
         onError: (error) => {
-            toast.error(error.response?.data?.message || 'Update failed');
+            void error;
+            toast.error('Update failed');
         },
     });
 
@@ -47,7 +48,8 @@ export function SettingsModal({ open, onOpenChange }) {
         try {
             await authService.logoutGoogle();
             toast.success('Google account disconnected');
-        } catch {
+        } catch (error) {
+            void error;
             toast.error('Failed to disconnect');
         } finally {
             setIsDisconnectingGoogle(false);
@@ -59,7 +61,8 @@ export function SettingsModal({ open, onOpenChange }) {
         try {
             await authService.revokeGoogleAccess();
             toast.success('Google access revoked');
-        } catch {
+        } catch (error) {
+            void error;
             toast.error('Failed to revoke');
         } finally {
             setIsRevokingGoogle(false);

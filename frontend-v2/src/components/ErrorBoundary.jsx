@@ -16,8 +16,6 @@ class ErrorBoundary extends Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        console.error('Error caught by boundary:', error, errorInfo);
-
         this.setState({
             error,
             errorInfo,
@@ -84,52 +82,7 @@ class ErrorBoundary extends Component {
                             We're sorry for the inconvenience. The application encountered an unexpected error.
                         </p>
 
-                        {import.meta.env.DEV && formattedError && (
-                            <details
-                                open
-                                className="mb-6 text-left rounded-lg border border-red-500/30 bg-red-500/5"
-                            >
-                                <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300">
-                                    ⚠️ Developer Error Details
-                                </summary>
-
-                                <div className="p-4 space-y-4 text-xs text-gray-300">
-                                    <div>
-                                        <h4 className="text-red-400 font-semibold mb-1">
-                                            Error
-                                        </h4>
-                                        <p className="font-mono break-words">
-                                            <span className="opacity-70">
-                                                {formattedError.name}:
-                                            </span>{' '}
-                                            {formattedError.message}
-                                        </p>
-                                    </div>
-
-                                    {formattedError.stack && (
-                                        <div>
-                                            <h4 className="text-red-400 font-semibold mb-1">
-                                                Stack Trace
-                                            </h4>
-                                            <pre className="max-h-48 overflow-auto rounded bg-black/40 p-3 whitespace-pre-wrap leading-relaxed text-gray-300">
-                                                {formattedError.stack}
-                                            </pre>
-                                        </div>
-                                    )}
-
-                                    {this.state.errorInfo?.componentStack && (
-                                        <div>
-                                            <h4 className="text-red-400 font-semibold mb-1">
-                                                Component Stack
-                                            </h4>
-                                            <pre className="max-h-48 overflow-auto rounded bg-black/40 p-3 whitespace-pre-wrap leading-relaxed text-gray-400">
-                                                {this.state.errorInfo.componentStack.trim()}
-                                            </pre>
-                                        </div>
-                                    )}
-                                </div>
-                            </details>
-                        )}
+                        {formattedError && null}
 
                         <div className="flex gap-3 justify-center">
                             <Button

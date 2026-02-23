@@ -6,6 +6,7 @@ import { useAuthStore, useChatStore } from '../../stores';
 import { Avatar, SkeletonMessage, EmptyState, NoMessagesIcon, AILogo } from '../ui';
 import { cn, formatTime, stripMarkdown } from '../../lib/utils';
 import toast from 'react-hot-toast';
+import { reportErrorOnce } from '../../lib/reportError';
 
 // ─── Date separator helper ───────────────────────────────────────────
 function getDateLabel(dateString) {
@@ -215,10 +216,9 @@ export function MessageList({ conversationId }) {
                         }
                     });
                 }
-            } catch (err) {
-                console.error('Failed to connect to WebSocket:', err);
+            } catch (error) {
                 if (isMounted) {
-                    toast.error('Real-time connection failed');
+                    reportErrorOnce('message-realtime', error, 'Real-time connection failed');
                 }
             }
         };
