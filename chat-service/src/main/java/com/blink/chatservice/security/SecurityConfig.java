@@ -20,7 +20,6 @@ import org.springframework.web.filter.CorsFilter;
 import jakarta.servlet.DispatcherType;
 import java.util.Collections;
 
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -61,7 +60,8 @@ public class SecurityConfig {
                                 "/swagger-ui/index.html",
                                 "/actuator/**",
                                 // Allowing public access to ws handshake, socket security is handled separately.
-                                "/ws/**"
+                                "/ws/**",
+                                "/api/v1/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

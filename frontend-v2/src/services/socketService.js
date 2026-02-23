@@ -1,4 +1,5 @@
 import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 import { hasReportedError, reportErrorOnce, reportSuccess, resetReportedError } from '../lib/reportError';
@@ -65,12 +66,18 @@ class SocketService {
                 return reject(new Error('No auth token'));
             }
 
-            // Prefer native WebSocket transport (avoids SockJS attaching deprecated `unload` listeners).
+            // Use SockJS so we can fall back to HTTP transports in environments
+            // where WebSocket upgrades are blocked/misconfigured in production.
             // env.WS_URL is expected to be ws(s)://.../ws by default.
             let socketUrl = env.WS_URL.replace(/^http(s)?:\/\//, 'ws$1://');
             if (typeof window !== 'undefined' && window.location.protocol === 'https:' && socketUrl.startsWith('ws:')) {
                 socketUrl = socketUrl.replace('ws:', 'wss:');
             }
+
+            // SockJS expects an http(s) URL, not ws(s).
+            const sockJsUrl = socketUrl
+                .replace(/^wss:\/\//, 'https://')
+                .replace(/^ws:\/\//, 'http://');
 
             // Tear down any stale client
             if (this.client) {
@@ -82,7 +89,7 @@ class SocketService {
             }
 
             this.client = new Client({
-                webSocketFactory: () => new WebSocket(socketUrl),
+                webSocketFactory: () => new SockJS(sockJsUrl),
                 connectHeaders: { Authorization: `Bearer ${token}` },
 
                 heartbeatOutgoing: this._heartbeatOutgoing,
@@ -136,7 +143,7 @@ class SocketService {
                     }
                 },
 
-                onWebSocketClose: () => {
+                onWebSocketClose: (event) => {
                     this.connected = false;
                     this.connectionPromise = null;
                     if (!this._intentionalDisconnect) {
@@ -151,6 +158,13 @@ class SocketService {
                         if (currentStatus !== 'reconnecting') {
                             useSocketStore.getState().setStatus('error');
                         }
+
+                        // Helpful breadcrumb for production debugging
+                        if (event?.code) {
+                            // eslint-disable-next-line no-console
+                            console.warn('WebSocket closed', { code: event.code, reason: event.reason });
+                        }
+
                         this._scheduleReconnect();
                     } else {
                         useSocketStore.getState().setStatus('disconnected');

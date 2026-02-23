@@ -37,6 +37,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Also register without SockJS for native WebSocket clients
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(origins);
+
+        // Some platforms route only versioned API paths to the backend.
+        // Expose a versioned websocket endpoint as an alias to reduce routing brittleness.
+        registry.addEndpoint("/api/v1/ws")
+            .setAllowedOriginPatterns(origins)
+            .withSockJS();
+        registry.addEndpoint("/api/v1/ws")
+            .setAllowedOriginPatterns(origins);
     }
 
     @Override
