@@ -66,38 +66,39 @@ export function MessageInput({ conversationId }) {
     const { addTypingUser, removeTypingUser } = useChatStore();
 
     const sendMessageMutation = useMutation({
-        mutationFn: async (body) => {
-            // Use local check or closure variable. Closure variable 'isAiChat' is defined at line 55.
-            if (!isAiChat && !socketService.connected) {
-                await socketService.connect();
-            }
-
+        mutationFn: async ({ body, tempId }) => {
             const destination = isAiChat ? '/app/ai.chat' : '/app/chat.sendMessage';
-
             const payload = { conversationId, body };
 
-            socketService.send(destination, payload);
-
-            // For AI chats, simulate typing indicator using the AI analysis endpoint
-            if (isAiChat) {
-                try {
-                    const typingData = await aiService.simulateTyping(body);
-                    const durationMs = typingData?.typing_duration_ms || typingData?.typingDurationMs || 2000;
-                    addTypingUser(conversationId, 'ai-assistant');
-                    setTimeout(() => {
-                        removeTypingUser(conversationId, 'ai-assistant');
-                    }, Math.min(durationMs, 15000)); // cap at 15s
-                } catch (error) {
-                    reportErrorOnce('ai-typing', error, 'Some features are temporarily unavailable');
-                    addTypingUser(conversationId, 'ai-assistant');
-                    setTimeout(() => {
-                        removeTypingUser(conversationId, 'ai-assistant');
-                    }, 2000);
+            try {
+                if (!socketService.connected) {
+                    // Race against a timeout so the mutation doesn't hang forever
+                    // when the server is completely unreachable
+                    await Promise.race([
+                        socketService.connect(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Connect timeout')), 5000))
+                    ]).catch(() => {});
                 }
+
+                const sent = socketService.send(destination, payload);
+
+                if (sent) {
+                    // Remove from pending outbox since sent (keep in optimisticMessages
+                    // until server echoes back via WebSocket)
+                    const state = useChatStore.getState();
+                    if (state.pendingOutbox?.[tempId]) {
+                        const newOutbox = { ...state.pendingOutbox };
+                        delete newOutbox[tempId];
+                        useChatStore.setState({ pendingOutbox: newOutbox });
+                    }
+                }
+                // If not sent, message stays in outbox for App.jsx retry
+            } catch (error) {
+                console.warn('Network offline or backend down, message queued:', error);
+                // Do NOT throw error, we want it to stay in optimistic and pendingOutbox
             }
         },
-        onMutate: async (body) => {
-            const tempId = `temp-${generateId()}`;
+        onMutate: async ({ body, tempId }) => {
             const optimisticMessage = {
                 id: tempId,
                 conversationId,
@@ -107,14 +108,15 @@ export function MessageInput({ conversationId }) {
                 seen: false,
                 deleted: false,
             };
+            const destination = isAiChat ? '/app/ai.chat' : '/app/chat.sendMessage';
+            const payload = { conversationId, body };
 
-            addOptimisticMessage(tempId, optimisticMessage);
+            addOptimisticMessage(tempId, optimisticMessage, destination, payload);
 
             return { tempId };
         },
         onSuccess: () => {
-            // Don't invalidate queries - WebSocket will handle real-time updates
-            // Invalidating causes refetch which can create duplicates
+            // handled automatically via websocket
         },
         onError: (error, variables, context) => {
             if (context?.tempId) {
@@ -178,7 +180,8 @@ export function MessageInput({ conversationId }) {
 
         // Clear input immediately for better responsiveness
         setMessage('');
-        sendMessageMutation.mutate(trimmedMessage);
+        const tempId = `temp-${generateId()}`;
+        sendMessageMutation.mutate({ body: trimmedMessage, tempId });
 
         // Ensure focus returns to input after sending
         setTimeout(() => {
@@ -189,7 +192,8 @@ export function MessageInput({ conversationId }) {
     };
 
     const handleSuggestionSelect = (suggestion) => {
-        sendMessageMutation.mutate(suggestion);
+        const tempId = `temp-${generateId()}`;
+        sendMessageMutation.mutate({ body: suggestion, tempId });
         // Regain focus after selecting a suggestion
         setTimeout(() => {
             if (inputRef.current) {
@@ -238,6 +242,8 @@ export function MessageInput({ conversationId }) {
                 <div className="flex-1">
                     <Textarea
                         ref={inputRef}
+                        id="message-input"
+                        name="message"
                         value={message}
                         onChange={handleInputChange}
                         onKeyDown={(e) => {

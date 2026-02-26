@@ -18,26 +18,37 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
 
     const { data: taskData, isLoading: isExtractingTasks } = useQuery({
         queryKey: ['conversationTasks', conversationId],
-        queryFn: () => null, // placeholder — actual fetch is done via fetchQuery below
+        queryFn: () => null,
         enabled: false,
     });
 
     const handleAnalyze = async () => {
         setIsAnalyzing(true);
         try {
-            const result = await refetch();
-            const analysisData = result.data;
-            if (analysisData) {
-                // Build the text from the freshly-fetched data 
-                const summaryText = analysisData.summary || '';
-                const keyPointsText = (analysisData.key_points || []).join('. ');
-                const fullText = `${summaryText} ${keyPointsText}`.trim();
-                if (fullText) {
-                    await queryClient.fetchQuery({
-                        queryKey: ['conversationTasks', conversationId],
-                        queryFn: () => aiService.extractTask(fullText),
-                        staleTime: 0,
-                    });
+            // Run both in parallel — summarize + extract tasks directly from messages
+            const [, tasksResult] = await Promise.allSettled([
+                refetch(),
+                queryClient.fetchQuery({
+                    queryKey: ['conversationTasks', conversationId],
+                    queryFn: () => aiService.extractTasksFromConversation(conversationId),
+                    staleTime: 0,
+                }),
+            ]);
+
+            // If direct extraction failed, fallback to extracting from summary text
+            if (tasksResult.status === 'rejected') {
+                const analysisResult = queryClient.getQueryData(['conversationAnalysis', conversationId]);
+                if (analysisResult) {
+                    const summaryText = analysisResult.summary || '';
+                    const keyPointsText = (analysisResult.key_points || []).join('. ');
+                    const fullText = `${summaryText} ${keyPointsText}`.trim();
+                    if (fullText) {
+                        await queryClient.fetchQuery({
+                            queryKey: ['conversationTasks', conversationId],
+                            queryFn: () => aiService.extractTask(fullText),
+                            staleTime: 0,
+                        });
+                    }
                 }
             }
         } finally {
@@ -51,6 +62,19 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
     ];
 
     const hasTasks = taskData?.tasks && taskData.tasks.length > 0;
+
+    // Normalize a task object to handle both old and new field names
+    const normalizeTask = (task) => {
+        if (typeof task === 'string') return { title: task, description: null, date: null, priority: null, status: null };
+        return {
+            title: task.task_title || task.taskTitle || task.title || task.description || 'Untitled task',
+            description: task.description || null,
+            date: task.date || task.dueDate || null,
+            priority: (task.priority || '').toLowerCase(),
+            status: (task.status || 'pending').toLowerCase(),
+            assignee: task.assignee || null,
+        };
+    };
 
     return (
         <Modal
@@ -167,9 +191,9 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                                 <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5">Sentiment</p>
                                                 <span className={cn(
                                                     'px-2.5 py-0.5 rounded-full text-[10px] font-semibold',
-                                                    analysis.sentiment === 'positive' && 'bg-green-500/10 text-green-400',
-                                                    analysis.sentiment === 'negative' && 'bg-red-500/10 text-red-400',
-                                                    analysis.sentiment === 'neutral' && 'bg-white/5 text-[var(--color-gray-300)]'
+                                                    analysis.sentiment.toLowerCase() === 'positive' && 'bg-green-500/10 text-green-400',
+                                                    analysis.sentiment.toLowerCase() === 'negative' && 'bg-red-500/10 text-red-400',
+                                                    analysis.sentiment.toLowerCase() === 'neutral' && 'bg-white/5 text-[var(--color-gray-300)]'
                                                 )}>
                                                     {analysis.sentiment}
                                                 </span>
@@ -180,9 +204,9 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                                 <p className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5">Priority</p>
                                                 <span className={cn(
                                                     'px-2.5 py-0.5 rounded-full text-[10px] font-semibold',
-                                                    analysis.urgency === 'high' && 'bg-red-500/10 text-red-400',
-                                                    analysis.urgency === 'medium' && 'bg-yellow-500/10 text-yellow-400',
-                                                    analysis.urgency === 'low' && 'bg-green-500/10 text-green-400'
+                                                    analysis.urgency.toLowerCase() === 'high' && 'bg-red-500/10 text-red-400',
+                                                    analysis.urgency.toLowerCase() === 'medium' && 'bg-yellow-500/10 text-yellow-400',
+                                                    analysis.urgency.toLowerCase() === 'low' && 'bg-green-500/10 text-green-400'
                                                 )}>
                                                     {analysis.urgency}
                                                 </span>
@@ -206,49 +230,96 @@ export function ConversationAnalysisModal({ open, onOpenChange, conversationId }
                                             <p className="text-[10px] font-semibold text-blue-400">Extracting tasks…</p>
                                         </div>
                                     ) : hasTasks ? (
-                                        taskData.tasks.map((task, index) => (
-                                            <Motion.div
-                                                key={index}
-                                                initial={{ opacity: 0, y: 4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.04 }}
-                                                className="flex gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5"
-                                            >
-                                                <div className={cn(
-                                                    "mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0",
-                                                    task.priority === 'HIGH' ? "border-red-500/50 bg-red-500/10" :
-                                                        task.priority === 'MEDIUM' ? "border-yellow-500/50 bg-yellow-500/10" :
-                                                            "border-white/20 bg-white/5"
-                                                )}>
-                                                    <div className={cn(
-                                                        "w-1.5 h-1.5 rounded-full",
-                                                        task.priority === 'HIGH' ? "bg-red-500" :
-                                                            task.priority === 'MEDIUM' ? "bg-yellow-400" : "bg-white/40"
-                                                    )} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-medium text-[var(--color-foreground)] leading-relaxed">
-                                                        {task.title || task.description || task}
-                                                    </p>
-                                                    {task.assignee && (
-                                                        <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">→ {task.assignee}</p>
-                                                    )}
-                                                    {task.dueDate && (
-                                                        <p className="text-[10px] text-blue-400/60 mt-0.5">Due: {task.dueDate}</p>
-                                                    )}
-                                                </div>
-                                                {task.priority && (
-                                                    <span className={cn(
-                                                        "text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded self-start",
-                                                        task.priority === 'HIGH' && "bg-red-500/10 text-red-400",
-                                                        task.priority === 'MEDIUM' && "bg-yellow-500/10 text-yellow-400",
-                                                        task.priority === 'LOW' && "bg-green-500/10 text-green-400"
-                                                    )}>
-                                                        {task.priority}
-                                                    </span>
-                                                )}
-                                            </Motion.div>
-                                        ))
+                                        <>
+                                            {/* Task count summary */}
+                                            <div className="flex items-center gap-2 px-1">
+                                                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-gray-500)]">
+                                                    {taskData.tasks.length} task{taskData.tasks.length !== 1 ? 's' : ''} found
+                                                </span>
+                                                {(() => {
+                                                    const pending = taskData.tasks.filter(t => (t.status || '').toLowerCase() !== 'done').length;
+                                                    const done = taskData.tasks.length - pending;
+                                                    return (
+                                                        <span className="text-[9px] text-[var(--color-gray-500)]">
+                                                            ({pending} pending{done > 0 ? `, ${done} done` : ''})
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
+
+                                            {taskData.tasks.map((rawTask, index) => {
+                                                const task = normalizeTask(rawTask);
+                                                const isDone = task.status === 'done';
+                                                return (
+                                                    <Motion.div
+                                                        key={index}
+                                                        initial={{ opacity: 0, y: 4 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: index * 0.04 }}
+                                                        className={cn(
+                                                            "flex gap-3 p-3 rounded-xl border",
+                                                            isDone
+                                                                ? "bg-green-500/[0.03] border-green-500/10"
+                                                                : "bg-white/[0.02] border-white/5"
+                                                        )}
+                                                    >
+                                                        <div className={cn(
+                                                            "mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0",
+                                                            isDone ? "border-green-500/50 bg-green-500/10" :
+                                                                task.priority === 'high' ? "border-red-500/50 bg-red-500/10" :
+                                                                    task.priority === 'medium' ? "border-yellow-500/50 bg-yellow-500/10" :
+                                                                        "border-white/20 bg-white/5"
+                                                        )}>
+                                                            {isDone ? (
+                                                                <svg width="10" height="10" viewBox="0 0 15 15" fill="none" className="text-green-400">
+                                                                    <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" />
+                                                                </svg>
+                                                            ) : (
+                                                                <div className={cn(
+                                                                    "w-1.5 h-1.5 rounded-full",
+                                                                    task.priority === 'high' ? "bg-red-500" :
+                                                                        task.priority === 'medium' ? "bg-yellow-400" : "bg-white/40"
+                                                                )} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={cn(
+                                                                "text-xs font-medium leading-relaxed",
+                                                                isDone
+                                                                    ? "text-[var(--color-gray-400)] line-through"
+                                                                    : "text-[var(--color-foreground)]"
+                                                            )}>
+                                                                {task.title}
+                                                            </p>
+                                                            {task.description && task.description !== task.title && (
+                                                                <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5 leading-relaxed">{task.description}</p>
+                                                            )}
+                                                            {task.assignee && (
+                                                                <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">→ {task.assignee}</p>
+                                                            )}
+                                                            {task.date && (
+                                                                <p className={cn(
+                                                                    "text-[10px] mt-0.5",
+                                                                    isDone ? "text-green-400/60" : "text-blue-400/60"
+                                                                )}>
+                                                                    {isDone ? '✓ ' : '📅 '}{task.date}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        {task.priority && (
+                                                            <span className={cn(
+                                                                "text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded self-start",
+                                                                task.priority === 'high' && "bg-red-500/10 text-red-400",
+                                                                task.priority === 'medium' && "bg-yellow-500/10 text-yellow-400",
+                                                                task.priority === 'low' && "bg-green-500/10 text-green-400"
+                                                            )}>
+                                                                {task.priority}
+                                                            </span>
+                                                        )}
+                                                    </Motion.div>
+                                                );
+                                            })}
+                                        </>
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-12 gap-3">
                                             <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center">

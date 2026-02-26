@@ -1,6 +1,5 @@
 package com.blink.chatservice.config;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Configuration
 public class CorsConfig {
 
@@ -41,7 +39,6 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         List<String> origins = parseAllowedOrigins(allowedOrigins);
-        log.info("CORS allowed origins: {}", origins);
         config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"

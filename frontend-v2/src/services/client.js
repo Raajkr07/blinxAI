@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import { env } from '../config/env';
 import { storage, STORAGE_KEYS } from '../lib/storage';
 
@@ -69,6 +70,19 @@ apiClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error?.config;
         const status = error?.response?.status;
+
+        // 429 Too Many Requests
+        if (status === 429) {
+            const retryAfter = error.response?.data?.retryAfterSeconds
+                ?? error.response?.headers?.['retry-after']
+                ?? null;
+            const msg = retryAfter
+                ? `You're doing that too fast. Please wait ${retryAfter}s and try again.`
+                : "You're doing that too fast. Please slow down and try again.";
+            toast.error(msg, { id: 'rate-limit', duration: 4000 });
+            return Promise.reject(normalizeApiError(error));
+        }
+
         const isAuthError = status === 401 || status === 403;
 
         const refreshToken = storage.get(STORAGE_KEYS.REFRESH_TOKEN);

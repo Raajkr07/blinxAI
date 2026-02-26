@@ -3,6 +3,7 @@ package com.blink.chatservice.controller;
 import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,9 +33,8 @@ public class HealthCheckController {
             health.put("mongodb", "DOWN: " + e.getMessage());
         }
 
-        try {
-            // Ping Redis
-            String pong = redisConnectionFactory.getConnection().ping();
+        try (RedisConnection connection = redisConnectionFactory.getConnection()) {
+            String pong = connection.ping();
             health.put("redis", "UP: " + pong);
         } catch (Exception e) {
             health.put("redis", "DOWN: " + e.getMessage());

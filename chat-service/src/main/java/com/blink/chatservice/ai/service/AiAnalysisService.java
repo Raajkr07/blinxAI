@@ -31,7 +31,7 @@ public class AiAnalysisService {
     @Value("${ai.api-key:}")
     private String apiKey;
 
-    @Value("${ai.model:gpt-4.1-mini}")
+    @Value("${ai.model:gpt-4o-mini}")
     private String model;
 
     @Value("${ai.base-url:https://api.openai.com}")
@@ -81,9 +81,29 @@ public class AiAnalysisService {
         String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
         return callAi(messageText, TaskListExtraction.class,
                 """
-                Extract tasks. Current Date: %s. Return JSON:
-                {"tasks":[{"task_title":"str","description":"str","date":"DD-MM-YYYY"|null,"priority":"low|medium|high","status":"pending|done"}]}
-                Categorize: "pending" (future) or "done" (past). Empty if none: {"tasks":[]}
+                You are a task extraction expert. Carefully read the conversation/text below and extract ALL actionable items.
+                Current Date: %s.
+
+                What counts as a task:
+                - Explicit to-dos: "I'll send the report", "Can you review this?", "Let's schedule a call"
+                - Deadlines/commitments: "Need this by Friday", "Submit before 5pm", "Due next week"
+                - Follow-ups: "I'll check and get back", "Will update you tomorrow", "Remind me to..."
+                - Action items from decisions: "So we're going with plan B", "Let's finalize the design"
+                - Requests: "Please share the file", "Can you book the room?"
+
+                What is NOT a task:
+                - Greetings, casual chat, opinions, questions without action
+                - Past events that are purely informational
+
+                Return JSON:
+                {"tasks":[{"task_title":"short clear title","description":"brief context from conversation","date":"DD-MM-YYYY"|null,"priority":"low|medium|high","status":"pending|done"}]}
+                Rules:
+                - task_title: 3-8 words, actionable verb (e.g. "Send project report to Raj")
+                - description: 1 line of context explaining why/what
+                - date: extract or infer date if mentioned, null if not
+                - priority: high=urgent/deadline, medium=important, low=nice-to-have
+                - status: "done" if explicitly completed, "pending" otherwise
+                - Empty if no tasks: {"tasks":[]}
                 """.formatted(currentDate));
     }
 

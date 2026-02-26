@@ -70,11 +70,25 @@ const ChatPage = () => {
                             toast.success('Email sent successfully! 📧');
                         }
                         openModal('emailPreview', payload);
+                    } else if (message.type === 'REPLY_EMAIL') {
+                        if (payload.error) {
+                            toast.error('Reply failed');
+                        } else {
+                            toast.success('Reply sent! 📧');
+                        }
+                        openModal('emailPreview', payload);
                     } else if (message.type === 'ADD_TO_CALENDAR_REQUEST') {
                         if (payload.error) {
                             toast.error('Calendar sync failed');
                         } else {
                             toast.success('Event added to calendar! 📅');
+                        }
+                        openModal('calendarPreview', payload);
+                    } else if (message.type === 'UPDATE_CALENDAR_EVENT') {
+                        if (payload.error) {
+                            toast.error('Calendar update failed');
+                        } else {
+                            toast.success('Calendar event updated! 📅');
                         }
                         openModal('calendarPreview', payload);
                     } else if (message.type === 'OPEN_URL') {

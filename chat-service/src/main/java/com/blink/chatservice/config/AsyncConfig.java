@@ -4,7 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.concurrent.Executor;
 
@@ -20,6 +22,12 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setMaxPoolSize(20);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("Async-");
+        
+        // Ensure threads finish their current tasks on shutdown to prevent 
+        // data corruption and hanging connections.
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        
         executor.initialize();
         return executor;
     }
@@ -31,7 +39,21 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setMaxPoolSize(15);
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("AITool-");
+        
+        // Professional shutdown handling for AI tool threads.
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+        
         executor.initialize();
         return executor;
+    }
+
+    @Bean(name = "heartTaskScheduler")
+    public TaskScheduler heartTaskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(2); // Small pool for heartbeats
+        scheduler.setThreadNamePrefix("wss-heartbeat-");
+        scheduler.initialize();
+        return scheduler;
     }
 }

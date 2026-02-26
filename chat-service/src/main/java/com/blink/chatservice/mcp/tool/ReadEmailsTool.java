@@ -34,7 +34,7 @@ public class ReadEmailsTool implements McpTool {
 
     @Override
     public String description() {
-        return "Read emails from Gmail inbox by date (today/yesterday/DD-MM-YYYY) or date range.";
+        return "Read emails from Gmail inbox by date (today/yesterday/DD-MM-YYYY) or date range. Can also search by 'query'.";
     }
 
     @Override
@@ -43,60 +43,81 @@ public class ReadEmailsTool implements McpTool {
             "type", "object",
             "properties", Map.of(
                 "dateFilter", Map.of("type", "string", "description",
-                    "Date filter: 'today', 'yesterday', or a specific date in DD-MM-YYYY format"),
+                    "CRITICAL: ALWAYS use this for dates. Examples: 'today', 'yesterday', 'last_3_days', 'last_7_days', 'last_30_days', month name (e.g., 'march'), or a specific date in DD-MM-YYYY format (e.g., '25-02-2026'). Also accepts YYYY-MM-DD."),
                 "startDate", Map.of("type", "string", "description",
-                    "Start date for range filter (DD-MM-YYYY). Use with endDate for custom ranges."),
+                    "Start date for range filter (DD-MM-YYYY)."),
                 "endDate", Map.of("type", "string", "description",
-                    "End date for range filter (DD-MM-YYYY). Defaults to startDate if not provided."),
+                    "End date for range filter (DD-MM-YYYY)."),
                 "query", Map.of("type", "string", "description",
-                    "Gmail search query (e.g. 'from:x@gmail.com', 'is:unread')"),
+                    "Gmail keyword search (e.g. 'from:boss@gmail.com', 'is:unread'). CRITICAL: DO NOT put dates here! Use dateFilter instead!"),
                 "maxResults", Map.of("type", "integer", "description",
-                    "Max emails to return (default 20, max 50)"),
+                    "Max emails to return (default 20, max 50)."),
                 "labelFilter", Map.of("type", "string", "description",
-                    "Label filter: INBOX, SENT, STARRED, UNREAD, ALL, PRIMARY (default INBOX)")
+                    "Label filter: INBOX, SENT, STARRED, UNREAD. Leave this empty or use 'ALL' to search everywhere (highly recommended).")
             ),
-            "required", List.of("dateFilter")
+            "required", Collections.emptyList()
         );
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object execute(String userId, Map<Object, Object> arguments) {
+    public Object execute(String userId, Map<String, Object> arguments) {
         String dateFilter = (String) arguments.get("dateFilter");
         String startDateStr = (String) arguments.get("startDate");
         String endDateStr = (String) arguments.get("endDate");
-        String userQuery = (String) arguments.get("query");
-        String labelFilter = (String) arguments.getOrDefault("labelFilter", "INBOX");
+        String userQuery = (String) arguments.getOrDefault("query", "");
+        String labelFilter = (String) arguments.getOrDefault("labelFilter", "");
         int maxResults = DEFAULT_MAX_RESULTS;
 
         Object maxResultsObj = arguments.get("maxResults");
         if (maxResultsObj != null) {
-            maxResults = Math.min(maxResultsObj instanceof Integer ? (Integer) maxResultsObj :
-                    Integer.parseInt(maxResultsObj.toString()), 50);
+            try {
+                maxResults = Math.min(maxResultsObj instanceof Integer ? (Integer) maxResultsObj :
+                        Integer.parseInt(maxResultsObj.toString()), 50);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid maxResults value: {}", maxResultsObj);
+            }
         }
 
         try {
             String accessToken = oAuthService.getAccessToken(userId);
-
-            // Build date-based Gmail query
-            String gmailQuery = buildDateQuery(dateFilter, startDateStr, endDateStr);
+            
+            String dateQuery = buildDateEpochQuery(dateFilter, startDateStr, endDateStr);
+            String gmailQuery = (dateQuery != null) ? dateQuery : "";
+            
             if (userQuery != null && !userQuery.isBlank()) {
-                gmailQuery += " " + userQuery;
+                gmailQuery = gmailQuery.isEmpty() ? userQuery : gmailQuery + " " + userQuery;
             }
 
-            log.info("Reading emails for user {} with query: '{}', label: {}, max: {}",
+            // If completely empty, default to a reasonable recent window to avoid massive results
+            if (gmailQuery.isBlank()) {
+                gmailQuery = buildDateEpochQuery("last_7_days", null, null);
+            }
+
+            log.info("Reading emails for user {} with query: '{}', label: '{}', max: {}",
                     userId, gmailQuery, labelFilter, maxResults);
 
             // Step 1: List message IDs
-            String listUrl = String.format(
-                "https://www.googleapis.com/gmail/v1/users/me/messages?q=%s&labelIds=%s&maxResults=%d",
-                URLEncoder.encode(gmailQuery, StandardCharsets.UTF_8),
-                URLEncoder.encode(labelFilter, StandardCharsets.UTF_8),
-                maxResults
-            );
+            String finalQuery = gmailQuery;
+            if (!finalQuery.isBlank()) {
+                finalQuery = finalQuery.replaceAll("after:(\\d{4})-(\\d{2})-(\\d{2})", "after:$1/$2/$3")
+                                       .replaceAll("before:(\\d{4})-(\\d{2})-(\\d{2})", "before:$1/$2/$3");
+            }
+
+            final String fQuery = finalQuery;
+            final int fMaxResults = maxResults;
 
             String listResponse = aiRestClient.get()
-                    .uri(listUrl)
+                    .uri("https://www.googleapis.com/gmail/v1/users/me/messages", uriBuilder -> {
+                        uriBuilder.queryParam("maxResults", fMaxResults);
+                        if (!fQuery.isBlank()) {
+                            uriBuilder.queryParam("q", fQuery);
+                        }
+                        if (labelFilter != null && !labelFilter.isBlank() && !labelFilter.equalsIgnoreCase("ALL")) {
+                            uriBuilder.queryParam("labelIds", labelFilter);
+                        }
+                        return uriBuilder.build();
+                    })
                     .header("Authorization", "Bearer " + accessToken)
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
@@ -130,8 +151,8 @@ public class ReadEmailsTool implements McpTool {
 
             // Sort by timestamp descending (newest first)
             emails.sort((a, b) -> {
-                long tsA = (long) a.getOrDefault("timestamp_epoch", 0L);
-                long tsB = (long) b.getOrDefault("timestamp_epoch", 0L);
+                long tsA = ((Number) a.getOrDefault("timestamp_epoch", 0L)).longValue();
+                long tsB = ((Number) b.getOrDefault("timestamp_epoch", 0L)).longValue();
                 return Long.compare(tsB, tsA);
             });
 
@@ -140,73 +161,107 @@ public class ReadEmailsTool implements McpTool {
                 "count", emails.size(),
                 "emails", emails,
                 "query_used", gmailQuery,
-                "hint", "You can now summarize these emails, extract tasks/events, or help the user reply to any of them using the reply_email or send_email tool."
+                "hint", "When presenting this to the user, briefly summarize the emails emphasizing the sender/receiver and the core intent or intention. Do not output raw JSON. and ask for any action the user might want to take."
             );
 
+        } catch (IllegalArgumentException e) {
+            // No Google credentials linked
+            log.warn("No Google credentials for user {}: {}", userId, e.getMessage());
+            return Map.of("success", false,
+                "message", "Please log out and log back in with Google to grant access to your Gmail.",
+                "error_type", "PERMISSION_DENIED");
         } catch (Exception e) {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Failed to read emails for user {}: {}", userId, errMsg, e);
-            if (errMsg.contains("403") || errMsg.contains("401") || errMsg.contains("Forbidden")
-                    || errMsg.contains("insufficient") || errMsg.contains("Unauthorized")
-                    || errMsg.contains("No Google credentials")) {
+            if (isPermissionError(errMsg)) {
                 return Map.of("success", false,
-                    "message", "Email access not authorized. Please re-link your Google account in Settings to grant email permissions.",
+                    "message", "Please log out and log back in with Google to refresh your permissions and access this feature.",
                     "error_type", "PERMISSION_DENIED");
             }
             return Map.of("success", false, "message", "Failed to read emails: " + errMsg);
         }
     }
 
-    private String buildDateQuery(String dateFilter, String startDateStr, String endDateStr) {
+    private boolean isPermissionError(String errMsg) {
+        return errMsg.contains("403") || errMsg.contains("401")
+                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
+                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
+                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
+    }
+
+    private String buildDateEpochQuery(String dateFilter, String startDateStr, String endDateStr) {
+        LocalDate today = LocalDate.now(IST);
         LocalDate startDate;
         LocalDate endDate;
-        LocalDate today = LocalDate.now(IST);
 
         if (dateFilter != null && !dateFilter.isBlank()) {
             switch (dateFilter.toLowerCase().trim()) {
-                case "today":
+                case "today" -> {
                     startDate = today;
                     endDate = today;
-                    break;
-                case "yesterday":
+                }
+                case "yesterday" -> {
                     startDate = today.minusDays(1);
                     endDate = today.minusDays(1);
-                    break;
-                case "this_week":
-                case "this week":
+                }
+                case "this_week", "this week" -> {
                     startDate = today.with(DayOfWeek.MONDAY);
                     endDate = today;
-                    break;
-                case "last_week":
-                case "last week":
+                }
+                case "last_week", "last week" -> {
                     startDate = today.minusWeeks(1).with(DayOfWeek.MONDAY);
                     endDate = today.minusWeeks(1).with(DayOfWeek.SUNDAY);
-                    break;
-                default:
-                    // Try parsing as a date
+                }
+                case "last_3_days", "last 3 days" -> {
+                    startDate = today.minusDays(2);
+                    endDate = today;
+                }
+                case "last_7_days", "last 7 days" -> {
+                    startDate = today.minusDays(6);
+                    endDate = today;
+                }
+                case "last_30_days", "last 30 days" -> {
+                    startDate = today.minusDays(29);
+                    endDate = today;
+                }
+                default -> {
                     try {
                         startDate = LocalDate.parse(dateFilter, DD_MM_YYYY);
                         endDate = startDate;
                     } catch (Exception e) {
-                        startDate = today;
-                        endDate = today;
+                        // Fallback: try YYYY-MM-DD (ISO) format
+                        try {
+                            startDate = LocalDate.parse(dateFilter, DateTimeFormatter.ISO_LOCAL_DATE);
+                            endDate = startDate;
+                        } catch (Exception e2) {
+                            // Fallback: try month name (e.g., "march", "february")
+                            try {
+                                Month m = Month.valueOf(dateFilter.toUpperCase().trim());
+                                int year = today.getYear();
+                                startDate = LocalDate.of(year, m, 1);
+                                endDate = LocalDate.of(year, m, m.length(LocalDate.of(year, 1, 1).isLeapYear()));
+                            } catch (Exception e3) {
+                                return null;
+                            }
+                        }
                     }
-                    break;
+                }
             }
         } else if (startDateStr != null) {
-            startDate = LocalDate.parse(startDateStr, DD_MM_YYYY);
-            endDate = (endDateStr != null) ? LocalDate.parse(endDateStr, DD_MM_YYYY) : startDate;
+            try {
+                startDate = LocalDate.parse(startDateStr, DD_MM_YYYY);
+                endDate = (endDateStr != null) ? LocalDate.parse(endDateStr, DD_MM_YYYY) : startDate;
+            } catch (Exception e) {
+                return null;
+            }
         } else {
-            startDate = today;
-            endDate = today;
+            return null;
         }
 
-        // Gmail uses 'after:YYYY/MM/DD before:YYYY/MM/DD' format
-        // 'after' is exclusive, 'before' is exclusive, so adjust
-        String afterDate = startDate.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        String beforeDate = endDate.plusDays(1).format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        long startEpoch = startDate.atStartOfDay(IST).toEpochSecond();
+        long endEpoch = endDate.plusDays(1).atStartOfDay(IST).toEpochSecond();
 
-        return "after:" + afterDate + " before:" + beforeDate;
+        return "after:" + startEpoch + " before:" + endEpoch;
     }
 
     @SuppressWarnings("unchecked")
@@ -261,9 +316,9 @@ public class ReadEmailsTool implements McpTool {
             emailInfo.put("to", to);
             emailInfo.put("subject", subject != null ? subject : "(No Subject)");
             emailInfo.put("snippet", snippet);
-            emailInfo.put("body", body != null && body.length() > 2000 ? body.substring(0, 2000) + "..." : body);
-            emailInfo.put("date", date);
-            emailInfo.put("formatted_time", formattedTime);
+            emailInfo.put("body", body != null && body.length() > 500 ? body.substring(0, 500) + "..." : body);
+            emailInfo.put("local_date_ist", formattedTime); // Standardized to local timezone for the AI
+            emailInfo.put("raw_header_date", date); // The raw unparsed Date header
             emailInfo.put("timestamp_epoch", internalDate);
             emailInfo.put("labels", labelIds);
             emailInfo.put("is_unread", labelIds.contains("UNREAD"));

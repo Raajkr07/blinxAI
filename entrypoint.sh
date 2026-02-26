@@ -3,8 +3,8 @@ set -e
 
 # Default JVM options if JAVA_OPTS is not set externally
 : "${JAVA_OPTS:=-XX:+UseContainerSupport \
-  -XX:MaxRAMPercentage=40.0 \
-  -XX:InitialRAMPercentage=20.0 \
+  -XX:MaxRAMPercentage=50.0 \
+  -XX:InitialRAMPercentage=25.0 \
   -XX:+UseG1GC \
   -XX:MaxGCPauseMillis=50 \
   -XX:+UseStringDeduplication \
@@ -15,6 +15,8 @@ set -e
   -Xss228k \
   -XX:MaxMetaspaceSize=100m \
   -XX:+ExitOnOutOfMemoryError \
+  -XX:G1PeriodicGCInterval=120000 \
+  -XX:G1PeriodicGCSystemLoadThreshold=0.0 \
   -Djava.security.egd=file:/dev/./urandom}"
 
 SPRING_PROFILE="${SPRING_PROFILES_ACTIVE:-prod}"

@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -29,6 +30,7 @@ public class WebSearchTool implements McpTool {
     private static final long RETRY_DELAY_MS = 1000;
     private static final int CIRCUIT_BREAKER_THRESHOLD = 5;
     private static final long CIRCUIT_BREAKER_RESET_MS = 60000;
+    private static final int MAX_CACHE_ENTRIES = 80;
     
     @Qualifier("aiRestTemplate")
     private final RestTemplate restTemplate;
@@ -51,7 +53,7 @@ public class WebSearchTool implements McpTool {
 
     @Override
     public String description() {
-        return "Search the web for any current information, latest news, facts, and recent events, social media profiles (Instagram, etc.). Provides real-time Google search results.";
+        return "Search the web for current info, latest news, trends, social profiles, facts — anything the user needs that isn't in local data.";
     }
 
     @Override
@@ -61,7 +63,7 @@ public class WebSearchTool implements McpTool {
                 "properties", Map.of(
                         "query", Map.of(
                                 "type", "string",
-                                "description", "The search query",
+                                "description", "What to search for — keep it specific for better results",
                                 "maxLength", MAX_QUERY_LENGTH
                         ),
                         "maxResults", Map.of(
@@ -77,7 +79,7 @@ public class WebSearchTool implements McpTool {
     }
 
     @Override
-    public Object execute(String userId, Map<Object, Object> args) {
+    public Object execute(String userId, Map<String, Object> args) {
         try {
             String query = validateQuery(args.get("query"));
             Integer maxResults = validateMaxResults(args.get("maxResults"));
@@ -275,6 +277,7 @@ public class WebSearchTool implements McpTool {
         response.put("results", results);
         response.put("count", results.size());
         response.put("timestamp", Instant.now().toString());
+        response.put("hint", "Summarize the top results in 3-5 bullet points. Include source URLs as markdown links.");
         return response;
     }
 
@@ -321,10 +324,25 @@ public class WebSearchTool implements McpTool {
     }
 
     private void putInCache(String query, List<Map<String, Object>> results) {
-        if (cache.size() > 100) {
+        // If approaching the cap, evict expired entries first instead of blindly clearing.
+        if (cache.size() >= MAX_CACHE_ENTRIES) {
+            evictExpiredCacheEntries();
+        }
+        // If still too large after eviction, drop oldest entries
+        if (cache.size() >= MAX_CACHE_ENTRIES) {
             cache.clear();
         }
         cache.put(query, new CachedResult(results, Instant.now()));
+    }
+
+    // Periodic cleanup of expired search cache entries.
+    // Prevents the ConcurrentHashMap from retaining stale results indefinitely
+    // when cached queries are never read again (lazy eviction misses them).
+    @Scheduled(fixedRate = 300_000) // every 5 minutes
+    public void evictExpiredCacheEntries() {
+        if (cache.isEmpty()) return;
+        Instant cutoff = Instant.now().minusSeconds(cacheTtlSeconds);
+        cache.entrySet().removeIf(entry -> entry.getValue().timestamp.isBefore(cutoff));
     }
 
     private record CachedResult(List<Map<String, Object>> results, Instant timestamp) {

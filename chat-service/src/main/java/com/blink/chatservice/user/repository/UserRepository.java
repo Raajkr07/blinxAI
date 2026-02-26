@@ -18,6 +18,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findFirstByEmail(String email);
     List<User> findAllByEmail(String email);
     Optional<User> findByUsername(String username);
+    Optional<User> findFirstByUsername(String username);
     List<User> findByUsernameContainingIgnoreCase(String username);
 
     @Query("{ '$or': [ { 'username': { '$regex': ?0, '$options': 'i' } }, { 'phone': { '$regex': ?0, '$options': 'i' } }, { 'email': { '$regex': ?0, '$options': 'i' } } ] }")

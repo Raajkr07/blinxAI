@@ -198,7 +198,11 @@ export function MessageList({ conversationId }) {
 
                         const bestMsg = bestMatch[1];
                         const timeDiff = Math.abs(new Date(bestMsg.createdAt).getTime() - msgTime);
-                        if (timeDiff < 300000) {
+
+                        // We increase time limit for offline messages to 24 hours (86400000 ms) 
+                        // because they could be queued for hours before network restores.
+                        // Or if candidates exactly match body and it's 1 result, we aggressively match.
+                        if (timeDiff < 86400000 || candidates.length === 1) {
                             removeOptimisticMessage(bestMatch[0]);
                         }
                     }
@@ -281,7 +285,8 @@ export function MessageList({ conversationId }) {
                 (optMsg.senderId === 'me' && realMsg.senderId === user?.id) ||
                 (realMsg.senderId === 'me' && optMsg.senderId === user?.id);
             const timeDiff = Math.abs(new Date(realMsg.createdAt).getTime() - new Date(optMsg.createdAt).getTime());
-            const timeMatch = timeDiff < 300000;
+            // Use 24-hour window to handle messages queued while offline
+            const timeMatch = timeDiff < 86400000;
             return contentMatch && senderMatch && timeMatch;
         });
         if (!isDuplicate) {
@@ -430,7 +435,7 @@ export function MessageList({ conversationId }) {
     }, [data]);
 
     // ─── Render states ───────────────────────────────────────────────
-    if (isLoading) {
+    if (isLoading && sortedMessages.length === 0) {
         return (
             <div className="flex-1 overflow-y-auto min-h-0 space-y-4 p-4">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -440,7 +445,7 @@ export function MessageList({ conversationId }) {
         );
     }
 
-    if (error) {
+    if (error && sortedMessages.length === 0) {
         return (
             <div className="flex-1 flex items-center justify-center">
                 <EmptyState

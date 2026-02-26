@@ -142,7 +142,20 @@ public class EmailServiceImpl implements EmailService {
             );
 
             log.info("Email successfully sent via Gmail API for user: {}", userId);
+        } catch (IllegalArgumentException e) {
+            // No Google credentials — do NOT fallback to Brevo (user hasn't granted permission)
+            log.warn("No Google credentials for user: {}. Cannot send email. Error: {}", userId, e.getMessage());
+            throw new RuntimeException("You don't have permission to send emails. Please link your Google account in Settings to grant email access.");
         } catch (Exception e) {
+            String errMsg = e.getMessage() != null ? e.getMessage() : "";
+            // Check if this is a permission/auth error from Google API
+            if (errMsg.contains("403") || errMsg.contains("401") || errMsg.contains("Forbidden")
+                    || errMsg.contains("insufficient") || errMsg.contains("Unauthorized")
+                    || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied")) {
+                log.warn("Gmail permission denied for user: {}. Error: {}", userId, errMsg);
+                throw new RuntimeException("You don't have permission to send emails. Please re-link your Google account in Settings to grant email access.");
+            }
+            // Only fallback to Brevo for transient/network errors
             log.warn("Gmail API failed for user: {}. Falling back to Brevo. Error: {}", userId, e.getMessage());
             sendCustomEmail(to, subject, body);
         }

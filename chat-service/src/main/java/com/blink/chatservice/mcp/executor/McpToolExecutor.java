@@ -4,8 +4,8 @@ import com.blink.chatservice.ai.config.AiConstants;
 import com.blink.chatservice.mcp.registry.McpToolRegistry;
 import com.blink.chatservice.mcp.tool.McpTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -18,29 +18,14 @@ public class McpToolExecutor {
 
     private final McpToolRegistry toolRegistry;
     private final ObjectMapper objectMapper;
-    private final ExecutorService executorService;
+    private final Executor aiToolExecutor;
 
-    public McpToolExecutor(McpToolRegistry toolRegistry, ObjectMapper objectMapper) {
+    public McpToolExecutor(McpToolRegistry toolRegistry, 
+                           ObjectMapper objectMapper,
+                           @Qualifier("aiToolExecutor") Executor aiToolExecutor) {
         this.toolRegistry = toolRegistry;
         this.objectMapper = objectMapper;
-        this.executorService = Executors.newFixedThreadPool(4, r -> {
-            Thread t = new Thread(r, "mcp-tool-executor");
-            t.setDaemon(true);
-            return t;
-        });
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        executorService.shutdown();
-        try {
-            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                executorService.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executorService.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        this.aiToolExecutor = aiToolExecutor;
     }
 
     public ToolExecutionResult execute(String userId, String toolName, String argumentsJson) {
@@ -65,13 +50,15 @@ public class McpToolExecutor {
                 return ToolExecutionResult.error(AiConstants.ERROR_TOOL_UNAUTHORIZED);
             }
 
-            Map<Object, Object> args = parseArguments(argumentsJson);
+            Map<String, Object> args = parseArguments(argumentsJson);
 
-            log.info("Executing tool: {} for user: {}", toolName, userId);
+            log.debug("Executing tool: {} for user: {}", toolName, userId);
+            
+            // Execute with timeout using the shared AI thread pool
             Object result = executeWithTimeout(tool, userId, args);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("Tool {} completed in {}ms", toolName, duration);
+            log.debug("Tool {} completed in {}ms", toolName, duration);
 
             return ToolExecutionResult.success(result);
 
@@ -94,15 +81,15 @@ public class McpToolExecutor {
         }
     }
 
-    private Object executeWithTimeout(McpTool tool, String userId, Map<Object, Object> args)
+    private Object executeWithTimeout(McpTool tool, String userId, Map<String, Object> args)
             throws InterruptedException, ExecutionException, TimeoutException {
 
-        Future<Object> future = executorService.submit(() -> tool.execute(userId, args));
+        CompletableFuture<Object> future = CompletableFuture.supplyAsync(() -> tool.execute(userId, args), aiToolExecutor);
         return future.get(AiConstants.TOOL_EXECUTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     @SuppressWarnings("unchecked")
-    private Map<Object, Object> parseArguments(String argumentsJson) {
+    private Map<String, Object> parseArguments(String argumentsJson) {
         if (argumentsJson == null || argumentsJson.isBlank()) {
             return new HashMap<>();
         }

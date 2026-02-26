@@ -27,6 +27,7 @@ public class ReadCalendarEventsTool implements McpTool {
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
     private static final DateTimeFormatter DD_MM_YYYY = DateTimeFormatter.ofPattern("dd-MM-yyyy");
     private static final String BIRTHDAY_CALENDAR_ID = "addressbook#contacts@group.v.calendar.google.com";
+    private static final String HOLIDAY_CALENDAR_ID = "en.indian#holiday@group.v.calendar.google.com";
 
     @Override
     public String name() {
@@ -54,13 +55,13 @@ public class ReadCalendarEventsTool implements McpTool {
                 "maxResults", Map.of("type", "integer", "description",
                     "Max results (default 25)")
             ),
-            "required", List.of("dateFilter")
+            "required", Collections.emptyList()
         );
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object execute(String userId, Map<Object, Object> arguments) {
+    public Object execute(String userId, Map<String, Object> arguments) {
         String dateFilter = (String) arguments.get("dateFilter");
         String startDateStr = (String) arguments.get("startDate");
         String endDateStr = (String) arguments.get("endDate");
@@ -99,9 +100,14 @@ public class ReadCalendarEventsTool implements McpTool {
             // Determine calendars to search
             List<String> calendarIds = new ArrayList<>();
             calendarIds.add("primary");
-            boolean isBirthdayQuery = query != null && query.toLowerCase().contains("birthday");
-            if (isBirthdayQuery) {
-                calendarIds.add(BIRTHDAY_CALENDAR_ID);
+            if (query != null) {
+                String qLower = query.toLowerCase();
+                if (qLower.contains("birthday")) {
+                    calendarIds.add(BIRTHDAY_CALENDAR_ID);
+                }
+                if (qLower.contains("holiday") || qLower.contains("festival") || qLower.contains("event")) {
+                    calendarIds.add(HOLIDAY_CALENDAR_ID);
+                }
             }
 
             List<Map<String, Object>> items = new ArrayList<>();
@@ -109,14 +115,14 @@ public class ReadCalendarEventsTool implements McpTool {
 
             for (String calendarId : calendarIds) {
                 try {
+                    String effectiveQuery = calendarId.equals("primary") ? query : null;
                     List<Map<String, Object>> calItems = fetchCalendarEvents(
-                            accessToken, calendarId, timeMin, timeMax, query, maxResults);
+                            accessToken, calendarId, timeMin, timeMax, effectiveQuery, maxResults);
                     items.addAll(calItems);
                 } catch (Exception calEx) {
                     String errMsg = calEx.getMessage() != null ? calEx.getMessage() : "";
                     log.warn("Could not read calendar '{}' for user {}: {}", calendarId, userId, errMsg);
-                    if (errMsg.contains("403") || errMsg.contains("401") || errMsg.contains("Forbidden")
-                            || errMsg.contains("insufficient") || errMsg.contains("Unauthorized")) {
+                    if (isPermissionError(errMsg)) {
                         hadPermissionError = true;
                     }
                 }
@@ -125,25 +131,35 @@ public class ReadCalendarEventsTool implements McpTool {
             // Deep search fallback: fetch broadly and filter client-side
             if (items.isEmpty() && query != null && !query.isBlank() && !hadPermissionError) {
                 log.info("Query '{}' yielded 0 results. Retrying with broad search...", query);
-                try {
-                    List<Map<String, Object>> broadItems = fetchCalendarEvents(
-                            accessToken, "primary", timeMin, timeMax, null, 100);
+                // Search all calendars without query filter
+                for (String calendarId : calendarIds) {
+                    try {
+                        List<Map<String, Object>> broadItems = fetchCalendarEvents(
+                                accessToken, calendarId, timeMin, timeMax, null, 100);
 
-                    String lowerQuery = query.toLowerCase();
-                    items = broadItems.stream()
-                            .filter(item -> {
-                                String summary = String.valueOf(item.getOrDefault("summary", "")).toLowerCase();
-                                String desc = String.valueOf(item.getOrDefault("description", "")).toLowerCase();
-                                return summary.contains(lowerQuery) || desc.contains(lowerQuery) ||
-                                       (!summary.isEmpty() && lowerQuery.contains(summary));
-                            })
-                            .toList();
-                } catch (Exception e) {
-                    String errMsg = e.getMessage() != null ? e.getMessage() : "";
-                    log.warn("Broad search also failed for user {}: {}", userId, errMsg);
-                    if (errMsg.contains("403") || errMsg.contains("401") || errMsg.contains("Forbidden")
-                            || errMsg.contains("insufficient") || errMsg.contains("Unauthorized")) {
-                        hadPermissionError = true;
+                        if (calendarId.equals("primary")) {
+                            // For primary calendar, filter client-side by query keywords
+                            String lowerQuery = query.toLowerCase();
+                            List<String> keywords = Arrays.stream(lowerQuery.split("\\s+"))
+                                    .filter(w -> w.length() > 2)
+                                    .toList();
+                            broadItems = broadItems.stream()
+                                    .filter(item -> {
+                                        String summary = String.valueOf(item.getOrDefault("summary", "")).toLowerCase();
+                                        String desc = String.valueOf(item.getOrDefault("description", "")).toLowerCase();
+                                        return keywords.stream().anyMatch(kw ->
+                                                summary.contains(kw) || desc.contains(kw));
+                                    })
+                                    .toList();
+                        }
+                        // For holiday/birthday calendars, include all events (no text filter needed)
+                        items.addAll(broadItems);
+                    } catch (Exception e) {
+                        String errMsg = e.getMessage() != null ? e.getMessage() : "";
+                        log.warn("Broad search failed for calendar '{}': {}", calendarId, errMsg);
+                        if (isPermissionError(errMsg)) {
+                            hadPermissionError = true;
+                        }
                     }
                 }
             }
@@ -153,7 +169,7 @@ public class ReadCalendarEventsTool implements McpTool {
                     "success", false,
                     "count", 0,
                     "events", List.of(),
-                    "message", "Calendar access denied. The user needs to re-link their Google account to grant calendar permissions. Ask them to go to Settings and reconnect Google.",
+                    "message", "Please log out and log back in with Google to refresh your permissions and access this feature.",
                     "error_type", "PERMISSION_DENIED"
                 );
             }
@@ -178,21 +194,32 @@ public class ReadCalendarEventsTool implements McpTool {
                 "count", events.size(),
                 "events", events,
                 "date_range", Map.of("from", startDate.format(DD_MM_YYYY), "to", endDate.format(DD_MM_YYYY)),
-                "hint", "Summarize, identify conflicts, or use add_to_calendar for modifications."
+                "hint", "Summarize, identify conflicts, or use add_to_calendar/update_calendar_event for modifications."
             );
 
+        } catch (IllegalArgumentException e) {
+            // No Google credentials linked
+            log.warn("No Google credentials for user {}: {}", userId, e.getMessage());
+            return Map.of("success", false,
+                "message", "Please log out and log back in with Google to grant access to your Calendar.",
+                "error_type", "PERMISSION_DENIED");
         } catch (Exception e) {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Failed to read calendar events for user {}: {}", userId, errMsg, e);
-            if (errMsg.contains("403") || errMsg.contains("401") || errMsg.contains("Forbidden")
-                    || errMsg.contains("insufficient") || errMsg.contains("Unauthorized")
-                    || errMsg.contains("No Google credentials")) {
+            if (isPermissionError(errMsg)) {
                 return Map.of("success", false,
-                    "message", "Calendar access not authorized. Please re-link your Google account in Settings to grant calendar permissions.",
+                    "message", "Please log out and log back in with Google to refresh your permissions and access this feature.",
                     "error_type", "PERMISSION_DENIED");
             }
             return Map.of("success", false, "message", "Failed to read calendar events: " + errMsg);
         }
+    }
+
+    private boolean isPermissionError(String errMsg) {
+        return errMsg.contains("403") || errMsg.contains("401")
+                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
+                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
+                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
     }
 
     @SuppressWarnings("unchecked")
@@ -262,6 +289,27 @@ public class ReadCalendarEventsTool implements McpTool {
                     startDate = today.plusWeeks(1).with(DayOfWeek.MONDAY);
                     endDate = today.plusWeeks(1).with(DayOfWeek.SUNDAY);
                     break;
+                case "last_month", "last month":
+                    startDate = today.minusMonths(1).withDayOfMonth(1);
+                    endDate = today.minusMonths(1).withDayOfMonth(today.minusMonths(1).lengthOfMonth());
+                    break;
+                case "next_month", "next month":
+                    startDate = today.plusMonths(1).withDayOfMonth(1);
+                    endDate = today.plusMonths(1).withDayOfMonth(today.plusMonths(1).lengthOfMonth());
+                    break;
+                case "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december":
+                    try {
+                        Month m = Month.valueOf(dateFilter.toUpperCase().trim());
+                        int year = today.getYear();
+                        // If the month passed this year, it might be about next year (e.g., asking about December in January without specifying year),
+                        // but defaulting to current year is safest.
+                        startDate = LocalDate.of(year, m, 1);
+                        endDate = LocalDate.of(year, m, m.length(LocalDate.of(year, 1, 1).isLeapYear()));
+                    } catch (Exception e) {
+                        startDate = today;
+                        endDate = today;
+                    }
+                    break;
                 default:
                     try {
                         startDate = LocalDate.parse(dateFilter, DD_MM_YYYY);
@@ -284,7 +332,7 @@ public class ReadCalendarEventsTool implements McpTool {
             }
         } else {
             startDate = today;
-            endDate = today;
+            endDate = today.plusDays(7);
         }
 
         return new LocalDate[]{startDate, endDate};

@@ -26,6 +26,11 @@ export const aiService = {
         return data;
     },
 
+    extractTasksFromConversation: async (conversationId) => {
+        const { data } = await apiClient.post(`/api/v1/ai/analysis/extract-tasks/${conversationId}`);
+        return data;
+    },
+
     parseSearchQuery: async (query) => {
         const { data } = await apiClient.post('/api/v1/ai/analysis/search-query', { query });
         return data;

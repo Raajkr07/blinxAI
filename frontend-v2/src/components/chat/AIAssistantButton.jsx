@@ -8,6 +8,20 @@ import { cn } from '../../lib/utils';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
+// Category icons based on tool name keywords
+const getCategoryIcon = (name) => {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('email') || lower.includes('mail')) return '📧';
+    if (lower.includes('calendar') || lower.includes('event')) return '📅';
+    if (lower.includes('message') || lower.includes('chat') || lower.includes('conversation')) return '💬';
+    if (lower.includes('search') && lower.includes('user')) return '👤';
+    if (lower.includes('search') || lower.includes('web')) return '🔍';
+    if (lower.includes('file') || lower.includes('save')) return '📁';
+    if (lower.includes('task') || lower.includes('extract')) return '✅';
+    if (lower.includes('summarize') || lower.includes('summary')) return '📊';
+    return '🦧';
+};
+
 export function AIAssistantButton({ compact }) {
     const { setActiveConversation } = useChatStore();
     const { openTab } = useTabsStore();
@@ -56,9 +70,10 @@ export function AIAssistantButton({ compact }) {
         setShowCapabilities(true);
     };
 
+    // Extract capabilities list — handle all possible response shapes
     const capabilitiesList = Array.isArray(capabilities)
         ? capabilities
-        : (capabilities?.capabilities || capabilities?.tools || []);
+        : (capabilities?.capabilities || capabilities?.tools || capabilities?.features || []);
 
     return (
         <>
@@ -111,40 +126,44 @@ export function AIAssistantButton({ compact }) {
                             </p>
                         </div>
                     ) : capabilitiesList.length > 0 ? (
-                        <div className="grid gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
-                            <AnimatePresence>
-                                {capabilitiesList.map((cap, index) => {
-                                    const name = typeof cap === 'string' ? cap : (cap.name || cap.title || `Capability ${index + 1}`);
-                                    const description = typeof cap === 'string' ? null : (cap.description || cap.desc);
+                        <>
+                            <p className="text-[10px] text-[var(--color-gray-500)] px-1">
+                                {capabilitiesList.length} capabilities available
+                            </p>
+                            <div className="grid gap-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
+                                <AnimatePresence>
+                                    {capabilitiesList.map((cap, index) => {
+                                        const name = typeof cap === 'string' ? cap : (cap.name || cap.title || `Capability ${index + 1}`);
+                                        const description = typeof cap === 'string' ? null : (cap.description || cap.desc);
+                                        const icon = getCategoryIcon(name);
 
-                                    return (
-                                        <Motion.div
-                                            key={index}
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.04 }}
-                                            className="flex gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/5 group hover:border-blue-500/20 transition-all"
-                                        >
-                                            <div className="mt-0.5 w-7 h-7 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-[10px] font-black text-blue-400">
-                                                    {String(index + 1).padStart(2, '0')}
-                                                </span>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-[var(--color-foreground)] leading-snug">
-                                                    {name}
-                                                </p>
-                                                {description && (
-                                                    <p className="text-[10px] text-[var(--color-gray-500)] mt-1 leading-relaxed">
-                                                        {description}
+                                        return (
+                                            <Motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.04 }}
+                                                className="flex gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/5 group hover:border-blue-500/20 transition-all"
+                                            >
+                                                <div className="mt-0.5 w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-sm">{icon}</span>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-[var(--color-foreground)] leading-snug">
+                                                        {name}
                                                     </p>
-                                                )}
-                                            </div>
-                                        </Motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </div>
+                                                    {description && (
+                                                        <p className="text-[10px] text-[var(--color-gray-500)] mt-1 leading-relaxed">
+                                                            {description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </Motion.div>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            </div>
+                        </>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 gap-4">
                             <div className="w-16 h-16 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">

@@ -147,7 +147,8 @@ public class ChatServiceImpl implements ChatService {
         Message msg = new Message();
         msg.setConversationId(conversationId);
         msg.setSenderId(senderId);
-        msg.setBody(body.length() > 4000 ? body.substring(0, 4000) : body.trim());
+        String trimmedBody = body.trim();
+        msg.setBody(trimmedBody.length() > 4000 ? trimmedBody.substring(0, 4000) : trimmedBody);
         msg.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
 
         if (conv.getType() == ConversationType.DIRECT) {

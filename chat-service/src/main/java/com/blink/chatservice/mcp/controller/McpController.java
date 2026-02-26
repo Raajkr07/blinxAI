@@ -18,6 +18,7 @@ public class McpController {
         this.registry = registry;
     }
 
+    // This endpoint is for the AI engine to get raw tool definitions
     @GetMapping("/tools")
     public List<Map<String, Object>> tools() {
         return registry.all().stream()
@@ -25,11 +26,10 @@ public class McpController {
                         "type", "function",
                         "function", Map.of(
                                 "name", tool.name(),
-                                "description", tool.description(),
-                                "parameters", tool.inputSchema()
+                                "description", tool.description() != null ? tool.description() : "",
+                                "parameters", tool.inputSchema() != null ? tool.inputSchema() : Map.of()
                         )
                 ))
                 .toList();
     }
 }
-

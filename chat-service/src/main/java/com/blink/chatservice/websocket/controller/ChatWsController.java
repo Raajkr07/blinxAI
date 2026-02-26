@@ -6,7 +6,8 @@ import com.blink.chatservice.chat.service.ChatService;
 import com.blink.chatservice.websocket.dto.RealtimeMessageRequest;
 import com.blink.chatservice.websocket.dto.TypingRequest;
 import com.blink.chatservice.websocket.dto.TypingResponse;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -14,14 +15,26 @@ import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
+@Slf4j
 @Controller
-@RequiredArgsConstructor
 public class ChatWsController {
 
     private final ChatService chatService;
     private final AiService aiService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final Executor aiToolExecutor;
+
+    public ChatWsController(ChatService chatService,
+                            AiService aiService,
+                            SimpMessagingTemplate messagingTemplate,
+                            @Qualifier("aiToolExecutor") Executor aiToolExecutor) {
+        this.chatService = chatService;
+        this.aiService = aiService;
+        this.messagingTemplate = messagingTemplate;
+        this.aiToolExecutor = aiToolExecutor;
+    }
 
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Payload RealtimeMessageRequest request, Principal principal) {
@@ -41,17 +54,20 @@ public class ChatWsController {
         try {
             messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", true));
 
-            // Offload to a non-blocking thread to keep the broker responsive
+            // Offload to dedicated AI thread pool to keep the message broker responsive
             CompletableFuture.runAsync(() -> {
                 try {
-                    Message aiResponse = aiService.processAiMessage(userId, conversationId, request.body(), false);
-                    messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));
-                    messagingTemplate.convertAndSend("/topic/conversations/" + conversationId, aiResponse);
+                    // processAiMessage now calls chatService.sendMessage internally, which handles broadcasting.
+                    aiService.processAiMessage(userId, conversationId, request.body(), false);
                 } catch (Exception e) {
+                    log.error("AI chat processing failed", e);
+                } finally {
                     messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));
                 }
-            });
-        } catch (Exception ignored) {}
+            }, aiToolExecutor);
+        } catch (Exception e) {
+            log.error("Failed to start AI chat task", e);
+        }
     }
 
     @MessageMapping("/chat.typing")

@@ -2,6 +2,7 @@ package com.blink.chatservice.mcp.tool.helper;
 
 import com.blink.chatservice.user.entity.User;
 import com.blink.chatservice.user.repository.UserRepository;
+import com.blink.chatservice.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 public class UserLookupHelper {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
     // Find user by email, username, phone, or ID
     public User findUserByIdentifier(String identifier) {
@@ -30,7 +32,7 @@ public class UserLookupHelper {
 
         // Try email if it looks like one
         if (cleaned.contains("@")) {
-            Optional<User> byEmail = userRepository.findByEmail(cleaned);
+            Optional<User> byEmail = userRepository.findByEmail(cleaned.toLowerCase(Locale.ROOT));
             if (byEmail.isPresent()) {
                 return byEmail.get();
             }
@@ -42,9 +44,42 @@ public class UserLookupHelper {
             return byPhone.get();
         }
 
-        // Try username
-        Optional<User> byUsername = userRepository.findByUsername(cleaned);
+        // Try username (findFirst to handle duplicate usernames safely)
+        Optional<User> byUsername = userRepository.findFirstByUsername(cleaned);
         return byUsername.orElse(null);
+    }
+
+    // Resolve user by identifier with fallback to contact search
+    public User resolveUser(String identifier, String currentUserId) {
+        User u = findUserByIdentifier(identifier);
+        if (u != null) return u;
+        List<User> users = userService.searchUsersByContact(identifier, currentUserId);
+        return users.isEmpty() ? null : users.get(0);
+    }
+
+    // Replace common name placeholders in email templates
+    public String resolveNamePlaceholders(String text, String senderId, String recipientEmail) {
+        if (text == null || text.isBlank()) return text;
+        String result = text;
+
+        User sender = userRepository.findById(senderId).orElse(null);
+        if (sender != null && sender.getUsername() != null) {
+            result = result.replace("[Your Name]", sender.getUsername())
+                    .replace("[Your Name Member]", sender.getUsername())
+                    .replace("{{Your Name}}", sender.getUsername());
+        }
+
+        if (recipientEmail != null && !recipientEmail.isBlank()) {
+            // Added toLowerCase() for email lookup consistent with system normalization.
+            User recipient = userRepository.findByEmail(recipientEmail.trim().toLowerCase(Locale.ROOT)).orElse(null);
+            if (recipient != null && recipient.getUsername() != null) {
+                result = result.replace("[Recipient's Name]", recipient.getUsername())
+                        .replace("[Recipient Name]", recipient.getUsername())
+                        .replace("{{Recipient Name}}", recipient.getUsername());
+            }
+        }
+
+        return result;
     }
 
     public Map<String, Object> getUserInfo(String userId) {

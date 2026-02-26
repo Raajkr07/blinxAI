@@ -63,6 +63,8 @@ app:
   frontend-url: http://localhost:3000
   cors:
     allowed-origins: http://localhost:5173
+  rate-limit:
+    enabled: false          # Disable rate limiting in tests by default
   oauth2:
     google:
       client-id: test-client-id

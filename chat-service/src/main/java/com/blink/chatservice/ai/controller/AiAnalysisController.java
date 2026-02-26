@@ -53,9 +53,31 @@ public class AiAnalysisController {
     }
 
     @PostMapping("/extract-task")
-    public ResponseEntity<TaskExtraction> extractTask(@RequestBody TextRequest request) {
+    public ResponseEntity<TaskListExtraction> extractTask(@RequestBody TextRequest request) {
         if (request.text() == null || request.text().isBlank()) return ResponseEntity.badRequest().build();
-        return ResponseEntity.ok(aiAnalysisService.extractTask(request.text()));
+        return ResponseEntity.ok(aiAnalysisService.extractTasks(request.text()));
+    }
+
+    @PostMapping("/extract-tasks/{conversationId}")
+    public ResponseEntity<TaskListExtraction> extractTasksFromConversation(@PathVariable String conversationId) {
+        var messages = messageRepository.findByConversationIdAndDeletedFalseOrderByIdDesc(
+                conversationId, PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "createdAt"))
+        ).getContent();
+        if (messages.isEmpty()) return ResponseEntity.notFound().build();
+
+        String context = messages.stream()
+                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                .map(m -> String.format("[%s] %s: %s",
+                        m.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM HH:mm")),
+                        m.getSenderId(), m.getBody()))
+                .collect(java.util.stream.Collectors.joining("\n"));
+
+        // Limit to last 8000 chars to prevent token overflow
+        if (context.length() > 8000) {
+            context = context.substring(context.length() - 8000);
+        }
+
+        return ResponseEntity.ok(aiAnalysisService.extractTasks(context));
     }
 
     @PostMapping("/typing-indicator")

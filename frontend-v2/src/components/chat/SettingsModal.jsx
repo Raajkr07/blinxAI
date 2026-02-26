@@ -100,6 +100,8 @@ export function SettingsModal({ open, onOpenChange }) {
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Username</label>
                                 <Input
+                                    id="settings-username"
+                                    name="username"
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     placeholder="Your display name"
@@ -110,6 +112,8 @@ export function SettingsModal({ open, onOpenChange }) {
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Bio</label>
                                 <Input
+                                    id="settings-bio"
+                                    name="bio"
                                     value={formData.bio}
                                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                                     placeholder="A short description about you"
@@ -119,6 +123,8 @@ export function SettingsModal({ open, onOpenChange }) {
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Avatar URL</label>
                                 <Input
+                                    id="settings-avatar-url"
+                                    name="avatarUrl"
                                     value={formData.avatarUrl}
                                     onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
                                     placeholder="https://..."
@@ -135,6 +141,8 @@ export function SettingsModal({ open, onOpenChange }) {
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Email</label>
                                 <Input
+                                    id="settings-email"
+                                    name="email"
                                     type="email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -145,6 +153,8 @@ export function SettingsModal({ open, onOpenChange }) {
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Phone</label>
                                 <Input
+                                    id="settings-phone"
+                                    name="phone"
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                     placeholder="+91 00000-00000"

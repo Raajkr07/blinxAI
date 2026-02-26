@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.config.annotation.*;
 
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.Arrays;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthChannelInterceptor webSocketAuthChannelInterceptor;
+    private final TaskScheduler heartTaskScheduler;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOriginsRaw;
@@ -51,12 +53,29 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
-        registry.enableSimpleBroker("/topic", "/queue", "/user");
+
+        // BUG FIX: Configure the simple broker with memory-safe limits.
+        // Without these, the in-memory broker can accumulate unbounded send buffers
+        // per WebSocket session, leading to steady memory growth under load.
+        registry.enableSimpleBroker("/topic", "/queue", "/user")
+                // Heartbeat: server sends ping every 25s, expects pong every 25s.
+                // Dead connections are detected and cleaned up within ~50s.
+                .setHeartbeatValue(new long[]{25000, 25000})
+                .setTaskScheduler(heartTaskScheduler);
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         // Injecting auth interceptor to validate JWT on CONNECT frame.
         registration.interceptors(webSocketAuthChannelInterceptor);
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
+        // BUG FIX: Cap per-message and per-session buffer sizes to prevent
+        // a single misbehaving client from consuming excessive memory.
+        registry.setMessageSizeLimit(64 * 1024);       // 64KB max per STOMP message
+        registry.setSendBufferSizeLimit(512 * 1024);    // 512KB max send buffer per session
+        registry.setSendTimeLimit(20 * 1000);            // 20s to flush send buffer before disconnect
     }
 }

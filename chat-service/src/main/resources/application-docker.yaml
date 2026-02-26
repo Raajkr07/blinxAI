@@ -82,8 +82,8 @@ app:
       scopes:
         - email
         - profile
-        - https://www.googleapis.com/auth/calendar
-        - https://www.googleapis.com/auth/gmail.modify
+        - https://www.googleapis.com/auth/calendar.events
+        - https://www.googleapis.com/auth/gmail.readonly
         - https://www.googleapis.com/auth/gmail.send
       allowed-frontend-origins:
         - https://blinx-app.netlify.app
@@ -95,6 +95,31 @@ app:
   frontend-url: ${APP_FRONTEND_URL:https://blinxai.me}
   cookie:
     domain: ${APP_COOKIE_DOMAIN}
+
+  # ── Rate Limiting (Redis-backed sliding window) ──
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    global:
+      max-requests: ${RATE_LIMIT_GLOBAL_MAX:120}
+      window-seconds: ${RATE_LIMIT_GLOBAL_WINDOW:60}
+    auth:
+      max-requests: ${RATE_LIMIT_AUTH_MAX:5}
+      window-seconds: ${RATE_LIMIT_AUTH_WINDOW:60}
+    ai:
+      max-requests: ${RATE_LIMIT_AI_MAX:20}
+      window-seconds: ${RATE_LIMIT_AI_WINDOW:60}
+    search:
+      max-requests: ${RATE_LIMIT_SEARCH_MAX:20}
+      window-seconds: ${RATE_LIMIT_SEARCH_WINDOW:60}
+    calls:
+      max-requests: ${RATE_LIMIT_CALLS_MAX:30}
+      window-seconds: ${RATE_LIMIT_CALLS_WINDOW:60}
+    email:
+      max-requests: ${RATE_LIMIT_EMAIL_MAX:3}
+      window-seconds: ${RATE_LIMIT_EMAIL_WINDOW:60}
+    message-send:
+      max-requests: ${RATE_LIMIT_MSG_SEND_MAX:30}
+      window-seconds: ${RATE_LIMIT_MSG_SEND_WINDOW:60}
 
 api:
   server:
@@ -133,3 +158,12 @@ web:
 logging:
   file:
     name: ${LOG_FILE_PATH:./logs/chat-service-mcp.log}
+  level:
+    root: INFO
+    com.blink.chatservice: INFO
+    org.springframework.web.socket.config: WARN
+    org.springframework.web.socket.messaging: WARN
+    org.springframework.messaging.simp.broker: WARN
+    org.apache.catalina.core: WARN
+    io.lettuce.core: WARN
+    org.mongodb.driver: WARN

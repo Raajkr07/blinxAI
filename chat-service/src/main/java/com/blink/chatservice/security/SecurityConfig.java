@@ -1,5 +1,6 @@
 package com.blink.chatservice.security;
 
+import com.blink.chatservice.ratelimit.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ import java.util.Collections;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -65,7 +67,9 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Rate-limit filter runs after JWT authentication so it can use the principal
+                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 
@@ -77,6 +81,15 @@ public class SecurityConfig {
         FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(corsFilter);
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ERROR, DispatcherType.ASYNC);
+        return registration;
+    }
+
+    // Prevent the servlet container from also registering the rate-limit filter
+    // (it's already wired into the Spring Security filter chain above).
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter filter) {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
         return registration;
     }
 

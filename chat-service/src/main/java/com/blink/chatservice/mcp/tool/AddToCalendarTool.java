@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.MediaType;
 
-import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -34,7 +34,7 @@ public class AddToCalendarTool implements McpTool {
 
     @Override
     public String description() {
-        return "Create an event in Google Calendar. Confirm details before creating.";
+        return "Create a Google Calendar event. Write the title like a real person would — 'Coffee with Raj' not 'Meeting: Coffee Discussion'.";
     }
 
     @Override
@@ -42,8 +42,8 @@ public class AddToCalendarTool implements McpTool {
         return Map.of(
             "type", "object",
             "properties", Map.of(
-                "title", Map.of("type", "string", "description", "Engaging, professional Indian English title. Avoid 'Meeting' or 'Date' - use 'Coffee catch-up with Raj Kumar' etc."),
-                "description", Map.of("type", "string", "description", "Rich, human-like description that connects with the context. Write it like a personal note."),
+                "title", Map.of("type", "string", "description", "Short, natural event title. Write like a real person: 'Lunch with Priya', 'Dentist appointment', 'Team standup'. No corporate jargon."),
+                "description", Map.of("type", "string", "description", "Brief personal note about the event. 1-2 lines max. 'Discussing the new feature rollout' not 'This meeting is scheduled to facilitate discussion regarding upcoming product deliverables'."),
                 "startTime", Map.of("type", "string", "description", "Start time (DD-MM-YYYYTHH:MM:SS)"),
                 "endTime", Map.of("type", "string", "description", "End time (optional, defaults to +1hr)"),
                 "location", Map.of("type", "string", "description", "Location or meeting link"),
@@ -54,7 +54,7 @@ public class AddToCalendarTool implements McpTool {
     }
 
     @Override
-    public Object execute(String userId, Map<Object, Object> args) {
+    public Object execute(String userId, Map<String, Object> args) {
         String title = (String) args.get("title");
         String description = (String) args.getOrDefault("description", "");
         String startDateStr = (String) args.get("startTime");
@@ -63,10 +63,10 @@ public class AddToCalendarTool implements McpTool {
         String location = (String) args.getOrDefault("location", "");
 
         if (title == null || title.isBlank() || startDateStr == null || startDateStr.isBlank()) {
-            return Map.of("error", true, "message", "Title and startTime are required");
+            return Map.of("error", true, "message", "Title and startTime are required.");
         }
         if (title.length() > 500) {
-            return Map.of("error", true, "message", "Title too long (max 500 chars)");
+            return Map.of("error", true, "message", "Title too long (max 500 chars).");
         }
 
         try {
@@ -119,9 +119,23 @@ public class AddToCalendarTool implements McpTool {
 
             return Map.of("success", true, "message", "Event '" + title + "' successfully added to Google Calendar.");
 
+        } catch (IllegalArgumentException e) {
+            // No Google credentials linked
+            log.warn("No Google credentials for user {}: {}", userId, e.getMessage());
+            return Map.of("success", false,
+                "message", "You don't have permission to access Google Calendar. Please link your Google account in Settings.",
+                "error_type", "PERMISSION_DENIED");
         } catch (Exception e) {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Failed to add Google Calendar event for user {}: {}", userId, errMsg, e);
+
+            // Check for permission/auth errors from Google API
+            if (isPermissionError(errMsg)) {
+                return Map.of("success", false,
+                    "message", "You don't have permission to create calendar events. Please re-link your Google account in Settings to grant calendar access.",
+                    "error_type", "PERMISSION_DENIED");
+            }
+
             Map<String, Object> errorPayload = new LinkedHashMap<>();
             errorPayload.put("title", title);
             errorPayload.put("description", description);
@@ -135,6 +149,14 @@ public class AddToCalendarTool implements McpTool {
             return Map.of("error", true, "message", "Failed to add to calendar: " + errMsg);
         }
     }
+
+    private boolean isPermissionError(String errMsg) {
+        return errMsg.contains("403") || errMsg.contains("401")
+                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
+                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
+                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
+    }
+
     private LocalDateTime parseDateTime(String dateStr) {
         String clean = dateStr.replace(" ", "T").replace("Z", "");
         if (clean.contains("T")) {
@@ -142,7 +164,7 @@ public class AddToCalendarTool implements McpTool {
             String datePart = clean.substring(0, clean.indexOf("T"));
             if (timePart.length() == 5) timePart += ":00";
             else if (timePart.length() > 8) timePart = timePart.substring(0, 8);
-            
+
             return parseDatePart(datePart).atTime(LocalTime.parse(timePart));
         } else {
             return parseDatePart(clean).atStartOfDay();

@@ -59,9 +59,14 @@ class SocketService {
         useSocketStore.getState().setStatus('connecting');
 
         this.connectionPromise = new Promise((resolve, reject) => {
+            // Store reject so we can call it from onWebSocketClose/onDisconnect
+            // to prevent orphaned promises that hang forever.
+            this._pendingReject = reject;
+
             const token = storage.get(STORAGE_KEYS.ACCESS_TOKEN);
             if (!token) {
                 this.connectionPromise = null;
+                this._pendingReject = null;
                 useSocketStore.getState().setStatus('disconnected');
                 return reject(new Error('No auth token'));
             }
@@ -97,6 +102,7 @@ class SocketService {
 
                 onConnect: () => {
                     this.connected = true;
+                    this._pendingReject = null;
                     useSocketStore.getState().setStatus('connected');
                     this._reconnectAttempts = 0;
                     this._clearReconnectTimer();
@@ -117,6 +123,11 @@ class SocketService {
                 onDisconnect: () => {
                     this.connected = false;
                     this.connectionPromise = null;
+                    // Reject any pending connect() callers so they don't hang forever
+                    if (this._pendingReject) {
+                        this._pendingReject(new Error('Socket disconnected'));
+                        this._pendingReject = null;
+                    }
                     if (!this._intentionalDisconnect) {
                         const stillAuthed = !!storage.get(STORAGE_KEYS.ACCESS_TOKEN);
                         if (!stillAuthed) {
@@ -146,6 +157,11 @@ class SocketService {
                 onWebSocketClose: (event) => {
                     this.connected = false;
                     this.connectionPromise = null;
+                    // Reject any pending connect() callers so they don't hang forever
+                    if (this._pendingReject) {
+                        this._pendingReject(new Error('WebSocket closed'));
+                        this._pendingReject = null;
+                    }
                     if (!this._intentionalDisconnect) {
                         const stillAuthed = !!storage.get(STORAGE_KEYS.ACCESS_TOKEN);
                         if (!stillAuthed) {
@@ -161,7 +177,6 @@ class SocketService {
 
                         // Helpful breadcrumb for production debugging
                         if (event?.code) {
-                            // eslint-disable-next-line no-console
                             console.warn('WebSocket closed', { code: event.code, reason: event.reason });
                         }
 
@@ -229,7 +244,9 @@ class SocketService {
     send(destination, body) {
         if (this.client?.connected) {
             this.client.publish({ destination, body: JSON.stringify(body) });
+            return true;
         }
+        return false;
     }
 
     getUserId() {

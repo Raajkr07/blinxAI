@@ -88,7 +88,6 @@ public class UserServiceImpl implements UserService {
         if (phone != null && user.getPhone() == null) user.setPhone(phone);
         if (email != null && user.getEmail() == null) user.setEmail(email.trim().toLowerCase(Locale.ROOT));
 
-        user.setCreatedAt(LocalDateTime.now(ZoneId.of("UTC")));
         userRepository.save(user);
         otpService.deleteOtp(identifier);
         
@@ -172,6 +171,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     @CachePut(value = "users_v2", key = "#userId")
     public User updateProfile(String userId, String username, String avatarUrl, String bio, String email, String phone) {
         User user = getProfile(userId);

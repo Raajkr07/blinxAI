@@ -82,6 +82,8 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                 <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
                     <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">File Name</label>
                     <Input
+                        id="file-name"
+                        name="fileName"
                         value={editedFileName}
                         onChange={(e) => setEditedFileName(e.target.value)}
                         placeholder="document.txt"

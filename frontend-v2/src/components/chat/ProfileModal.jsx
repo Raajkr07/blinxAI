@@ -1,10 +1,24 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chatService, userService } from '../../services';
+import { chatService, userService, aiService } from '../../services';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores';
 import { Modal, Avatar, Button, AILogo, Input, ModalFooter } from '../ui';
 import toast from 'react-hot-toast';
+
+// Category icons based on tool name keywords
+const getCategoryIcon = (name) => {
+    const lower = (name || '').toLowerCase();
+    if (lower.includes('email') || lower.includes('mail')) return '📧';
+    if (lower.includes('calendar') || lower.includes('event')) return '📅';
+    if (lower.includes('message') || lower.includes('chat') || lower.includes('conversation')) return '💬';
+    if (lower.includes('search') && lower.includes('user')) return '👤';
+    if (lower.includes('search') || lower.includes('web')) return '🔍';
+    if (lower.includes('file') || lower.includes('save')) return '📁';
+    if (lower.includes('task') || lower.includes('extract')) return '✅';
+    if (lower.includes('summarize') || lower.includes('summary')) return '📊';
+    return '🦧';
+};
 
 export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' }) {
     const { user: currentUser } = useAuthStore();
@@ -45,6 +59,20 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
         },
         enabled: isGroup && !!conversation?.participants && isOpen,
     });
+
+    // Fetch AI capabilities when viewing AI profile
+    const { data: aiCapabilities, isLoading: isLoadingCapabilities } = useQuery({
+        queryKey: ['aiCapabilities'],
+        queryFn: aiService.getCapabilities,
+        enabled: isAI && isOpen,
+        staleTime: Infinity,
+    });
+
+    const capabilitiesList = aiCapabilities
+        ? (Array.isArray(aiCapabilities)
+            ? aiCapabilities
+            : (aiCapabilities?.capabilities || aiCapabilities?.tools || aiCapabilities?.features || []))
+        : [];
 
     const { data: searchResults } = useQuery({
         queryKey: ['users', memberSearch],
@@ -167,6 +195,8 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Group Name</label>
                                 <Input
+                                    id="profile-group-name"
+                                    name="groupName"
                                     value={editTitle}
                                     onChange={(e) => setEditTitle(e.target.value)}
                                     placeholder="Group name"
@@ -176,6 +206,8 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                             <div className="p-4">
                                 <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Avatar URL</label>
                                 <Input
+                                    id="profile-avatar-url"
+                                    name="avatarUrl"
                                     value={editAvatarUrl}
                                     onChange={(e) => setEditAvatarUrl(e.target.value)}
                                     placeholder="https://..."
@@ -188,6 +220,8 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                     /* Add Member View */
                     <div className="space-y-4 py-4">
                         <Input
+                            id="profile-member-search"
+                            name="memberSearch"
                             value={memberSearch}
                             onChange={(e) => setMemberSearch(e.target.value)}
                             placeholder="Search users…"
@@ -297,15 +331,42 @@ export function ProfileModal({ isOpen, onClose, conversationId, type = 'user' })
                                 <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-4 space-y-3">
                                     <div className="flex items-center gap-2">
                                         <AILogo className="w-4 h-4 text-blue-400" />
-                                        <h3 className="text-[10px] uppercase font-semibold tracking-wider text-blue-400">Capabilities</h3>
+                                        <h3 className="text-[10px] uppercase font-semibold tracking-wider text-blue-400">
+                                            Capabilities {capabilitiesList.length > 0 && `(${capabilitiesList.length})`}
+                                        </h3>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {['MCP Tools', 'Reasoning', 'Real-time Chat', 'Memory'].map((feat, i) => (
-                                            <span key={i} className="px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-[10px] font-medium text-blue-300">
-                                                {feat}
-                                            </span>
-                                        ))}
-                                    </div>
+                                    {isLoadingCapabilities ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <div className="w-6 h-6 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin" />
+                                        </div>
+                                    ) : capabilitiesList.length > 0 ? (
+                                        <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                            {capabilitiesList.map((cap, i) => {
+                                                const name = typeof cap === 'string' ? cap : (cap.name || cap.title || `Tool ${i + 1}`);
+                                                const description = typeof cap === 'string' ? null : (cap.description || cap.desc);
+                                                const icon = getCategoryIcon(name);
+                                                return (
+                                                    <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-black/20 border border-white/5">
+                                                        <span className="text-sm mt-0.5 flex-shrink-0">{icon}</span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[11px] font-semibold text-blue-300 leading-snug">{name}</p>
+                                                            {description && (
+                                                                <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5 leading-relaxed">{description}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {['MCP Tools', 'Reasoning', 'Real-time Chat', 'Memory'].map((feat, i) => (
+                                                <span key={i} className="px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-[10px] font-medium text-blue-300">
+                                                    {feat}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

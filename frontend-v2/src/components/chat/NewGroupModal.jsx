@@ -108,6 +108,8 @@ export function NewGroupModal({ open, onOpenChange }) {
                         <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
                             <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Group Name</label>
                             <Input
+                                id="new-group-name"
+                                name="groupName"
                                 placeholder="e.g. Design Team"
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
@@ -141,6 +143,8 @@ export function NewGroupModal({ open, onOpenChange }) {
                         <div>
                             <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5 block px-1">Search Users</label>
                             <Input
+                                id="new-group-search"
+                                name="memberSearch"
                                 placeholder="Type to search…"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}

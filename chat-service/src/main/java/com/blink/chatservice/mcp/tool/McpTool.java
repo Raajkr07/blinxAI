@@ -6,7 +6,7 @@ public interface McpTool {
     String name();
     String description();
     Map<String, Object> inputSchema();
-    Object execute(String userId, Map<Object, Object> arguments);
+    Object execute(String userId, Map<String, Object> arguments);
     default boolean isAllowedForUser(String userId) {
         return true;
     }

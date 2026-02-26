@@ -3,6 +3,8 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { useUIStore } from './stores/uiStore';
+import { useSocketStore } from './stores/socketStore';
+import { useChatStore } from './stores/chatStore';
 import {
   publicRoutes,
   protectedRoutes,
@@ -48,6 +50,7 @@ const App = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const prevAuthRef = useRef(isAuthenticated);
+  const socketConnected = useSocketStore(state => state.connected);
 
   const isPublicRoute = PUBLIC_PATHS.some(p => location.pathname.toLowerCase().startsWith(p));
 
@@ -66,7 +69,7 @@ const App = () => {
       queryClient.clear();
       import('./services/socketService')
         .then((m) => m.socketService.disconnect())
-        .catch(() => {});
+        .catch(() => { });
       return;
     }
 
@@ -108,6 +111,77 @@ const App = () => {
     document.title = TITLE_MAP[location.pathname.toLowerCase()] || 'Blinx AI Assistant | Chat';
   }, [location.pathname]);
 
+  // Cleanup stale "Sending..." messages older than 1 day on every auth/mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      useChatStore.getState().cleanupStaleMessages();
+    }
+  }, [isAuthenticated]);
+
+  // Offline Sync: Send pending messages when socket reconnects
+  useEffect(() => {
+    if (!socketConnected || !isAuthenticated) return;
+
+    const flushOutbox = () => {
+      const state = useChatStore.getState();
+      const outbox = state.pendingOutbox || {};
+      const pendingKeys = Object.keys(outbox);
+      if (pendingKeys.length === 0) return;
+
+      const flushedConversationIds = new Set();
+
+      import('./services/socketService').then(({ socketService }) => {
+        pendingKeys.forEach(tempId => {
+          const msg = outbox[tempId];
+          if (msg && msg.destination && msg.payload) {
+            try {
+              const sent = socketService.send(msg.destination, msg.payload);
+              if (sent) {
+                const currentState = useChatStore.getState();
+                const newOutbox = { ...currentState.pendingOutbox };
+                delete newOutbox[tempId];
+                useChatStore.setState({ pendingOutbox: newOutbox });
+
+                // Track which conversations had messages flushed
+                const convId = msg.payload?.conversationId;
+                if (convId) flushedConversationIds.add(convId);
+
+                // Schedule removal of the optimistic message after a delay
+                // (gives WebSocket echo time to arrive; if it already removed it, this is a no-op)
+                setTimeout(() => {
+                  useChatStore.getState().removeOptimisticMessage(tempId);
+                }, 8000);
+              }
+              // If not sent, stays in outbox for next retry
+            } catch (e) {
+              console.warn('Sync failed for message', tempId, e);
+            }
+          }
+        });
+
+        // Refetch message queries for flushed conversations so the UI
+        // transitions from "Sending..." to "Sent" without a manual refresh
+        if (flushedConversationIds.size > 0) {
+          setTimeout(() => {
+            flushedConversationIds.forEach(convId => {
+              queryClient.invalidateQueries({ queryKey: ['messages', convId] });
+            });
+          }, 3000);
+        }
+      }).catch(err => console.error('Failed to load socket service for sync', err));
+    };
+
+    // Delay initial flush so WebSocket subscriptions can re-establish first
+    const initialTimer = setTimeout(flushOutbox, 1500);
+    // Periodic retry for any items that failed to send
+    const retryTimer = setInterval(flushOutbox, 15000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(retryTimer);
+    };
+  }, [socketConnected, isAuthenticated, queryClient]);
+
   // Auth page should not show real-time failure toasts or keep reconnect loops alive.
   useEffect(() => {
     if (location.pathname.toLowerCase().startsWith('/auth')) {
@@ -115,7 +189,7 @@ const App = () => {
       if (!isAuthenticated) {
         import('./services/socketService')
           .then((m) => m.socketService.disconnect())
-          .catch(() => {});
+          .catch(() => { });
       }
     }
   }, [location.pathname, isAuthenticated]);

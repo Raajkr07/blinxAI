@@ -1,9 +1,7 @@
 package com.blink.chatservice.mcp.tool;
 
-import com.blink.chatservice.user.entity.User;
+import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
 import com.blink.chatservice.user.service.OAuthService;
-import com.blink.chatservice.user.service.UserService;
-import com.blink.chatservice.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -21,8 +19,7 @@ public class ReplyEmailTool implements McpTool {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final OAuthService oAuthService;
-    private final UserService userService;
-    private final UserRepository userRepository;
+    private final UserLookupHelper userLookupHelper;
     private final RestClient restClient = RestClient.create();
 
     @Override
@@ -32,7 +29,7 @@ public class ReplyEmailTool implements McpTool {
 
     @Override
     public String description() {
-        return "Reply to a specific Gmail email thread. Requires threadId from read_emails.";
+        return "Reply to a Gmail email thread. Match the tone of the original email. Write naturally in Indian English, not like a robot.";
     }
 
     @Override
@@ -45,7 +42,7 @@ public class ReplyEmailTool implements McpTool {
                 "to", Map.of("type", "string", "description", "Recipient email address"),
                 "subject", Map.of("type", "string", "description", "Subject line (usually 'Re: original subject')"),
                 "body", Map.of("type", "string", "description",
-                    "Reply content. Use [Recipient Name] and [Your Name] as placeholders."),
+                    "Reply content in natural Indian English. Match the sender's tone — casual reply to casual email, formal to formal. Keep it brief (2-5 lines). No boilerplate. Use [Recipient Name] and [Your Name] as placeholders."),
                 "inReplyTo", Map.of("type", "string", "description", "Original Message-ID header for threading")
             ),
             "required", List.of("threadId", "to", "subject", "body")
@@ -53,37 +50,22 @@ public class ReplyEmailTool implements McpTool {
     }
 
     @Override
-    public Map<String, Object> execute(String userId, Map<Object, Object> arguments) {
+    public Map<String, Object> execute(String userId, Map<String, Object> arguments) {
         String threadId = (String) arguments.get("threadId");
-        String messageId = (String) arguments.get("messageId");
         String to = (String) arguments.get("to");
         String subject = (String) arguments.getOrDefault("subject", "(No Subject)");
         String body = (String) arguments.getOrDefault("body", "");
         String inReplyTo = (String) arguments.get("inReplyTo");
 
         if (to == null || to.isBlank()) {
-            throw new IllegalArgumentException("Recipient (to) is required");
+            return Map.of("success", false, "message", "Recipient (to) is required.");
         }
         if (threadId == null || threadId.isBlank()) {
-            throw new IllegalArgumentException("Thread ID is required for replying");
+            return Map.of("success", false, "message", "Thread ID is required for replying.");
         }
 
-        // Resolve name placeholders
-        User sender = userService.getProfile(userId);
-        Optional<User> recipient = userRepository.findFirstByEmail(to.trim().toLowerCase());
-
-        String finalBody = body;
-        if (sender != null && sender.getUsername() != null) {
-            String name = sender.getUsername();
-            finalBody = finalBody.replace("[Your Name]", name);
-            finalBody = finalBody.replace("{{Your Name}}", name);
-        }
-        if (recipient.isPresent() && recipient.get().getUsername() != null) {
-            String name = recipient.get().getUsername();
-            finalBody = finalBody.replace("[Recipient's Name]", name);
-            finalBody = finalBody.replace("[Recipient Name]", name);
-            finalBody = finalBody.replace("{{Recipient Name}}", name);
-        }
+        // Resolve name placeholders using helper
+        String finalBody = userLookupHelper.resolveNamePlaceholders(body, userId, to);
 
         try {
             log.info("Replying to email thread {} for user: {} to: {}", threadId, userId, to);
@@ -130,9 +112,31 @@ public class ReplyEmailTool implements McpTool {
 
             return Map.of("success", true, "message", "Reply successfully sent to " + to + " in thread " + threadId);
 
+        } catch (IllegalArgumentException e) {
+            // No Google credentials linked
+            log.warn("No Google credentials for user {}: {}", userId, e.getMessage());
+            return Map.of("success", false,
+                "message", "You don't have permission to send emails. Please link your Google account in Settings to grant email access.",
+                "error_type", "PERMISSION_DENIED");
         } catch (Exception e) {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Gmail reply failed for user: {}. Thread: {}. Error: {}", userId, threadId, errMsg, e);
+
+            // Check for permission/auth errors from Google API
+            if (isPermissionError(errMsg)) {
+                messagingTemplate.convertAndSend("/topic/user/" + userId + "/actions", Map.of(
+                    "type", "REPLY_EMAIL_REQUEST",
+                    "payload", Map.of(
+                        "to", to,
+                        "subject", subject,
+                        "error", "Permission denied"
+                    )
+                ));
+                return Map.of("success", false,
+                    "message", "You don't have permission to send emails. Please re-link your Google account in Settings to grant email access.",
+                    "error_type", "PERMISSION_DENIED");
+            }
+
             messagingTemplate.convertAndSend("/topic/user/" + userId + "/actions", Map.of(
                 "type", "REPLY_EMAIL_REQUEST",
                 "payload", Map.of(
@@ -145,5 +149,12 @@ public class ReplyEmailTool implements McpTool {
             ));
             return Map.of("success", false, "message", "Failed to send reply: " + errMsg);
         }
+    }
+
+    private boolean isPermissionError(String errMsg) {
+        return errMsg.contains("403") || errMsg.contains("401")
+                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
+                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
+                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
     }
 }

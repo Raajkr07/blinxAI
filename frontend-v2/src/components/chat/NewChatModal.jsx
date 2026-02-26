@@ -63,6 +63,8 @@ export function NewChatModal({ open, onOpenChange }) {
                         Search Users
                     </label>
                     <Input
+                        id="new-chat-search"
+                        name="userSearch"
                         placeholder="Type a name or email…"
                         value={searchQuery}
                         onChange={(e) => handleSearch(e.target.value)}
