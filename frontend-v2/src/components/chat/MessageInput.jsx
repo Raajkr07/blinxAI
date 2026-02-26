@@ -8,7 +8,6 @@ import { Button, Textarea } from '../ui';
 import { AutoReplySuggestions } from './AutoReplySuggestions';
 import { generateId } from '../../lib/utils';
 import toast from 'react-hot-toast';
-import { reportErrorOnce } from '../../lib/reportError';
 
 export function MessageInput({ conversationId }) {
     const [message, setMessage] = useState('');
@@ -63,7 +62,6 @@ export function MessageInput({ conversationId }) {
 
     // Check if this is an AI conversation
     const isAiChat = aiConversation?.id && conversationId === aiConversation.id;
-    const { addTypingUser, removeTypingUser } = useChatStore();
 
     const sendMessageMutation = useMutation({
         mutationFn: async ({ body, tempId }) => {
