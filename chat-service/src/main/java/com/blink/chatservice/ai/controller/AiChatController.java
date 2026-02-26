@@ -4,27 +4,23 @@ import com.blink.chatservice.ai.config.AiConstants;
 import com.blink.chatservice.ai.service.AiService;
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
-import com.blink.chatservice.mcp.registry.McpToolRegistry;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import com.blink.chatservice.mcp.tool.McpTool;
 
 @RestController
 @RequestMapping("/api/v1/ai")
-@RequiredArgsConstructor
 public class AiChatController {
 
     private final AiService aiService;
-    private final McpToolRegistry mcpToolRegistry;
+
+    public AiChatController(AiService aiService) {
+        this.aiService = aiService;
+    }
 
     @PostMapping("/chat")
     public ResponseEntity<Message> chat(Authentication auth, @RequestBody ChatRequest request) {

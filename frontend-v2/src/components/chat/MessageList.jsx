@@ -49,11 +49,11 @@ function DateSeparator({ label }) {
     return (
         <div className="flex items-center justify-center my-4 select-none pointer-events-none">
             <div className="flex items-center gap-3 w-full max-w-xs">
-                <div className="flex-1 h-px bg-[var(--color-border)]" />
-                <span className="text-[11px] font-medium tracking-wide uppercase text-[var(--color-gray-500)] bg-[var(--color-background)] px-3 py-1 rounded-full border border-[var(--color-border)] whitespace-nowrap">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[11px] font-medium tracking-wide uppercase text-gray-500 bg-background px-3 py-1 rounded-full border border-border whitespace-nowrap">
                     {label}
                 </span>
-                <div className="flex-1 h-px bg-[var(--color-border)]" />
+                <div className="flex-1 h-px bg-border" />
             </div>
         </div>
     );
@@ -494,7 +494,7 @@ export function MessageList({ conversationId }) {
 
                 {isFetchingNextPage && (
                     <div className="flex justify-center p-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-primary)]"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-(--color-primary)"></div>
                     </div>
                 )}
 
@@ -575,7 +575,7 @@ function renderMessageWithLinks(text, isOwn) {
                 className={cn(
                     "underline hover:opacity-80 transition-opacity",
                     isOwn
-                        ? "text-[var(--color-background)]"
+                        ? "text-background"
                         : "text-blue-600 dark:text-blue-400"
                 )}
                 onClick={(e) => e.stopPropagation()}
@@ -653,7 +653,7 @@ function MessageBubble({
             onMouseLeave={() => setIsHovered(false)}
         >
             {showAvatar && (
-                <div className="flex-shrink-0 mt-auto mb-1">
+                <div className="shrink-0 mt-auto mb-1">
                     <Avatar
                         src={message.senderId === 'ai-assistant' ? null : displayAvatar}
                         name={displayName}
@@ -672,7 +672,7 @@ function MessageBubble({
                 )}
             >
                 {!isOwn && displayName && (isGroup || isAI) && (
-                    <span className="text-xs text-[var(--color-gray-500)] px-4">
+                    <span className="text-xs text-gray-500 px-4">
                         {displayName}
                     </span>
                 )}
@@ -681,10 +681,10 @@ function MessageBubble({
                     <div
                         className={cn(
                             'px-4 py-2 rounded-2xl',
-                            'break-words',
+                            'wrap-break-word',
                             isOwn
-                                ? 'bg-[var(--color-foreground)] text-[var(--color-background)] rounded-br-sm'
-                                : 'bg-[var(--color-border)] rounded-bl-sm text-[var(--color-foreground)]'
+                                ? 'bg-foreground text-background rounded-br-sm'
+                                : 'bg-border rounded-bl-sm text-foreground'
                         )}
                     >
                         <div className="text-sm whitespace-pre-wrap">
@@ -703,8 +703,8 @@ function MessageBubble({
                             <span className={cn(
                                 'text-xs',
                                 isOwn
-                                    ? 'text-[var(--color-background)]/60'
-                                    : 'text-[var(--color-foreground)]/60'
+                                    ? 'text-background/60'
+                                    : 'text-foreground/60'
                             )}>
                                 {formatTime(message.createdAt)}
                             </span>
@@ -712,8 +712,8 @@ function MessageBubble({
                                 <span className={cn(
                                     'text-xs',
                                     isOwn
-                                        ? 'text-[var(--color-background)]/60'
-                                        : 'text-[var(--color-foreground)]/60'
+                                        ? 'text-background/60'
+                                        : 'text-foreground/60'
                                 )}>
                                     {isOptimistic ? (
                                         <span>• Sending...</span>
@@ -729,7 +729,7 @@ function MessageBubble({
 
                     {!isOptimistic && showDeleteConfirm && (
                         <div className={cn(
-                            "absolute z-10 bg-[var(--color-background)] border border-[var(--color-border)] shadow-xl capitalize rounded-lg p-2 flex items-center gap-2 mb-2",
+                            "absolute z-10 bg-background border border-border shadow-xl capitalize rounded-lg p-2 flex items-center gap-2 mb-2",
                             isOwn ? "right-0 bottom-full" : "left-0 bottom-full"
                         )}>
                             <span className="text-xs font-medium whitespace-nowrap px-1">Delete?</span>
@@ -743,7 +743,7 @@ function MessageBubble({
                             </button>
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="p-1 rounded bg-[var(--color-border)] hover:bg-[var(--color-gray-500)] text-[var(--color-foreground)] transition-colors"
+                                className="p-1 rounded bg-border hover:bg-gray-500 text-foreground transition-colors"
                             >
                                 <svg width="14" height="14" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M11.7816 4.03157C12.0062 3.80702 12.0062 3.44295 11.7816 3.2184C11.5571 2.99385 11.193 2.99385 10.9685 3.2184L7.50005 6.68682L4.03164 3.2184C3.80708 2.99385 3.44301 2.99385 3.21846 3.2184C2.99391 3.44295 2.99391 3.80702 3.21846 4.03157L6.68688 7.49999L3.21846 10.9684C2.99391 11.193 2.99391 11.557 3.21846 11.7816C3.44301 12.0061 3.80708 12.0061 4.03164 11.7816L7.50005 8.31316L10.9685 11.7816C11.193 12.0061 11.5571 12.0061 11.7816 11.7816C12.0062 11.557 12.0062 11.193 11.7816 10.9684L8.31322 7.49999L11.7816 4.03157Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>

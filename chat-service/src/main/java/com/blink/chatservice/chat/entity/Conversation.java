@@ -40,4 +40,8 @@ public class Conversation {
     private LocalDateTime lastMessageAt;
     private LocalDateTime createdAt = LocalDateTime.now(UTC);
     private LocalDateTime updatedAt = LocalDateTime.now(UTC);
+
+    public String getId() {
+        return id;
+    }
 }

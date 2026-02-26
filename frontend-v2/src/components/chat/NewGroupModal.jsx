@@ -105,8 +105,8 @@ export function NewGroupModal({ open, onOpenChange }) {
                             </div>
                         </div>
 
-                        <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
-                            <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Group Name</label>
+                        <div className="rounded-2xl bg-white/3 border border-white/5 p-4">
+                            <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Group Name</label>
                             <Input
                                 id="new-group-name"
                                 name="groupName"
@@ -125,7 +125,7 @@ export function NewGroupModal({ open, onOpenChange }) {
                     <div className="space-y-4">
                         {/* Selected chips */}
                         {selectedMembers.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                            <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-white/3 border border-white/5">
                                 {selectedMembers.map((member) => (
                                     <div key={member.id} className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
                                         <Avatar src={member.avatarUrl} name={member.username} size="xs" />
@@ -141,27 +141,27 @@ export function NewGroupModal({ open, onOpenChange }) {
                         )}
 
                         <div>
-                            <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1.5 block px-1">Search Users</label>
+                            <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1.5 block px-1">Search Users</label>
                             <Input
                                 id="new-group-search"
                                 name="memberSearch"
                                 placeholder="Type to search…"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="bg-white/[0.03] border-white/5 focus:border-blue-500/40 h-10"
+                                className="bg-white/3 border-white/5 focus:border-blue-500/40 h-10"
                                 leftIcon={
-                                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none" className="text-[var(--color-gray-500)]">
+                                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none" className="text-gray-500">
                                         <path d="M10 6.5C10 8.433 8.433 10 6.5 10C4.567 10 3 8.433 3 6.5C3 4.567 4.567 3 6.5 3C8.433 3 10 4.567 10 6.5ZM9.30884 10.0159C8.53901 10.6318 7.56251 11 6.5 11C4.01472 11 2 8.98528 2 6.5C2 4.01472 4.01472 2 6.5 2C8.98528 2 11 4.01472 11 6.5C11 7.56251 10.6318 8.53901 10.0159 9.30884L12.8536 12.1464C13.0488 12.3417 13.0488 12.6583 12.8536 12.8536C12.6583 13.0488 12.3417 13.0488 12.1464 12.8536L9.30884 10.0159Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd" />
                                     </svg>
                                 }
                             />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 min-h-[180px]">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 min-h-45">
                             {isSearching ? (
                                 <div className="text-center py-10">
                                     <div className="w-5 h-5 border-2 border-white/10 border-t-white/60 rounded-full animate-spin mx-auto mb-2" />
-                                    <p className="text-[10px] text-[var(--color-gray-500)]">Searching…</p>
+                                    <p className="text-[10px] text-gray-500">Searching…</p>
                                 </div>
                             ) : searchResults?.length > 0 ? (
                                 searchResults.map((user) => {
@@ -174,16 +174,16 @@ export function NewGroupModal({ open, onOpenChange }) {
                                                 'w-full p-3 flex items-center gap-3 rounded-xl transition-all border',
                                                 isSelected
                                                     ? 'bg-blue-500/10 border-blue-500/20'
-                                                    : 'bg-white/[0.02] border-transparent hover:border-white/5'
+                                                    : 'bg-white/2 border-transparent hover:border-white/5'
                                             )}
                                         >
                                             <Avatar src={user.avatarUrl} name={user.username} size="sm" />
                                             <div className="flex-1 text-left min-w-0">
-                                                <p className="text-xs font-semibold text-[var(--color-foreground)] truncate">{user.username}</p>
-                                                <p className="text-[10px] text-[var(--color-gray-500)]">{user.email || 'User'}</p>
+                                                <p className="text-xs font-semibold text-foreground truncate">{user.username}</p>
+                                                <p className="text-[10px] text-gray-500">{user.email || 'User'}</p>
                                             </div>
                                             <div className={cn(
-                                                "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center flex-shrink-0",
+                                                "w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center shrink-0",
                                                 isSelected ? "bg-blue-500 border-blue-500" : "border-white/20"
                                             )}>
                                                 {isSelected && (
@@ -196,7 +196,7 @@ export function NewGroupModal({ open, onOpenChange }) {
                                     );
                                 })
                             ) : searchQuery ? (
-                                <div className="text-center py-10 text-xs text-[var(--color-gray-500)]">No users found</div>
+                                <div className="text-center py-10 text-xs text-gray-500">No users found</div>
                             ) : null}
                         </div>
                     </div>
@@ -206,12 +206,12 @@ export function NewGroupModal({ open, onOpenChange }) {
             <ModalFooter>
                 {step === 'details' ? (
                     <>
-                        <Button variant="ghost" onClick={handleClose} className="text-xs font-medium text-[var(--color-gray-400)]">Cancel</Button>
+                        <Button variant="ghost" onClick={handleClose} className="text-xs font-medium text-gray-400">Cancel</Button>
                         <Button variant="default" onClick={handleNext} className="text-xs font-semibold h-9 px-6">Next</Button>
                     </>
                 ) : (
                     <>
-                        <Button variant="ghost" onClick={handleBack} className="text-xs font-medium text-[var(--color-gray-400)]">Back</Button>
+                        <Button variant="ghost" onClick={handleBack} className="text-xs font-medium text-gray-400">Back</Button>
                         <Button
                             variant="default"
                             onClick={handleCreateGroup}

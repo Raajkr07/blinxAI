@@ -1,7 +1,6 @@
 package com.blink.chatservice.websocket.controller;
 
 import com.blink.chatservice.ai.service.AiService;
-import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.service.ChatService;
 import com.blink.chatservice.websocket.dto.RealtimeMessageRequest;
 import com.blink.chatservice.websocket.dto.TypingRequest;
@@ -59,7 +58,7 @@ public class ChatWsController {
                 try {
                     // processAiMessage now calls chatService.sendMessage internally, which handles broadcasting.
                     aiService.processAiMessage(userId, conversationId, request.body(), false);
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     log.error("AI chat processing failed", e);
                 } finally {
                     messagingTemplate.convertAndSend("/topic/conversations/" + conversationId + "/typing", new TypingResponse(conversationId, "ai-assistant", false));

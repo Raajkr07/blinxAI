@@ -79,8 +79,8 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                 </div>
 
                 {/* File Name */}
-                <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
-                    <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">File Name</label>
+                <div className="rounded-2xl bg-white/3 border border-white/5 p-4">
+                    <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">File Name</label>
                     <Input
                         id="file-name"
                         name="fileName"
@@ -94,11 +94,11 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                 {/* Preview */}
                 {content && (
                     <div>
-                        <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-2 block px-1">
+                        <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-2 block px-1">
                             Preview
                         </label>
                         <div className="p-4 rounded-2xl bg-black/30 border border-white/5 max-h-40 overflow-y-auto custom-scrollbar">
-                            <pre className="text-[11px] font-mono text-[var(--color-gray-400)] leading-relaxed whitespace-pre-wrap">
+                            <pre className="text-[11px] font-mono text-gray-400 leading-relaxed whitespace-pre-wrap">
                                 {content.length > 800 ? content.substring(0, 800) + '…' : content}
                             </pre>
                         </div>
@@ -110,7 +110,7 @@ export function FilePermissionModal({ isOpen, onApprove, onDeny, fileInfo }) {
                 <Button
                     onClick={onDeny}
                     variant="ghost"
-                    className="text-xs font-medium text-[var(--color-gray-400)]"
+                    className="text-xs font-medium text-gray-400"
                     disabled={isSaving}
                 >
                     Cancel

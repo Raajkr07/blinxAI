@@ -90,15 +90,15 @@ export function SettingsModal({ open, onOpenChange }) {
                                 className="w-24 h-24 ring-2 ring-white/10 shadow-xl"
                             />
                         </div>
-                        <p className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)]">Profile photo</p>
+                        <p className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">Profile photo</p>
                     </div>
 
                     {/* Profile */}
                     <section>
-                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] mb-3 px-1">Profile</h4>
-                        <div className="rounded-2xl bg-white/[0.03] border border-white/5 divide-y divide-white/5">
+                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 mb-3 px-1">Profile</h4>
+                        <div className="rounded-2xl bg-white/3 border border-white/5 divide-y divide-white/5">
                             <div className="p-4">
-                                <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Username</label>
+                                <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Username</label>
                                 <Input
                                     id="settings-username"
                                     name="username"
@@ -110,7 +110,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                 />
                             </div>
                             <div className="p-4">
-                                <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Bio</label>
+                                <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Bio</label>
                                 <Input
                                     id="settings-bio"
                                     name="bio"
@@ -121,7 +121,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                 />
                             </div>
                             <div className="p-4">
-                                <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Avatar URL</label>
+                                <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Avatar URL</label>
                                 <Input
                                     id="settings-avatar-url"
                                     name="avatarUrl"
@@ -136,10 +136,10 @@ export function SettingsModal({ open, onOpenChange }) {
 
                     {/* Contact */}
                     <section>
-                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] mb-3 px-1">Contact</h4>
-                        <div className="rounded-2xl bg-white/[0.03] border border-white/5 divide-y divide-white/5">
+                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 mb-3 px-1">Contact</h4>
+                        <div className="rounded-2xl bg-white/3 border border-white/5 divide-y divide-white/5">
                             <div className="p-4">
-                                <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Email</label>
+                                <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Email</label>
                                 <Input
                                     id="settings-email"
                                     name="email"
@@ -151,7 +151,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                 />
                             </div>
                             <div className="p-4">
-                                <label className="text-[10px] uppercase font-medium tracking-wider text-[var(--color-gray-500)] mb-1 block">Phone</label>
+                                <label className="text-[10px] uppercase font-medium tracking-wider text-gray-500 mb-1 block">Phone</label>
                                 <Input
                                     id="settings-phone"
                                     name="phone"
@@ -166,8 +166,8 @@ export function SettingsModal({ open, onOpenChange }) {
 
                     {/* Google Account */}
                     <section>
-                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] mb-3 px-1">Google Account</h4>
-                        <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4 space-y-3">
+                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 mb-3 px-1">Google Account</h4>
+                        <div className="rounded-2xl bg-white/3 border border-white/5 p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
@@ -179,8 +179,8 @@ export function SettingsModal({ open, onOpenChange }) {
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-[var(--color-foreground)]">Google</p>
-                                        <p className="text-[10px] text-[var(--color-gray-500)]">Used for email & calendar</p>
+                                        <p className="text-xs font-semibold text-foreground">Google</p>
+                                        <p className="text-[10px] text-gray-500">Used for email & calendar</p>
                                     </div>
                                 </div>
                             </div>
@@ -191,7 +191,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                     size="sm"
                                     onClick={handleDisconnectGoogle}
                                     loading={isDisconnectingGoogle}
-                                    className="text-[10px] font-semibold text-[var(--color-gray-400)] h-8 px-3"
+                                    className="text-[10px] font-semibold text-gray-400 h-8 px-3"
                                 >
                                     Disconnect
                                 </Button>
@@ -211,12 +211,12 @@ export function SettingsModal({ open, onOpenChange }) {
 
                     {/* Preferences */}
                     <section>
-                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-[var(--color-gray-500)] mb-3 px-1">Preferences</h4>
-                        <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                        <h4 className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 mb-3 px-1">Preferences</h4>
+                        <div className="rounded-2xl bg-white/3 border border-white/5 p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold text-[var(--color-foreground)]">AI Suggestions</p>
-                                    <p className="text-[10px] text-[var(--color-gray-500)] mt-0.5">Show smart reply suggestions in chat</p>
+                                    <p className="text-xs font-semibold text-foreground">AI Suggestions</p>
+                                    <p className="text-[10px] text-gray-500 mt-0.5">Show smart reply suggestions in chat</p>
                                 </div>
                                 <button
                                     type="button"
@@ -228,7 +228,7 @@ export function SettingsModal({ open, onOpenChange }) {
                                 >
                                     <span className={cn(
                                         "pointer-events-none h-4 w-4 transform rounded-full bg-white shadow transition duration-200 mt-0.5",
-                                        showAISuggestions ? "translate-x-[18px]" : "translate-x-0.5"
+                                        showAISuggestions ? "translate-x-4.5" : "translate-x-0.5"
                                     )} />
                                 </button>
                             </div>
@@ -240,7 +240,7 @@ export function SettingsModal({ open, onOpenChange }) {
                     <Button
                         variant="ghost"
                         onClick={() => onOpenChange(false)}
-                        className="text-xs font-medium text-[var(--color-gray-400)]"
+                        className="text-xs font-medium text-gray-400"
                     >
                         Cancel
                     </Button>

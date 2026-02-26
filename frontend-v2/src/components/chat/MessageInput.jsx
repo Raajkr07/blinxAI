@@ -251,7 +251,7 @@ export function MessageInput({ conversationId }) {
                             }
                         }}
                         placeholder="Type a message..."
-                        className="h-12 min-h-[48px]"
+                        className="min-h-12 h-12"
                     />
                 </div>
                 <Button

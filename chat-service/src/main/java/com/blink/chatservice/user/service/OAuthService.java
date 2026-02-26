@@ -10,8 +10,8 @@ import com.blink.chatservice.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.encrypt.Encryptors;
@@ -33,20 +33,40 @@ import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class OAuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(OAuthService.class);
 
     private final GoogleOAuthConfig googleConfig;
     private final UserRepository userRepository;
     private final OAuth2CredentialRepository credentialRepository;
     private final StringRedisTemplate redisTemplate;
     private final JwtUtil jwtUtil;
+    @SuppressWarnings("unused")
     private final JwtConfig jwtConfig;
     private final RestClient restClient = RestClient.create();
+    @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
 
     private TextEncryptor encryptor;
+
+    public OAuthService(
+            GoogleOAuthConfig googleConfig,
+            UserRepository userRepository,
+            OAuth2CredentialRepository credentialRepository,
+            StringRedisTemplate redisTemplate,
+            JwtUtil jwtUtil,
+            JwtConfig jwtConfig,
+            ObjectMapper objectMapper
+    ) {
+        this.googleConfig = googleConfig;
+        this.userRepository = userRepository;
+        this.credentialRepository = credentialRepository;
+        this.redisTemplate = redisTemplate;
+        this.jwtUtil = jwtUtil;
+        this.jwtConfig = jwtConfig;
+        this.objectMapper = objectMapper;
+    }
 
     @PostConstruct
     public void init() {

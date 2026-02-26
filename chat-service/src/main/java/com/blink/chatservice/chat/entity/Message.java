@@ -31,4 +31,20 @@ public class Message {
     private LocalDateTime createdAt = LocalDateTime.now(UTC);
     private boolean seen = false;
     private boolean deleted = false;
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getSenderId() {
+        return senderId;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public String getConversationId() {
+        return conversationId;
+    }
 }

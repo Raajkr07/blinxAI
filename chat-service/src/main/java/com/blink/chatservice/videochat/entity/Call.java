@@ -1,5 +1,7 @@
 package com.blink.chatservice.videochat.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,6 +16,8 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Document(collection = "calls")
 public class Call {
 
@@ -32,6 +36,8 @@ public class Call {
     private LocalDateTime startedAt;
     private LocalDateTime answeredAt;
     private LocalDateTime endedAt;
+
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now(ZoneId.of("UTC"));
 
     private String conversationId;

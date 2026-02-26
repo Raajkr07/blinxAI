@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -31,50 +31,64 @@ import org.springframework.web.client.RestTemplate;
 		RedisAutoConfiguration.class,
 		RedisRepositoriesAutoConfiguration.class
 })
+@SuppressWarnings("unused")
 class ChatServiceApplicationTests {
 
-	@MockBean
+	@MockitoBean
 	private EmailService emailService;
 
-	@MockBean
+	@MockitoBean
 	private SimpMessagingTemplate simpMessagingTemplate;
 
-	@MockBean
+	@MockitoBean
 	private StringRedisTemplate redisTemplate;
 
-	@MockBean
+	@MockitoBean
 	private RedisConnectionFactory redisConnectionFactory;
 
-	@MockBean
+	@MockitoBean
 	private ConversationRepository conversationRepository;
 
-	@MockBean
+	@MockitoBean
 	private MessageRepository messageRepository;
 
-	@MockBean
+	@MockitoBean
 	private UserRepository userRepository;
 
-	@MockBean
+	@MockitoBean
 	private OAuth2CredentialRepository oAuth2CredentialRepository;
 
-	@MockBean
+	@MockitoBean
 	private RefreshTokenRepository refreshTokenRepository;
 
-	@MockBean
+	@MockitoBean
 	private CallRepository callRepository;
 
-	@MockBean(name = "aiRestTemplate")
+	@MockitoBean(name = "aiRestTemplate")
 	private RestTemplate aiRestTemplate;
 
 	// Mocking MongoTemplate is required because HealthCheckController dependency
 	// relies on it, but Mongo auto-configuration is excluded in this test slice.
-	@MockBean
+	@MockitoBean
 	private MongoTemplate mongoTemplate;
 
-	@MockBean
+	@MockitoBean
 	private MongoDatabaseFactory mongoDatabaseFactory;
 
 	@Test
 	void contextLoads() {
+		org.assertj.core.api.Assertions.assertThat(emailService).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(simpMessagingTemplate).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(redisTemplate).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(redisConnectionFactory).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(conversationRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(messageRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(userRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(oAuth2CredentialRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(refreshTokenRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(callRepository).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(aiRestTemplate).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(mongoTemplate).isNotNull();
+		org.assertj.core.api.Assertions.assertThat(mongoDatabaseFactory).isNotNull();
 	}
 }

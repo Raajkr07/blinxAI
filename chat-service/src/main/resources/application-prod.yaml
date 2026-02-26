@@ -164,17 +164,17 @@ web:
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n"
+    console: "{\"timestamp\":\"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}\",\"level\":\"%level\",\"logger\":\"%logger{36}\",\"correlationId\":\"%X{correlationId}\",\"message\":\"%msg\"}%n"
   level:
     root: WARN
     com.blink.chatservice: INFO
-    org.springframework.web: WARN
-    org.springframework.web.socket.config: WARN
-    org.springframework.web.socket.messaging: WARN
-    org.springframework.messaging.simp.broker: WARN
-    org.apache.catalina.core: WARN
-    io.lettuce.core: WARN
-    org.mongodb.driver: WARN
+    org.springframework.web: INFO
+    org.springframework.web.socket.config: INFO
+    org.springframework.web.socket.messaging: INFO
+    org.springframework.messaging.simp.broker: INFO
+    org.apache.catalina.core: INFO
+    io.lettuce.core: INFO
+    org.mongodb.driver: INFO
 
 resilience4j:
   circuitbreaker:

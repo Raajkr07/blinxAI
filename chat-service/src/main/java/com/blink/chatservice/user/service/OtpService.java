@@ -1,19 +1,19 @@
 package com.blink.chatservice.user.service;
 
-import com.blink.chatservice.exception.GlobalExceptionHandler;
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
 import java.time.Duration;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 public class OtpService {
 
     private final RedisTemplate<String, String> redisTemplate;
+
+    public OtpService(RedisTemplate<String, String> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     private static final int OTP_LENGTH = 6;
     private static final int MAX_ATTEMPTS = 3;
