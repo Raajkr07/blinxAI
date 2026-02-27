@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
@@ -89,7 +90,13 @@ public class AiIncognitoService {
         userConfigs.clear();
     }
 
+    @CircuitBreaker(name = "aiIncognitoService", fallbackMethod = "processIncognitoMessageFallback")
     public String processIncognitoMessage(String userId, String userMessage) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.error("AI API key is not configured — cannot process incognito chat");
+            return "Sorry, I lost my connection. But since we are incognito, even my failure is a secret!";
+        }
+
         TimestampedConfig timestamped = userConfigs.get(userId);
         IncognitoConfig config = (timestamped != null && timestamped.createdAt().plus(CONFIG_TTL).isAfter(Instant.now()))
                 ? timestamped.config()
@@ -113,6 +120,12 @@ public class AiIncognitoService {
         return "Sorry, I lost my connection. But since we are incognito, even my failure is a secret!";
     }
 
+    @SuppressWarnings("unused")
+    private String processIncognitoMessageFallback(String userId, String userMessage, Throwable t) {
+        log.warn("Incognito AI circuit breaker open for user {}: {}", userId, t.getMessage());
+        return "Sorry, I lost my connection. But since we are incognito, even my failure is a secret!";
+    }
+
     private OpenAiResponse callApi(List<Map<String, String>> messages) {
         return callApi(messages, 1500, 0.9);
     }
@@ -128,10 +141,15 @@ public class AiIncognitoService {
         headers.setBearerAuth(apiKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.postForObject(
-                baseUrl + "/v1/chat/completions",
-                new HttpEntity<>(body, headers),
-                OpenAiResponse.class);
+        try {
+            return restTemplate.postForObject(
+                    baseUrl + "/v1/chat/completions",
+                    new HttpEntity<>(body, headers),
+                    OpenAiResponse.class);
+        } catch (Exception e) {
+            log.error("Incognito AI API call failed: {}", e.getMessage());
+            return null;
+        }
     }
 
     private String buildPrompt(IncognitoConfig config) {

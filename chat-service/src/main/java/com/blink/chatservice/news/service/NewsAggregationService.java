@@ -37,6 +37,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 import com.rometools.rome.feed.synd.SyndEnclosure;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
@@ -119,6 +121,7 @@ public class NewsAggregationService {
         httpExecutor.shutdownNow();
     }
 
+    @CircuitBreaker(name = "newsService", fallbackMethod = "getFeedPageFallback")
     public FeedPage getFeedPage(List<String> sources, int offset, int limit) {
         if (sources == null || sources.isEmpty()) return new FeedPage(List.of(), null);
         if (offset < 0) offset = 0;
@@ -133,6 +136,12 @@ public class NewsAggregationService {
         List<NewsItem> page = new ArrayList<>(all.subList(from, to));
         Integer next = to < all.size() ? to : null;
         return new FeedPage(page, next);
+    }
+
+    @SuppressWarnings("unused")
+    private FeedPage getFeedPageFallback(List<String> sources, int offset, int limit, Throwable t) {
+        log.warn("News feed circuit breaker open: {}", t.getMessage());
+        return new FeedPage(List.of(), null);
     }
 
     public List<NewsItem> getFeed(List<String> sources, int limit) {

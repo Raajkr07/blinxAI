@@ -6,7 +6,7 @@ metadata:
   labels:
     app: chat-service
 data:
-  SPRING_PROFILES_ACTIVE: "docker"
+  SPRING_PROFILES_ACTIVE: "prod"
   SERVER_PORT: "8080"
   SPRING_DATA_MONGODB_DATABASE: "blinx_chat"
   

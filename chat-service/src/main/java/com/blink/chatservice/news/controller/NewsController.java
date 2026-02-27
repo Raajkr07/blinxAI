@@ -13,8 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.blink.chatservice.news.service.NewsAggregationService;
 import com.blink.chatservice.news.service.NewsAggregationService.NewsItem;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/news")
+@Tag(name = "News Feed", description = "Aggregated news feed from RSS/Atom sources")
 public class NewsController {
 
     private final NewsAggregationService newsAggregationService;
@@ -26,6 +32,7 @@ public class NewsController {
     public record NewsFeedRequest(List<String> sources, Integer limit, Integer offset) {}
     public record NewsFeedResponse(List<NewsItem> items, Integer nextOffset) {}
 
+    @Operation(summary = "Get news feed", description = "Fetch paginated news items from the provided RSS/Atom sources")
     @PostMapping("/feed")
     public ResponseEntity<NewsFeedResponse> getFeed(Authentication auth, @RequestBody NewsFeedRequest request) {
         if (auth == null || auth.getName() == null) {
@@ -50,7 +57,12 @@ public class NewsController {
         // Encourage pagination: keep page size bounded.
         if (limit > 50) limit = 50;
 
-        NewsAggregationService.FeedPage page = newsAggregationService.getFeedPage(sources, offset, limit);
-        return ResponseEntity.ok(new NewsFeedResponse(page.items(), page.nextOffset()));
+        try {
+            NewsAggregationService.FeedPage page = newsAggregationService.getFeedPage(sources, offset, limit);
+            return ResponseEntity.ok(new NewsFeedResponse(page.items(), page.nextOffset()));
+        } catch (Exception e) {
+            log.error("News feed failed: {}", e.getMessage(), e);
+            return ResponseEntity.ok(new NewsFeedResponse(List.of(), null));
+        }
     }
 }
