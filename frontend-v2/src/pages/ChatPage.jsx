@@ -126,46 +126,61 @@ const ChatPage = () => {
                         <SidebarHeader>
                             <div
                                 className={cn(
-                                    "flex items-center gap-3 cursor-pointer hover:bg-white/5 rounded-lg transition-colors",
-                                    isSidebarCollapsed ? "justify-center p-1" : "flex-1 p-2"
+                                    "flex items-center cursor-pointer hover:bg-white/5 rounded-lg transition-all duration-1000 overflow-hidden flex-shrink-0",
+                                    isSidebarCollapsed ? "justify-center p-0 gap-0 w-10 h-10" : "flex-1 p-2 gap-3 w-auto"
                                 )}
                                 onClick={() => setShowSettingsModal(true)}
                                 title={isSidebarCollapsed ? user?.username : undefined}
                             >
                                 <Avatar src={user?.avatarUrl} name={user?.username} size="sm" online />
-                                {!isSidebarCollapsed && (
-                                    <div className="flex-1 min-w-0">
+                                <div className={cn(
+                                    "grid transition-all duration-1000 pointer-events-none",
+                                    isSidebarCollapsed ? "grid-cols-[0fr] opacity-0" : "flex-1 grid-cols-[1fr] opacity-100"
+                                )}>
+                                    <div className="overflow-hidden whitespace-nowrap">
                                         <h2 className="font-semibold text-sm truncate">{user?.username}</h2>
                                         <p className="text-xs text-[var(--color-gray-500)]">Online</p>
                                     </div>
-                                )}
+                                </div>
                             </div>
 
-                            {!isSidebarCollapsed && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={toggleCallsView}
-                                    className={cn(activeView === 'calls' && "bg-blue-500/10 text-blue-500")}
-                                >
-                                    {activeView === 'calls' ? <BackIcon /> : <PhoneIcon />}
-                                </Button>
-                            )}
+                            <div className={cn(
+                                "transition-all duration-1000 flex-shrink-0 origin-right overflow-hidden flex items-center",
+                                isSidebarCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-10 opacity-100 ml-1"
+                            )}>
+                                <div className="w-10 flex-shrink-0">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={toggleCallsView}
+                                        className={cn(activeView === 'calls' && "bg-blue-500/10 text-blue-500", "w-full")}
+                                    >
+                                        {activeView === 'calls' ? <BackIcon /> : <PhoneIcon />}
+                                    </Button>
+                                </div>
+                            </div>
                         </SidebarHeader>
 
                         <div className={cn(
-                            "border-b border-white/5 flex flex-col gap-2 transition-all duration-300",
+                            "border-b border-white/5 flex flex-col gap-2 transition-all duration-1000",
                             isSidebarCollapsed ? "p-2 items-center" : "p-3"
                         )}>
                             <SimpleDropdown
                                 trigger={
                                     <Button
                                         variant="default"
-                                        className={cn("transition-all duration-300", isSidebarCollapsed ? "h-9 w-9 p-0" : "w-full h-10")}
+                                        className={cn("transition-all duration-1000 flex items-center overflow-hidden", isSidebarCollapsed ? "h-9 w-9 p-0 justify-center" : "w-full h-10 px-3 justify-start")}
                                         size="sm"
                                     >
-                                        <PlusIcon className={isSidebarCollapsed ? "" : "mr-2"} />
-                                        {!isSidebarCollapsed && "New Chat"}
+                                        <PlusIcon className={cn("flex-shrink-0 transition-all duration-1000", !isSidebarCollapsed && "mr-2")} />
+                                        <div className={cn(
+                                            "grid transition-all duration-1000 origin-left",
+                                            isSidebarCollapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
+                                        )}>
+                                            <span className="overflow-hidden whitespace-nowrap">
+                                                New Chat
+                                            </span>
+                                        </div>
                                     </Button>
                                 }
                                 align="start"
@@ -194,8 +209,8 @@ const ChatPage = () => {
                                 id="logout-button"
                                 variant="ghost"
                                 className={cn(
-                                    "transition-all duration-300",
-                                    isSidebarCollapsed ? "h-9 w-9 p-0 justify-center" : "w-full h-10 justify-start"
+                                    "transition-all duration-1000 flex items-center overflow-hidden",
+                                    isSidebarCollapsed ? "h-9 w-9 p-0 justify-center" : "w-full h-10 justify-start px-3"
                                 )}
                                 onClick={async () => {
                                     await logout();
@@ -203,8 +218,15 @@ const ChatPage = () => {
                                 }}
                                 title={isSidebarCollapsed ? "Logout" : undefined}
                             >
-                                <LogoutIcon className={cn("transition-all", isSidebarCollapsed ? "" : "mr-2")} />
-                                {!isSidebarCollapsed && "Logout"}
+                                <LogoutIcon className={cn("flex-shrink-0 transition-all duration-1000", !isSidebarCollapsed && "mr-2")} />
+                                <div className={cn(
+                                    "grid transition-all duration-1000 origin-left",
+                                    isSidebarCollapsed ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100"
+                                )}>
+                                    <span className="overflow-hidden whitespace-nowrap">
+                                        Logout
+                                    </span>
+                                </div>
                             </Button>
                         </SidebarFooter>
                     </Sidebar>

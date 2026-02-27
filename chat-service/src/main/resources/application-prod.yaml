@@ -2,9 +2,10 @@ spring:
   application:
     name: blinx-ai-chat-service
 
-  # Lazy-init beans to reduce startup memory and time
-  main:
-    lazy-initialization: true
+  # MEMORY FIX: Removed lazy-initialization. With lazy-init, beans are created
+  # on-demand which causes gradual Metaspace/classloader growth over days as new
+  # code paths are exercised. Eager init gives a predictable startup footprint
+  # and catches config errors at boot time.
   jmx:
     enabled: false
 
@@ -19,6 +20,8 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT}
       password: ${SPRING_DATA_REDIS_PASSWORD}
       timeout: 3000ms
+      repositories:
+        enabled: false
       lettuce:
         pool:
           max-active: ${REDIS_POOL_MAX_ACTIVE}
@@ -39,12 +42,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,info,metrics,prometheus,heapdump,threaddump
   endpoint:
     health:
       show-details: always
       probes:
         enabled: true
+    heapdump:
+      enabled: true
+    threaddump:
+      enabled: true
+  metrics:
+    tags:
+      application: blinx-chat-service
 
 # Disable Swagger in production to save ~30MB of memory
 springdoc:

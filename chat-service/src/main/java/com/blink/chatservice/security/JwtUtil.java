@@ -4,6 +4,7 @@ import com.blink.chatservice.config.JwtConfig;
 import com.blink.chatservice.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,8 @@ public class JwtUtil {
 
     private final JwtConfig jwtConfig;
 
-    // Cache the signing key – it never changes at runtime, so no need to recompute on every request.
     private volatile Key cachedKey;
+    private volatile JwtParser cachedParser;
 
     private Key getKey() {
         Key key = this.cachedKey;
@@ -37,6 +38,18 @@ public class JwtUtil {
                 this.cachedKey = Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
             }
             return this.cachedKey;
+        }
+    }
+
+    private JwtParser getParser() {
+        JwtParser parser = this.cachedParser;
+        if (parser != null) return parser;
+        synchronized (this) {
+            if (this.cachedParser != null) return this.cachedParser;
+            this.cachedParser = Jwts.parserBuilder()
+                    .setSigningKey(getKey())
+                    .build();
+            return this.cachedParser;
         }
     }
 
@@ -99,9 +112,7 @@ public class JwtUtil {
 
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
         try {
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getKey())
-                    .build()
+            Claims claims = getParser()
                     .parseClaimsJws(token)
                     .getBody();
             return resolver.apply(claims);
@@ -112,10 +123,7 @@ public class JwtUtil {
     
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getKey())
-                    .build()
-                    .parseClaimsJws(token);
+            getParser().parseClaimsJws(token);
             return true;
         } catch (Exception e) {
             // If parsing fails (expired, modified, etc.), we return false. Caller handles generic 401.

@@ -1,21 +1,25 @@
 package com.blink.chatservice.websocket;
 
-import com.blink.chatservice.user.entity.User;
-import com.blink.chatservice.user.repository.UserRepository;
-import com.blink.chatservice.websocket.dto.PresenceEvent;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-import org.springframework.web.socket.messaging.SessionConnectEvent;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
-
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.messaging.SessionConnectEvent;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+
+import com.blink.chatservice.user.entity.User;
+import com.blink.chatservice.user.repository.UserRepository;
+import com.blink.chatservice.websocket.dto.PresenceEvent;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class WebSocketPresenceListener {
@@ -25,7 +29,6 @@ public class WebSocketPresenceListener {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    @Async
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
@@ -33,14 +36,17 @@ public class WebSocketPresenceListener {
         if (principal == null) return;
 
         String userId = principal.getName();
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setOnline(true);
-            userRepository.save(user);
-            broadcastPresence(user);
-        });
+        try {
+            userRepository.findById(userId).ifPresent(user -> {
+                user.setOnline(true);
+                userRepository.save(user);
+                broadcastPresence(user);
+            });
+        } catch (Exception e) {
+            log.warn("Failed to update presence on connect for user {}: {}", userId, e.getMessage());
+        }
     }
 
-    @Async
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
@@ -48,12 +54,16 @@ public class WebSocketPresenceListener {
         if (principal == null) return;
 
         String userId = principal.getName();
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setOnline(false);
-            user.setLastSeen(LocalDateTime.now(UTC));
-            userRepository.save(user);
-            broadcastPresence(user);
-        });
+        try {
+            userRepository.findById(userId).ifPresent(user -> {
+                user.setOnline(false);
+                user.setLastSeen(LocalDateTime.now(UTC));
+                userRepository.save(user);
+                broadcastPresence(user);
+            });
+        } catch (Exception e) {
+            log.warn("Failed to update presence on disconnect for user {}: {}", userId, e.getMessage());
+        }
     }
 
     private void broadcastPresence(User user) {

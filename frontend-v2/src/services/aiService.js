@@ -11,6 +11,11 @@ export const aiService = {
         return data;
     },
 
+    chatWithIncognitoAi: async (message) => {
+        const { data } = await apiClient.post('/api/v1/ai/incognito/chat', { message });
+        return data;
+    },
+
     generateAutoReplies: async (payload) => {
         const { data } = await apiClient.post('/api/v1/ai/analysis/auto-replies', payload);
         return data;
@@ -43,6 +48,18 @@ export const aiService = {
 
     getCapabilities: async () => {
         const { data } = await apiClient.get('/api/v1/ai/capabilities');
+        return data;
+    },
+
+    saveIncognitoConfig: async (payload) => {
+        const { data } = await apiClient.post('/api/v1/ai/incognito/config', payload);
+        return data;
+    },
+
+    crunchDataAnalysis: async (formData) => {
+        const { data } = await apiClient.post('/api/v1/ai/incognito/data-analysis/crunch', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         return data;
     }
 };

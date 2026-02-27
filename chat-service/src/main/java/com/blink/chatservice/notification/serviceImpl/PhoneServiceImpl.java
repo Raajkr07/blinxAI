@@ -1,17 +1,23 @@
 package com.blink.chatservice.notification.serviceImpl;
 
 import com.blink.chatservice.notification.service.PhoneService;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Implementation of PhoneService using HTTP-based SMS providers
@@ -57,12 +63,25 @@ public class PhoneServiceImpl implements PhoneService {
     @Value("${app.sms.generic.sender-id:}")
     private String genericSenderId;
 
+    private final ExecutorService httpExecutor;
     private final HttpClient httpClient;
 
     public PhoneServiceImpl() {
+        // Fixed-size pool prevents unbounded thread creation from HttpClient's default cached pool
+        this.httpExecutor = Executors.newFixedThreadPool(2, r -> {
+            Thread t = new Thread(r, "sms-http");
+            t.setDaemon(true);
+            return t;
+        });
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
+                .executor(httpExecutor)
                 .build();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        httpExecutor.shutdownNow();
     }
 
     @Override
@@ -136,8 +155,8 @@ public class PhoneServiceImpl implements PhoneService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Content-Type", "application/x-www-form-urlencoded")
-                    .header("Authorization", "Basic " + java.util.Base64.getEncoder()
-                            .encodeToString((twilioAccountSid + ":" + twilioAuthToken).getBytes()))
+                    .header("Authorization", "Basic " + Base64.getEncoder()
+                            .encodeToString((twilioAccountSid + ":" + twilioAuthToken).getBytes(StandardCharsets.UTF_8)))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .timeout(Duration.ofSeconds(30))
                     .build();
@@ -243,12 +262,7 @@ public class PhoneServiceImpl implements PhoneService {
 
     private String encode(String value) {
         if (value == null) return "";
-
-        try {
-            return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return value;
-        }
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private String maskPhone(String phone) {

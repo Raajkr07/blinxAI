@@ -1,6 +1,5 @@
 package com.blink.chatservice.config;
 
-import jakarta.annotation.PreDestroy;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
@@ -10,37 +9,39 @@ import org.apache.hc.core5.util.Timeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+
+import jakarta.annotation.PreDestroy;
 
 @Configuration
-public class AiHttpConfig {
+public class GoogleApiRestClientConfig {
 
     private CloseableHttpClient httpClient;
 
-    @Bean
-    public HttpComponentsClientHttpRequestFactory aiRequestFactory() {
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(30);
-        connectionManager.setDefaultMaxPerRoute(10);
+    @Bean("googleApiRestClient")
+    public RestClient googleApiRestClient() {
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+        connManager.setMaxTotal(15);
+        connManager.setDefaultMaxPerRoute(8);
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectTimeout(Timeout.ofSeconds(10))
-                .setResponseTimeout(Timeout.ofSeconds(60))
+                .setResponseTimeout(Timeout.ofSeconds(30))
                 .build();
 
         httpClient = HttpClients.custom()
-                .setConnectionManager(connectionManager)
+                .setConnectionManager(connManager)
                 .setDefaultRequestConfig(requestConfig)
-                .evictIdleConnections(TimeValue.ofSeconds(60))
+                .evictIdleConnections(TimeValue.ofSeconds(30))
                 .evictExpiredConnections()
                 .build();
 
-        return new HttpComponentsClientHttpRequestFactory(httpClient);
-    }
+        HttpComponentsClientHttpRequestFactory factory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
 
-    @Bean
-    public RestTemplate aiRestTemplate(HttpComponentsClientHttpRequestFactory factory) {
-        return new RestTemplate(factory);
+        return RestClient.builder()
+                .requestFactory(factory)
+                .build();
     }
 
     @PreDestroy

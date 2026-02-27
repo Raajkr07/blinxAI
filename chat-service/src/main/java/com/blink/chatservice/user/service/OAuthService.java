@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,7 +45,7 @@ public class OAuthService {
     private final JwtUtil jwtUtil;
     @SuppressWarnings("unused")
     private final JwtConfig jwtConfig;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     @SuppressWarnings("unused")
     private final ObjectMapper objectMapper;
 
@@ -57,6 +58,7 @@ public class OAuthService {
             StringRedisTemplate redisTemplate,
             JwtUtil jwtUtil,
             JwtConfig jwtConfig,
+            @Qualifier("googleApiRestClient") RestClient restClient,
             ObjectMapper objectMapper
     ) {
         this.googleConfig = googleConfig;
@@ -65,6 +67,7 @@ public class OAuthService {
         this.redisTemplate = redisTemplate;
         this.jwtUtil = jwtUtil;
         this.jwtConfig = jwtConfig;
+        this.restClient = restClient;
         this.objectMapper = objectMapper;
     }
 

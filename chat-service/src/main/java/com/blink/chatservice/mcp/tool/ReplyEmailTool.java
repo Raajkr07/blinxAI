@@ -2,7 +2,6 @@ package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.mcp.tool.helper.UserLookupHelper;
 import com.blink.chatservice.user.service.OAuthService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -13,14 +12,23 @@ import java.util.*;
 import java.nio.charset.StandardCharsets;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class ReplyEmailTool implements McpTool {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final OAuthService oAuthService;
     private final UserLookupHelper userLookupHelper;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public ReplyEmailTool(SimpMessagingTemplate messagingTemplate,
+                          OAuthService oAuthService,
+                          UserLookupHelper userLookupHelper,
+                          @org.springframework.beans.factory.annotation.Qualifier("googleApiRestClient") RestClient restClient) {
+        this.messagingTemplate = messagingTemplate;
+        this.oAuthService = oAuthService;
+        this.userLookupHelper = userLookupHelper;
+        this.restClient = restClient;
+    }
 
     @Override
     public String name() {

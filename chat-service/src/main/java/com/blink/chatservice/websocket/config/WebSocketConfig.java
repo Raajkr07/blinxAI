@@ -1,15 +1,20 @@
 package com.blink.chatservice.websocket.config;
 
-import com.blink.chatservice.websocket.WebSocketAuthChannelInterceptor;
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.web.socket.config.annotation.*;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
-import java.util.Arrays;
+import com.blink.chatservice.websocket.WebSocketAuthChannelInterceptor;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -54,13 +59,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
 
-        // BUG FIX: Configure the simple broker with memory-safe limits.
+        // Configure the simple broker with memory-safe limits.
         // Without these, the in-memory broker can accumulate unbounded send buffers
         // per WebSocket session, leading to steady memory growth under load.
         registry.enableSimpleBroker("/topic", "/queue", "/user")
-                // Heartbeat: server sends ping every 25s, expects pong every 25s.
-                // Dead connections are detected and cleaned up within ~50s.
-                .setHeartbeatValue(new long[]{25000, 25000})
+                // Heartbeat: server sends ping every 10s, expects pong every 10s.
+                // Dead connections are detected and cleaned up within ~20s,
+                // preventing stale sessions from accumulating send buffers.
+                .setHeartbeatValue(new long[]{10000, 10000})
                 .setTaskScheduler(heartTaskScheduler);
     }
 
@@ -72,10 +78,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
-        // BUG FIX: Cap per-message and per-session buffer sizes to prevent
+        // Cap per-message and per-session buffer sizes to prevent
         // a single misbehaving client from consuming excessive memory.
-        registry.setMessageSizeLimit(64 * 1024);       // 64KB max per STOMP message
+        registry.setMessageSizeLimit(128 * 1024);      // 128KB max per STOMP message
         registry.setSendBufferSizeLimit(512 * 1024);    // 512KB max send buffer per session
-        registry.setSendTimeLimit(20 * 1000);            // 20s to flush send buffer before disconnect
+        registry.setSendTimeLimit(15 * 1000);            // 15s to flush send buffer before disconnect
     }
 }

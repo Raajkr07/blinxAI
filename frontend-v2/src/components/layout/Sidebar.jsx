@@ -72,7 +72,7 @@ export function Sidebar({ children }) {
                 className={cn(
                     'group/sidebar relative flex-shrink-0 h-full',
                     'transition-[width,min-width,max-width] ease-[cubic-bezier(0.4,0,0.2,1)]',
-                    isResizing ? 'duration-0' : 'duration-300',
+                    isResizing ? 'duration-0' : 'duration-1000',
                     isMobile ? 'fixed left-0 top-0 z-50' : 'z-20',
                     !isSidebarOpen && isMobile && 'hidden',
                 )}
@@ -123,7 +123,7 @@ export function Sidebar({ children }) {
                             viewBox="0 0 15 15"
                             fill="none"
                             className={cn(
-                                'transition-transform duration-300',
+                                'transition-transform duration-1000',
                                 isSidebarCollapsed ? 'rotate-0' : 'rotate-180'
                             )}
                         >
@@ -146,7 +146,7 @@ export function SidebarHeader({ children }) {
 
     return (
         <div className={cn(
-            "h-14 flex items-center justify-between border-b border-[var(--color-border)] flex-shrink-0 transition-all duration-300 overflow-hidden",
+            "h-14 flex items-center justify-between border-b border-[var(--color-border)] flex-shrink-0 transition-all duration-1000 overflow-hidden",
             isSidebarCollapsed ? "px-2 justify-center" : "px-3"
         )}>
             {children}
@@ -167,8 +167,8 @@ export function SidebarFooter({ children }) {
 
     return (
         <div className={cn(
-            "flex border-t border-[var(--color-border)] flex-shrink-0 transition-all duration-300 bg-[var(--color-background)]",
-            isSidebarCollapsed ? "p-2 flex-col items-center gap-2 h-auto py-4" : "px-3 items-center justify-between gap-2 h-16"
+            "flex border-t border-[var(--color-border)] flex-shrink-0 transition-all duration-1000 bg-[var(--color-background)]",
+            isSidebarCollapsed ? "p-2 flex-col items-center gap-2 h-[109px] py-4" : "px-3 items-center justify-between gap-2 h-16"
         )}>
             <div className={cn(
                 "flex items-center",
@@ -182,7 +182,7 @@ export function SidebarFooter({ children }) {
                 size="icon"
                 onClick={toggleTheme}
                 aria-label="Toggle theme"
-                className={cn("transition-all duration-300", isSidebarCollapsed ? "h-9 w-9" : "")}
+                className={cn("transition-all duration-1000", isSidebarCollapsed ? "h-9 w-9" : "")}
             >
                 {theme === 'dark' ? (
                     <svg width="18" height="18" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -43,7 +43,7 @@ export function AIAssistantButton({ compact }) {
 
     const handleOpenAI = () => {
         if (aiConversation?.id) {
-            const promise = new Promise((resolve) => setTimeout(resolve, 1000));
+            const promise = new Promise((resolve) => setTimeout(resolve, 500));
 
             toast.promise(
                 promise,
@@ -84,24 +84,27 @@ export function AIAssistantButton({ compact }) {
                 onContextMenu={handleContextMenu}
                 disabled={isLoading || !aiConversation}
                 className={cn(
-                    'transition-all duration-300 overflow-hidden',
-                    compact ? 'h-9 w-9 justify-center px-0' : 'w-full h-10 justify-start'
+                    'transition-all duration-1000 flex items-center overflow-hidden',
+                    compact ? 'h-9 w-9 justify-center p-0' : 'w-full h-10 justify-start px-3'
                 )}
                 title="AI Assistant (right-click for capabilities)"
             >
-                <AILogo className={cn(compact ? "w-5 h-5" : "w-5 h-5 mr-2")} />
+                <AILogo className={cn("flex-shrink-0 transition-all duration-1000 h-5 w-5", !compact && "mr-2")} />
 
-                {!compact && (
-                    <>
-                        <div className="flex-1 text-left">
-                            <div className="text-sm font-medium">AI Assistant</div>
-                            <div className="text-xs text-[var(--color-gray-400)]">your 2nd 🧠</div>
+                <div className={cn(
+                    "grid transition-all duration-1000 origin-left",
+                    compact ? "grid-cols-[0fr] opacity-0" : "grid-cols-[1fr] opacity-100 flex-1"
+                )}>
+                    <div className="overflow-hidden whitespace-nowrap flex items-center">
+                        <div className="flex-1 text-left min-w-0 pr-2">
+                            <div className="text-sm font-medium leading-none">Assistant</div>
+                            <div className="text-[10px] text-[var(--color-gray-400)] mt-1 leading-none">your 2nd 🧠</div>
                         </div>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-foreground)]/10 text-[var(--color-foreground)]">
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[var(--color-foreground)]/10 text-[var(--color-foreground)] flex-shrink-0">
                             AI
                         </span>
-                    </>
-                )}
+                    </div>
+                </div>
             </Button>
 
             {/* AI Capabilities Modal */}

@@ -1,27 +1,29 @@
 package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.user.service.OAuthService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class UpdateCalendarEventTool implements McpTool {
 
     private final OAuthService oAuthService;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public UpdateCalendarEventTool(OAuthService oAuthService,
+                                    @Qualifier("googleApiRestClient") RestClient restClient) {
+        this.oAuthService = oAuthService;
+        this.restClient = restClient;
+    }
 
     @Override
     public String name() {
@@ -104,14 +106,13 @@ public class UpdateCalendarEventTool implements McpTool {
             if (location != null) patch.put("location", location);
 
             if (startDateStr != null && !startDateStr.isBlank()) {
-                LocalDateTime startLdt = parseDateTime(startDateStr);
+                LocalDateTime startLdt = CalendarToolUtils.parseDateTime(startDateStr);
                 LocalDateTime endLdt = (endDateStr != null && !endDateStr.isBlank())
-                        ? parseDateTime(endDateStr)
+                        ? CalendarToolUtils.parseDateTime(endDateStr)
                         : startLdt.plusHours(1);
 
-                DateTimeFormatter gFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-                patch.put("start", Map.of("dateTime", startLdt.format(gFormat), "timeZone", timezone));
-                patch.put("end", Map.of("dateTime", endLdt.format(gFormat), "timeZone", timezone));
+                patch.put("start", Map.of("dateTime", startLdt.format(CalendarToolUtils.GOOGLE_FORMAT), "timeZone", timezone));
+                patch.put("end", Map.of("dateTime", endLdt.format(CalendarToolUtils.GOOGLE_FORMAT), "timeZone", timezone));
             }
 
             // 3. Send PATCH request to Google Calendar API
@@ -138,62 +139,13 @@ public class UpdateCalendarEventTool implements McpTool {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Failed to update calendar event {} for user {}: {}", eventId, userId, errMsg, e);
 
-            if (isPermissionError(errMsg)) {
+            if (CalendarToolUtils.isPermissionError(errMsg)) {
                 return Map.of("success", false,
                     "message", "Please log out and log back in with Google to refresh your permissions and access this feature.",
                     "error_type", "PERMISSION_DENIED");
             }
 
             return Map.of("success", false, "message", "Failed to update event: " + errMsg);
-        }
-    }
-
-    private boolean isPermissionError(String errMsg) {
-        return errMsg.contains("403") || errMsg.contains("401")
-                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
-                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
-                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
-    }
-
-    private LocalDateTime parseDateTime(String dateStr) {
-        if (dateStr == null || dateStr.isBlank()) {
-            throw new IllegalArgumentException("Date/time is required");
-        }
-
-        String clean = dateStr.trim().replace(" ", "T").replace("Z", "");
-
-        // Handle ISO format (yyyy-MM-ddTHH:mm:ss)
-        if (clean.contains("T")) {
-            String datePart = clean.substring(0, clean.indexOf("T"));
-            String timePart = clean.substring(clean.indexOf("T") + 1);
-
-            // Normalize time part
-            if (timePart.length() == 5) timePart += ":00";
-            if (timePart.length() > 8) timePart = timePart.substring(0, 8);
-
-            LocalDate date = parseDatePart(datePart);
-            LocalTime time = LocalTime.parse(timePart);
-            return date.atTime(time);
-        }
-
-        // Date-only: default to start of day
-        return parseDatePart(clean).atStartOfDay();
-    }
-
-    private LocalDate parseDatePart(String datePart) {
-        if (datePart == null || datePart.isBlank()) {
-            throw new IllegalArgumentException("Date is required");
-        }
-        try {
-            if (datePart.contains("-")) {
-                String[] parts = datePart.split("-");
-                if (parts[0].length() == 4) return LocalDate.parse(datePart); // yyyy-MM-dd
-                return LocalDate.parse(datePart, DateTimeFormatter.ofPattern("dd-MM-yyyy")); // dd-MM-yyyy
-            }
-            return LocalDate.parse(datePart); // ISO default
-        } catch (Exception e) {
-            log.warn("Could not parse date '{}', falling back to today", datePart);
-            return LocalDate.now();
         }
     }
 }

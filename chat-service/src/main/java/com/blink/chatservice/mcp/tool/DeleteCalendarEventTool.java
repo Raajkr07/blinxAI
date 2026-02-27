@@ -1,7 +1,6 @@
 package com.blink.chatservice.mcp.tool;
 
 import com.blink.chatservice.user.service.OAuthService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -11,12 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class DeleteCalendarEventTool implements McpTool {
 
     private final OAuthService oAuthService;
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
+
+    public DeleteCalendarEventTool(OAuthService oAuthService,
+                                    @org.springframework.beans.factory.annotation.Qualifier("googleApiRestClient") RestClient restClient) {
+        this.oAuthService = oAuthService;
+        this.restClient = restClient;
+    }
 
     @Override
     public String name() {
@@ -74,7 +78,7 @@ public class DeleteCalendarEventTool implements McpTool {
             String errMsg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             log.error("Failed to delete calendar event {} for user {}: {}", eventId, userId, errMsg, e);
 
-            if (isPermissionError(errMsg)) {
+            if (CalendarToolUtils.isPermissionError(errMsg)) {
                 return Map.of("success", false,
                     "message", "Please log out and log back in with Google to refresh your permissions and access this feature.",
                     "error_type", "PERMISSION_DENIED");
@@ -86,12 +90,5 @@ public class DeleteCalendarEventTool implements McpTool {
 
             return Map.of("success", false, "message", "Failed to delete event: " + errMsg);
         }
-    }
-
-    private boolean isPermissionError(String errMsg) {
-        return errMsg.contains("403") || errMsg.contains("401")
-                || errMsg.contains("Forbidden") || errMsg.contains("insufficient")
-                || errMsg.contains("Unauthorized") || errMsg.contains("No Google credentials")
-                || errMsg.contains("PERMISSION_DENIED") || errMsg.contains("access_denied");
     }
 }

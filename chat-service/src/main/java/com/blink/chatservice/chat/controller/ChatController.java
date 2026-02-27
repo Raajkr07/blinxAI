@@ -1,24 +1,33 @@
 package com.blink.chatservice.chat.controller;
 
-import com.blink.chatservice.chat.dto.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.blink.chatservice.chat.dto.CreateGroupRequest;
+import com.blink.chatservice.chat.dto.DirectChatRequest;
+import com.blink.chatservice.chat.dto.PagedResponse;
+import com.blink.chatservice.chat.dto.SaveFileRequest;
+import com.blink.chatservice.chat.dto.SendEmailRequest;
+import com.blink.chatservice.chat.dto.SendMessageRequest;
 import com.blink.chatservice.chat.entity.Conversation;
 import com.blink.chatservice.chat.entity.Message;
 import com.blink.chatservice.chat.service.ChatService;
 import com.blink.chatservice.notification.service.EmailService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -54,8 +63,8 @@ public class ChatController {
     }
 
     @GetMapping("/{conversationId}/messages")
-    public ResponseEntity<Page<Message>> getMessages(@PathVariable String conversationId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(chatService.getMessages(conversationId, page, size));
+    public ResponseEntity<PagedResponse<Message>> getMessages(@PathVariable String conversationId, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(PagedResponse.from(chatService.getMessages(conversationId, page, size)));
     }
 
     @GetMapping("/{conversationId}")
@@ -76,24 +85,19 @@ public class ChatController {
     }
 
     @PostMapping("/save-file")
-    public ResponseEntity<Object> saveFile(Authentication auth, @RequestBody SaveFileRequest request) throws Exception {
-        if (request.fileName() == null || request.fileName().isBlank()) return ResponseEntity.badRequest().body("Filename is required");
-
-        String filename = new File(request.fileName()).getName();
-        if (!filename.contains(".")) filename += ".txt";
-
-        String userHome = System.getProperty("user.home");
-        Path desktopPath = Paths.get(userHome, "Desktop");
-        Path oneDriveDesktop = Paths.get(userHome, "OneDrive", "Desktop");
-        if (oneDriveDesktop.toFile().exists()) desktopPath = oneDriveDesktop;
-
-        File file = desktopPath.resolve(filename).toFile();
-        file.getParentFile().mkdirs();
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(request.content() != null ? request.content() : "");
+    public ResponseEntity<Object> saveFile(Authentication auth, @RequestBody SaveFileRequest request) {
+        if (request.fileName() == null || request.fileName().isBlank()) {
+            return ResponseEntity.badRequest().body("Filename is required");
         }
 
-        return ResponseEntity.ok(Map.of("success", true, "filePath", file.getAbsolutePath()));
+        String filename = request.fileName().trim();
+        if (!filename.contains(".")) filename += ".txt";
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "fileName", filename,
+                "content", request.content() != null ? request.content() : ""
+        ));
     }
 
     @PostMapping("/send-email")
