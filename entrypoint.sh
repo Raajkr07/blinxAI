@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 
-# Default JVM options if JAVA_OPTS is not set externally
-: "${JAVA_OPTS:=-XX:+UseContainerSupport \
+JAVA_OPTS="-XX:+UseContainerSupport \
   -XX:MaxRAMPercentage=75.0 \
   -XX:InitialRAMPercentage=30.0 \
   -XX:+UseG1GC \
@@ -21,7 +20,12 @@ set -e
   -XX:G1PeriodicGCSystemLoadThreshold=0.0 \
   -XX:NativeMemoryTracking=summary \
   -Xlog:gc*:file=/tmp/gc.log:time,level,tags:filecount=3,filesize=5m \
-  -Djava.security.egd=file:/dev/./urandom}"
+  -Djava.security.egd=file:/dev/./urandom"
+
+# Append any extra opts passed via EXTRA_JAVA_OPTS env var
+if [ -n "$EXTRA_JAVA_OPTS" ]; then
+  JAVA_OPTS="$JAVA_OPTS $EXTRA_JAVA_OPTS"
+fi
 
 SPRING_PROFILE="${SPRING_PROFILES_ACTIVE:-prod}"
 APP_PORT="${PORT:-8080}"

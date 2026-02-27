@@ -35,7 +35,8 @@ services:
       - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/blink_chat
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      - JAVA_OPTS=-XX:MaxRAMPercentage=60.0 -XX:+UseG1GC -XX:MaxGCPauseMillis=50
+      # JAVA_OPTS defaults are defined in entrypoint.sh — do NOT override here
+      # unless you specify ALL flags. Partial overrides lose important GC/memory settings.
       - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
       - APP_CORS_ALLOWED_ORIGINS=${APP_CORS_ALLOWED_ORIGINS:-https://blinxai.me,https://www.blinxai.me,https://blinx-app.netlify.app,http://localhost:8080,http://localhost:5173,http://localhost:5174}
       - APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://blinxai.me}
