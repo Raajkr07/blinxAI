@@ -43,13 +43,13 @@ public class AiIncognitoService {
     // Bounded TTL cache to prevent memory leak. Entries expire after CONFIG_TTL.
     private final Map<String, TimestampedConfig> userConfigs = new ConcurrentHashMap<>();
 
-    @Value("${ai.api-key}")
+    @Value("${ai.api-key:}")
     private String apiKey;
 
-    @Value("${ai.model}")
+    @Value("${ai.model:gpt-4o-mini}")
     private String model;
 
-    @Value("${ai.base-url}")
+    @Value("${ai.base-url:https://api.openai.com}")
     private String baseUrl;
 
     public AiIncognitoService(@Qualifier("aiRestTemplate") RestTemplate restTemplate, ObjectMapper objectMapper) {

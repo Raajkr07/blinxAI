@@ -41,6 +41,12 @@ server:
     include-binding-errors: always
     include-exception: true
 
+# AI configuration
+ai:
+  api-key: test-api-key
+  model: gpt-4o-mini
+  base-url: https://api.openai.com
+
 # Logging configuration
 logging:
   level:
